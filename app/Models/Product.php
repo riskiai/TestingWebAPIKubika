@@ -19,6 +19,8 @@ class Product extends Model
         'id_kategori',
         'deskripsi',
         'kode_produk',
+        'type_pembelian',
+        'harga',
         'stok',
     ];
 
@@ -58,4 +60,6 @@ class Product extends Model
 
         return 'PRD-' . $nextNumber . '-' . $nameSlug . '-' . $date;
     }
+    
+    
 }

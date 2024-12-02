@@ -49,4 +49,10 @@ class Kategori extends Model
 
         return 'KTG-' . $nextNumber . '-' . $nameSlug . '-' . $date;
     }
+
+     // Relasi ke produk
+     public function products()
+     {
+         return $this->hasMany(Product::class, 'id_kategori');
+     }
 }

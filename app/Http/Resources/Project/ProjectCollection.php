@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Project;
 
+use App\Models\User;
 use App\Models\Project;
 use App\Models\Purchase;
 use Illuminate\Http\Request;
@@ -22,10 +23,63 @@ class ProjectCollection extends ResourceCollection
             $data[] = [
                 'id' => $project->id,
                 'client' => [
-                    'id' => $project->company->id,
-                    'name' => $project->company->name,
+                    'id' => optional($project->company)->id,
+                    'name' => optional($project->company)->name,
                     'contact_type' => $project->company->contactType->name,
                 ],
+                // Menambahkan data spbProjects yang terkait dengan project
+                'spb_project' => $project->spbProjects->map(function ($spbProject) {
+                    return [
+                        'doc_no_spb' => $spbProject->doc_no_spb,
+                        'doc_type_spb' => $spbProject->doc_type_spb,
+                        'produk' => $spbProject->products->map(function ($product) {
+                            return [
+                                'id' => $product->id,
+                                'nama' => $product->nama,
+                                'deskripsi' => $product->deskripsi,
+                                'stok' => $product->stok,
+                                'harga' => $product->harga,
+                                'type_pembelian' => $product->type_pembelian,
+                                'kode_produk' => $product->kode_produk,
+                            ];
+                        }),
+                        'unit_kerja' => $spbProject->unit_kerja,
+                        'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
+                        'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
+                        'logs' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
+                            // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
+                            $lastLog = $logsByUser->sortByDesc('created_at')->first();
+
+                            // Ambil reject_note dari spbProject
+                            $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
+
+                            return [
+                                'tab' => $lastLog->tab, // Ambil tab dari log terakhir
+                                'name' => $lastLog->name, // Ambil nama pengguna
+                                'created_at' => $lastLog->created_at, // Ambil waktu terakhir log
+                                'message' => $lastLog->message, // Ambil pesan dari log terakhir
+                                'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
+                            ];
+                        })->values()->all(),
+                    ];
+                }),
+                'file_attachment_spb' => [
+                    'name' => 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->file, PATHINFO_EXTENSION),
+                    'link' => asset("storage/$project->spb_file")
+                ],
+                'user' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'divisi' => [
+                            'id' => optional($user->divisi)->id,
+                            'name' => optional($user->divisi)->name,
+                        ],
+                    ];
+                }),
+
                 'date' => $project->date,
                 'name' => $project->name,
                 'billing' => $project->billing,
@@ -45,6 +99,13 @@ class ProjectCollection extends ResourceCollection
 
             if ($project->user) {
                 $data[$key]['created_by'] = [
+                    "id" => $project->user->id,
+                    "name" => $project->user->name,
+                ];
+            }
+
+            if ($project->user) {
+                $data[$key]['updated_by'] = [
                     "id" => $project->user->id,
                     "name" => $project->user->name,
                 ];
@@ -87,12 +148,13 @@ class ProjectCollection extends ResourceCollection
             Project::PENGGUNA_MUATAN => "Pengguna Muatan",
             Project::PRATINJAU => "Pratinjau",
         ];
-
+    
         return [
             "id" => $step,
-            "name" => $steps[$step] ?? "Unknown",
+            "name" => $steps[$step] ?? "Unknown", // Tetap tampilkan "Unknown" jika step tidak dikenal
         ];
     }
+    
 
     /**
      * Calculate the cost progress and determine the project status.

@@ -10,62 +10,64 @@ class SpbProject extends Model
 {
     use HasFactory;
 
-    // Tentukan tabel yang terkait dengan model ini
     protected $table = 'spb_projects';
+    protected $primaryKey = 'doc_no_spb';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
-    // Tentukan kolom yang dapat diisi secara massal
+    const TAB_SUBMIT = 1;
+    const TAB_VERIFIED = 2;
+    const TAB_PAYMENT_REQUEST = 3;
+    const TAB_PAID = 4;
+
     protected $fillable = [
+        'doc_no_spb',
+        'doc_type_spb',
         'spbproject_category_id',
         'spbproject_status_id',
+        'tab',
         'user_id',
         'project_id',
         'produk_id',
         'unit_kerja',
+        'tanggal_berahir_spb',
         'tanggal_dibuat_spb',
-        'nama_barang',
-        'type_pembelian',
-        'jumlah_barang',
         'nama_toko',
-        'keterangan',
+        'reject_note',
+        'know_marketing',
+        'know_kepalagudang',
+        'request_owner',
     ];
 
-    /**
-     * Relasi ke kategori SPB (many to one).
-     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(SpbProject_Category::class, 'spbproject_category_id', 'id');
     }
 
-    /**
-     * Relasi ke status SPB (many to one).
-     */
-    public function status(): BelongsTo
+    public function status()
     {
-        return $this->belongsTo(SpbProject_Status::class, 'spbproject_status_id', 'id');
+        return $this->belongsTo(SpbProject_Status::class, 'spbproject_status_id');
     }
 
-    /**
-     * Relasi ke pengguna (many to one).
-     */
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    /**
-     * Relasi ke proyek (many to one).
-     */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id', 'id');
     }
 
-    /**
-     * Relasi ke produk (many to one).
-     */
-    public function product(): BelongsTo
+    public function products()
     {
-        return $this->belongsTo(Product::class, 'produk_id', 'id');
+        return $this->belongsToMany(Product::class, 'product_spb_project', 'spb_project_id', 'product_id');
     }
+
+    public function logs()
+    {
+        return $this->hasMany(LogsSPBProject::class, 'spb_project_id', 'doc_no_spb');
+    }
+
 }

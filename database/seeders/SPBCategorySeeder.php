@@ -15,23 +15,23 @@ class SPBCategorySeeder extends Seeder
         // Seed data untuk kategori SPB
         SpbProject_Category::create([
             'name' => 'Flash Cash',
-            'short' => 'FCA',
+            'short' => 'FCASPB',
         ]);
         SpbProject_Category::create([
             'name' => 'Invoice',
-            'short' => 'INV',
+            'short' => 'INVSPB',
         ]);
-        SpbProject_Category::create([
-            'name' => 'Man Power',
-            'short' => 'MAP',
-        ]);
-        SpbProject_Category::create([
-            'name' => 'Expense',
-            'short' => 'EXP',
-        ]);
-        SpbProject_Category::create([
-            'name' => 'Reimbursement',
-            'short' => 'RMB',
-        ]);
+        // SpbProject_Category::create([
+        //     'name' => 'Man Power',
+        //     'short' => 'MAP',
+        // ]);
+        // SpbProject_Category::create([
+        //     'name' => 'Expense',
+        //     'short' => 'EXP',
+        // ]);
+        // SpbProject_Category::create([
+        //     'name' => 'Reimbursement',
+        //     'short' => 'RMB',
+        // ]);
     }
 }

@@ -59,4 +59,15 @@ class MessageActeeve extends Response
             'message' => $message
         ], self::HTTP_INTERNAL_SERVER_ERROR);
     }
+
+    public static function errorauth($message)
+    {
+        return response()->json([
+            'status' => self::ERROR,
+            'status_code' => self::HTTP_UNAUTHORIZED,  // Gunakan 401 Unauthorized untuk masalah autentikasi
+            'message' => $message
+        ], self::HTTP_UNAUTHORIZED);  // Ubah status code menjadi 401
+    }
+
+
 }

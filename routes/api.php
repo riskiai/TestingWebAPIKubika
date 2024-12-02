@@ -12,7 +12,11 @@ use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\PurchaseCategoryController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PurchaseStatusController;
 use App\Http\Controllers\SpbCategoryController;
+use App\Http\Controllers\SPBController;
 use App\Http\Controllers\SpbStatusController;
 
 Route::prefix('auth')->group(function () {
@@ -23,8 +27,6 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware(['auth:sanctum'])->group(function () {
-   
-
      // Users
      Route::prefix('user')->group(function () {
         Route::get('/', [UsersController::class, 'index']);
@@ -84,18 +86,56 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
      // Project
      Route::get('project', [ProjectController::class, 'index']);
-     Route::get('project/create-informasi', [ProjectController::class, 'createInformasi']);
-
-     // SPB PROJECTS
-      // end point puchase category
+     Route::get('projects/counting', [ProjectController::class, 'counting']);
+     Route::get('project/{id}', [ProjectController::class, 'show']);
+     Route::post('project/create-informasi', [ProjectController::class, 'createInformasi']);
+     Route::put('project/accept/{id}', [ProjectController::class, 'accept']);
+     Route::put('project/reject/{id}', [ProjectController::class, 'reject']);
+     Route::put('projects/update-pengguna-muatan/{id}', [ProjectController::class, 'UpdatePenggunaMuatan']);
+     Route::put('projects/update_lengkap/{id}', [ProjectController::class, 'UpdateLengkap']);
+     Route::put('projects/update/{id}', [ProjectController::class, 'update']);
+     Route::delete('projects/delete/{id}', [ProjectController::class, 'destroy']);
+     
+    // SPB PROJECTS
+    // end point SPB PROJECT CATEGORY
     Route::prefix('spbproject-category')->group(function () {
         Route::get('/', [SpbCategoryController::class, 'index']);
         Route::get('/{id}', [SpbCategoryController::class, 'show']);
     });
 
-    // end point puchase status
+    // end point SPB PROJECT STATUS
     Route::prefix('spbproject-status')->group(function () {
         Route::get('/', [SpbStatusController::class, 'index']);
         Route::get('/{id}', [SpbStatusController::class, 'show']);
     });
+
+    Route::get('spbproject', [SPBController::class, 'index']);
+    Route::post('spbproject/create-spb', [SPBController::class, 'store']);
+    Route::post('spbproject/update-spb/{id}', [SPBController::class, 'update']);
+    Route::get('spbproject/{id}', [SPBController::class, 'show']);
+    Route::delete('spbproject/destroy/{id}', [SPBController::class, 'destroy']);
+    Route::put('spbproject/accept/{id}', [SPBController::class, 'accept']);
+    Route::put('spbproject/reject/{id}', [SPBController::class, 'reject']);
+    Route::put('spbproject/activate/{id}', [SPBController::class, 'activate']);
+    Route::put('spbproject/undo/{id}', [SPBController::class, 'undo']);
+    Route::put('spbproject/request/{id}', [SPBController::class, 'request']);
+    Route::put('spbproject/payment/{id}', [SPBController::class, 'payment']);
+    Route::put('spbproject/knowmarketing/{id}', [SPBController::class, 'knowmarketing']);
+    Route::put('spbproject/knowmarkepalagudang/{id}', [SPBController::class, 'knowmarkepalagudang']);
+    Route::put('spbproject/menyetujuiowner/{id}', [SPBController::class, 'menyetujuiowner']);
+
+    // Purchase
+    // end point Purchase Category
+    Route::prefix('purchase-category')->group(function () {
+        Route::get('/', [PurchaseCategoryController::class, 'index']);
+        Route::get('/{id}', [PurchaseCategoryController::class, 'show']);
+    });
+
+    // end point Purchase Status
+    Route::prefix('purchase-status')->group(function () {
+        Route::get('/', [PurchaseStatusController::class, 'index']);
+        Route::get('/{id}', [PurchaseStatusController::class, 'show']);
+    });
+
+    Route::get('purchase', [PurchaseController::class, 'index']);
 });

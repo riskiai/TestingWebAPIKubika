@@ -14,6 +14,11 @@ class TaxController extends Controller
 {
     public function index(Request $request)
     {
+        if (!$request->user()) {
+            // Jika tidak terautentikasi, kirimkan response error dengan status 401 Unauthorized
+            return MessageActeeve::errorauth("You must be logged in to access this resource.");
+        }
+
         $query = Tax::query();
 
         if ($request->has('search')) {

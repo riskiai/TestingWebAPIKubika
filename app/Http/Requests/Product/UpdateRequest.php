@@ -30,6 +30,8 @@ class UpdateRequest extends FormRequest
             'id_kategori' => 'sometimes|required|exists:kategori,id',
             'deskripsi' => 'nullable|string',
             'stok' => 'sometimes|required|integer|min:0',
+            'type_pembelian' => 'nullable|string|max:255',
+            'harga' => 'sometimes|required|numeric|min:0', 
             // kode_produk di-generate otomatis, jadi tidak perlu di-update
         ];
     }
