@@ -27,7 +27,7 @@ class CreateRequest extends FormRequest
     {
         return [
             'spbproject_category_id' => 'nullable|exists:spb_project__categories,id',
-            // 'project_id' => 'nullable|string|max:255',
+            'project_id' => 'nullable|string|max:255',
             'produk_id' => 'nullable|array',
            'produk_id.*' => 'nullable|exists:products,id|numeric|min:1',
             'tanggal_berahir_spb' => 'nullable|date',
@@ -41,7 +41,7 @@ class CreateRequest extends FormRequest
     {
         return [
             'spbproject_category_id' => 'SPB project category',
-            // 'project_id' => 'project ID',
+            'project_id' => 'project ID',
             'produk_id' => 'product ID',
             'tanggal_berahir_spb' => 'SPB expiry date',
             'tanggal_dibuat_spb' => 'SPB creation date',

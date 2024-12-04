@@ -31,6 +31,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::prefix('user')->group(function () {
         Route::get('/', [UsersController::class, 'index']);
         Route::get('me', function (Request $request) {
+            // dd($request->user());
             return $request->user();
         });
         Route::get('/{id}', [UsersController::class, 'show']);
@@ -122,6 +123,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('spbproject/undo/{id}', [SPBController::class, 'undo']);
     Route::put('spbproject/request/{id}', [SPBController::class, 'request']);
     Route::put('spbproject/payment/{id}', [SPBController::class, 'payment']);
+    Route::put('spbproject/accSpbProject/{id}', [SPBController::class, 'accSpbProject']);
     Route::put('spbproject/knowmarketing/{id}', [SPBController::class, 'knowmarketing']);
     Route::put('spbproject/knowmarkepalagudang/{id}', [SPBController::class, 'knowmarkepalagudang']);
     Route::put('spbproject/menyetujuiowner/{id}', [SPBController::class, 'menyetujuiowner']);

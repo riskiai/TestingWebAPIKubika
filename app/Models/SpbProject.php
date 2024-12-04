@@ -34,6 +34,7 @@ class SpbProject extends Model
         'tanggal_dibuat_spb',
         'nama_toko',
         'reject_note',
+        'know_supervisor',
         'know_marketing',
         'know_kepalagudang',
         'request_owner',
@@ -55,10 +56,16 @@ class SpbProject extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
+    // public function project()
+    // {
+    //     return $this->belongsToMany(Project::class, 'project_spb_project', 'spb_project_id', 'project_id');
+    // }
+
     public function project()
     {
-        return $this->belongsToMany(Project::class, 'project_spb_project', 'spb_project_id', 'project_id');
+        return $this->belongsTo(Project::class, 'project_id', 'id'); // Menggunakan 'project_id' di tabel spb_projects
     }
+
 
     public function products()
     {

@@ -50,8 +50,6 @@ class SPBController extends Controller
             });
         }
 
- 
-
         // Filter berdasarkan range date (tanggal_dibuat_spb atau tanggal tertentu dari SPB Project)
         if ($request->has('tanggal_dibuat_spb')) {
             $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb)); // Parsing tanggal range
@@ -106,6 +104,12 @@ class SPBController extends Controller
             if (!$spbCategory) {
                 throw new \Exception("Kategori SPB tidak ditemukan.");
             }
+
+            // Mendapatkan project yang dipilih
+            $project = Project::find($request->project_id); // Pastikan project_id ada
+            if (!$project) {
+                throw new \Exception("Project dengan ID {$request->project_id} tidak ditemukan.");
+            }
     
             // Mendapatkan doc_no_spb terakhir berdasarkan kategori SPB
             $maxDocNo = SpbProject::where('spbproject_category_id', $request->spbproject_category_id)
@@ -125,7 +129,7 @@ class SPBController extends Controller
     
             // Membuat SPB baru dengan data yang telah dimodifikasi
             $spbProject = SpbProject::create($request->only([
-                'doc_no_spb', 'doc_type_spb', 'spbproject_category_id', 'spbproject_status_id', 'user_id', 
+                'doc_no_spb', 'doc_type_spb', 'project_id', 'spbproject_category_id', 'spbproject_status_id', 'user_id', 
                 'tanggal_berahir_spb', 'tanggal_dibuat_spb', 'unit_kerja', 'nama_toko'
             ]));
     
@@ -288,8 +292,6 @@ class SPBController extends Controller
             ], 500);
         }
     }
-    
-
 
     public function addspbtoproject(Request $request, $id)
     {
@@ -411,13 +413,20 @@ class SPBController extends Controller
             "doc_no_spb" => $spbProject->doc_no_spb,
             "doc_type_spb" => $spbProject->doc_type_spb,
             "status" => $this->getStatus($spbProject),
-            'project' => $spbProject->project->isNotEmpty() ? [
+            /* 'project' => $spbProject->project->isNotEmpty() ? [
                 'id' => $spbProject->project->first()->id,
                 'nama' => $spbProject->project->first()->name,
             ] : [
                 'id' => 'N/A',
                 'nama' => 'No Project Available'
-            ],  
+            ],   */
+            "project" => $spbProject->project ? [
+                'id' => $spbProject->project->id,
+                'nama' => $spbProject->project->name,
+                ] : [
+                    'id' => 'N/A',
+                    'nama' => 'No Project Available',
+            ],
             'produk' => $spbProject->products ? $spbProject->products->map(function ($product) {
                 return [
                     'id' => $product->id,
@@ -434,25 +443,26 @@ class SPBController extends Controller
             "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
             "nama_toko" => $spbProject->nama_toko,
             "know_marketing" => $this->getUserRole($spbProject->know_marketing),
+            "know_supervisor" => $this->getUserRole($spbProject->know_supervisor),
             "know_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
             "request_owner" => $this->getUserRole($spbProject->request_owner),
             "created_at" => $spbProject->created_at->format('Y-m-d'),
             "updated_at" => $spbProject->updated_at->format('Y-m-d'),
              // Menambahkan logs ke dalam data proyek
-          'logs' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
-                // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
-                $lastLog = $logsByUser->sortByDesc('created_at')->first();
+            'logs' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
+                    // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
+                    $lastLog = $logsByUser->sortByDesc('created_at')->first();
 
-                // Ambil reject_note dari spbProject
-                $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
+                    // Ambil reject_note dari spbProject
+                    $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
 
-                return [
-                    'tab' => $lastLog->tab, // Ambil tab dari log terakhir
-                    'name' => $lastLog->name, // Ambil nama pengguna
-                    'created_at' => $lastLog->created_at, // Ambil waktu terakhir log
-                    'message' => $lastLog->message, // Ambil pesan dari log terakhir
-                    'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
-                ];
+                    return [
+                        'tab' => $lastLog->tab, // Ambil tab dari log terakhir
+                        'name' => $lastLog->name, // Ambil nama pengguna
+                        'created_at' => $lastLog->created_at, // Ambil waktu terakhir log
+                        'message' => $lastLog->message, // Ambil pesan dari log terakhir
+                        'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
+                    ];
             })->values()->all(),
         ];
 
@@ -588,6 +598,93 @@ class SPBController extends Controller
 
         // Kembalikan data status yang sesuai dengan tab
         return $data;
+    }
+
+    public function accSpbProject(Request $request, $docNoSpb)
+    {
+        DB::beginTransaction();
+
+        // Cari SPB Project berdasarkan doc_no_spb
+        $spbProject = SpbProject::where('doc_no_spb', $docNoSpb)->first();
+        if (!$spbProject) {
+            return MessageActeeve::notFound('SPB Project not found!');
+        }
+
+        try {
+            // Pesan dasar untuk status perubahan
+            $message = "";
+
+            // Periksa role user yang sedang login dan lakukan pembaruan status yang sesuai
+            switch (auth()->user()->role_id) {
+                case Role::MARKETING:
+                    // Update kolom know_marketing jika user adalah Marketing
+                    $spbProject->update([
+                        'know_marketing' => auth()->user()->id,
+                    ]);
+                    $message = "SPB Project {$spbProject->doc_no_spb} is now acknowledged by Marketing.";
+                    break;
+
+                case Role::GUDANG:
+                    // Update kolom know_kepalagudang jika user adalah Kepala Gudang
+                    $spbProject->update([
+                        'know_kepalagudang' => auth()->user()->id,
+                    ]);
+                    $message = "SPB Project {$spbProject->doc_no_spb} is now acknowledged by Gudang.";
+                    break;
+
+                case Role::SUPERVISOR:
+                    // Update kolom know_supervisor jika user adalah Kepala Gudang
+                    $spbProject->update([
+                            'know_supervisor' => auth()->user()->id,
+                    ]);
+                    $message = "SPB Project {$spbProject->doc_no_spb} is now acknowledged by Supervisor.";
+                    break;
+
+                case Role::OWNER:
+                    // Update kolom request_owner jika user adalah Owner
+                    $spbProject->update([
+                        'request_owner' => auth()->user()->id,
+                    ]);
+                    $message = "SPB Project {$spbProject->doc_no_spb} is now Accepted by Owner.";
+                    break;
+
+                default:
+                    // Jika role tidak valid, kirimkan error
+                    return MessageActeeve::error('Access denied. You do not have permission to perform this action.');
+            }
+
+            // Commit transaksi
+            DB::commit();
+
+            // Dapatkan informasi siapa yang terakhir menyetujui
+            $lastApprovedByMarketing = $this->getUserRole($spbProject->know_marketing);
+            $lastApprovedByGudang = $this->getUserRole($spbProject->know_kepalagudang);
+            $lastApprovedByOwner = $this->getUserRole($spbProject->request_owner);
+
+            // Buat pesan tambahan berdasarkan status terakhir
+            $logMessage = [
+                "know_marketing" => $lastApprovedByMarketing 
+                    ? "Last Marketing acknowledgment by {$lastApprovedByMarketing['user_name']} ({$lastApprovedByMarketing['role_name']})"
+                    : "Marketing has not acknowledged yet.",
+                "know_supervisor" => $lastApprovedByGudang 
+                    ? "Last Supervisor acknowledgment by {$lastApprovedByGudang['user_name']} ({$lastApprovedByGudang['role_name']})"
+                    : "Gudang has not acknowledged yet.",
+                "know_kepalagudang" => $lastApprovedByGudang 
+                    ? "Last Gudang acknowledgment by {$lastApprovedByGudang['user_name']} ({$lastApprovedByGudang['role_name']})"
+                    : "Gudang has not acknowledged yet.",
+                "request_owner" => $lastApprovedByOwner 
+                    ? "Last Owner acceptance by {$lastApprovedByOwner['user_name']} ({$lastApprovedByOwner['role_name']})"
+                    : "Owner has not accepted yet."
+            ];
+
+            // Mengembalikan response sukses dengan pesan tambahan
+            return MessageActeeve::success($message, ['logs' => $logMessage]);
+
+        } catch (\Throwable $th) {
+            // Jika ada error, rollback transaksi
+            DB::rollBack();
+            return MessageActeeve::error('An error occurred: ' . $th->getMessage());
+        }
     }
 
 
@@ -914,9 +1011,10 @@ class SPBController extends Controller
         }
     }
 
-    public function knowmarketing($docNoSpb)
+    public function knowmarketing(Request $request, $docNoSpb )
     {
         DB::beginTransaction();
+        // dd($request->user());
 
         // Cari SpbProject berdasarkan doc_no_spb
         $spbProject = SpbProject::where('doc_no_spb', $docNoSpb)->first();
@@ -927,7 +1025,7 @@ class SPBController extends Controller
         try {
             // Update kolom know_marketing untuk menandakan bahwa proyek sudah diketahui oleh marketing
             $spbProject->update([
-                "know_marketing" => auth()->user()->id, // Simpan ID user marketing yang mengetahui proyek
+                "know_marketing" => auth()->user()->id, 
             ]);
 
             DB::commit();

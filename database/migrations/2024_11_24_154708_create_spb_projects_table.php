@@ -32,6 +32,7 @@ return new class extends Migration
 
             // Menambahkan kolom-kolom baru di bawah
             $table->string('know_marketing')->nullable(); // Menyimpan informasi marketing
+            $table->string('know_supervisor')->nullable();
             $table->string('know_kepalagudang')->nullable(); // Menyimpan informasi kepala gudang
             $table->string('request_owner')->nullable(); // Menyimpan informasi pemilik permintaan
 

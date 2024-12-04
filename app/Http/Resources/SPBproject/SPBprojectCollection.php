@@ -24,12 +24,19 @@ class SPBprojectCollection extends ResourceCollection
                 "doc_no_spb" => $spbProject->doc_no_spb,
                 "doc_type_spb" => $spbProject->doc_type_spb,
                 "status" => $this->getStatus($spbProject),
-                'project' => $spbProject->project->isNotEmpty() ? [
-                    'id' => $spbProject->project->first()->id,
-                    'nama' => $spbProject->project->first()->name,
+                // 'project' => $spbProject->project->isNotEmpty() ? [
+                //     'id' => $spbProject->project->first()->id,
+                //     'nama' => $spbProject->project->first()->name,
+                // ] : [
+                //     'id' => 'N/A',
+                //     'nama' => 'No Project Available'
+                // ],
+                "project" => $spbProject->project ? [
+                'id' => $spbProject->project->id,
+                'nama' => $spbProject->project->name,
                 ] : [
                     'id' => 'N/A',
-                    'nama' => 'No Project Available'
+                    'nama' => 'No Project Available',
                 ],
                 'produk' => $spbProject->products ? $spbProject->products->map(function ($product) {
                     return [
@@ -47,6 +54,7 @@ class SPBprojectCollection extends ResourceCollection
                 "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
                 "nama_toko" => $spbProject->nama_toko,
                 "know_marketing" => $this->getUserRole($spbProject->know_marketing),
+                "know_supervisor" => $this->getUserRole($spbProject->know_supervisor),
                 "know_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
                 "request_owner" => $this->getUserRole($spbProject->request_owner),
                 "created_at" => $spbProject->created_at->format('Y-m-d'),
