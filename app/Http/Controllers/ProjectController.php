@@ -19,6 +19,33 @@ use App\Http\Requests\Project\UpdatePengunaMuatanRequest;
 
 class ProjectController extends Controller
 {
+
+    public function projectall(Request $request)
+    {
+        $query = Project::query();
+
+        // Filter berdasarkan status proyek
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('date')) {
+            $date = str_replace(['[', ']'], '', $request->date);
+            $date = explode(", ", $date);
+
+            $query->whereBetween('created_at', $date);
+        }
+
+        // Tambahkan kondisi untuk menyortir data berdasarkan nama proyek
+        $query->orderBy('name', 'asc');
+
+        // Ambil daftar proyek yang sudah diurutkan
+        $projects = $query->get();
+
+        return new ProjectCollection($projects);
+    }
+
+
     public function index(Request $request)
     {
         $query = Project::query();
@@ -53,8 +80,8 @@ class ProjectController extends Controller
         }
 
         // Filter berdasarkan vendor
-        if ($request->has('vendor')) {
-            $query->where('company_id', $request->vendor);
+        if ($request->has('contact')) {
+            $query->where('company_id', $request->contact);
         }
 
         if ($request->has('date')) {
@@ -178,7 +205,10 @@ class ProjectController extends Controller
             // Periksa apakah file dilampirkan sebelum menyimpannya
             if ($request->hasFile('attachment_file')) {
                 $project->file = $request->file('attachment_file')->store(Project::ATTACHMENT_FILE);
+            } else {
+                $project->file = null; // Tidak ada file, set null
             }
+
 
             // Simpan proyek ke database
             $project->save();
@@ -197,6 +227,7 @@ class ProjectController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
+
 
     public function UpdatePenggunaMuatan(UpdatePengunaMuatanRequest $request, $id)
     {
@@ -419,6 +450,10 @@ class ProjectController extends Controller
                     })->values()->all(),
                 ];
             }),
+            'file_attachment_spb' => [
+                    'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
+                    'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
+                ],
             'user' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
             ->get()
             ->map(function ($user) {

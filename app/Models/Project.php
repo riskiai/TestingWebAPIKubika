@@ -200,9 +200,9 @@ class Project extends Model
         return $this->hasOne(Company::class, 'id', 'company_id');
     }
 
-    public function spbProjects(): HasMany
+    public function spbProjects()
     {
-        return $this->hasMany(SpbProject::class, 'project_id', 'id');
+        return $this->belongsToMany(SpbProject::class, 'project_spb_project', 'project_id', 'spb_project_id');
     }
 
 /* 

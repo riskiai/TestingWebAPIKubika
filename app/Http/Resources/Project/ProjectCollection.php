@@ -63,10 +63,11 @@ class ProjectCollection extends ResourceCollection
                         })->values()->all(),
                     ];
                 }),
-                'file_attachment_spb' => [
-                    'name' => 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->file, PATHINFO_EXTENSION),
-                    'link' => asset("storage/$project->spb_file")
+               'file_attachment_spb' => [
+                    'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
+                    'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
                 ],
+
                 'user' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
                 ->get()
                 ->map(function ($user) {
@@ -87,8 +88,8 @@ class ProjectCollection extends ResourceCollection
                 'margin' => $project->margin,
                 'percent' => $this->formatPercent($project->percent),
                 'file_attachment' => [
-                    'name' => date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->file, PATHINFO_EXTENSION),
-                    'link' => asset("storage/$project->file")
+                    'name' => $project->file ? date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->file, PATHINFO_EXTENSION) : null,
+                    'link' => $project->file ? asset("storage/$project->file") : null,
                 ],
                 'cost_progress' => $project->status_cost_progress,
                 'status_step_project' => $this->getStepStatus($project->status_step_project),

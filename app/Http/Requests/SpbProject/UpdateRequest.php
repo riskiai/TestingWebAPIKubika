@@ -28,8 +28,8 @@ class UpdateRequest extends FormRequest
         return [
             'spbproject_category_id' => 'nullable|exists:spb_project__categories,id',
             'project_id' => 'nullable|string|max:255',
-            'produk_id' => 'required|array',
-            'produk_id.*' => 'exists:products,id|numeric|min:1',
+            'produk_id' => 'nullable|array',
+            'produk_id.*' => 'nullable|exists:products,id|numeric|min:1',
             'tanggal_berahir_spb' => 'nullable|date',
             'tanggal_dibuat_spb' => 'nullable|date',
             'unit_kerja' => 'nullable|string|max:255',

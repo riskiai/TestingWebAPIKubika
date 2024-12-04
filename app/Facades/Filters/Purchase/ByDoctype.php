@@ -5,7 +5,7 @@ namespace App\Facades\Filters\Purchase;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 
-class ByDocType
+class ByDoctype
 {
     public function handle(Builder $query, Closure $next)
     {

@@ -86,6 +86,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
      // Project
      Route::get('project', [ProjectController::class, 'index']);
+     Route::get('projectall', [ProjectController::class, 'projectall']);
      Route::get('projects/counting', [ProjectController::class, 'counting']);
      Route::get('project/{id}', [ProjectController::class, 'show']);
      Route::post('project/create-informasi', [ProjectController::class, 'createInformasi']);
@@ -111,6 +112,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('spbproject', [SPBController::class, 'index']);
     Route::post('spbproject/create-spb', [SPBController::class, 'store']);
+    Route::put('addspbproject/toproject/{id}', [SPBController::class, 'addspbtoproject']);
     Route::post('spbproject/update-spb/{id}', [SPBController::class, 'update']);
     Route::get('spbproject/{id}', [SPBController::class, 'show']);
     Route::delete('spbproject/destroy/{id}', [SPBController::class, 'destroy']);

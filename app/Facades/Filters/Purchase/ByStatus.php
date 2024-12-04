@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ByStatus
 {
-    /* public function handle(Builder $query, Closure $next)
+    public function handle(Builder $query, Closure $next)
     {
         if (!request()->has('status')) {
             return $next($query);
@@ -30,5 +30,5 @@ class ByStatus
             }
         }
         return $next($query);
-    } */
+    }
 }

@@ -24,10 +24,13 @@ class SPBprojectCollection extends ResourceCollection
                 "doc_no_spb" => $spbProject->doc_no_spb,
                 "doc_type_spb" => $spbProject->doc_type_spb,
                 "status" => $this->getStatus($spbProject),
-                'project' => $spbProject->project ? [ // Periksa apakah ada data project
-                    'id' => $spbProject->project->id,
-                    'nama' => $spbProject->project->name, // Assuming 'name' is the correct field for project name
-                ] : null,   
+                'project' => $spbProject->project->isNotEmpty() ? [
+                    'id' => $spbProject->project->first()->id,
+                    'nama' => $spbProject->project->first()->name,
+                ] : [
+                    'id' => 'N/A',
+                    'nama' => 'No Project Available'
+                ],
                 'produk' => $spbProject->products ? $spbProject->products->map(function ($product) {
                     return [
                         'id' => $product->id,

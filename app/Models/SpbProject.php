@@ -55,9 +55,9 @@ class SpbProject extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function project(): BelongsTo
+    public function project()
     {
-        return $this->belongsTo(Project::class, 'project_id', 'id');
+        return $this->belongsToMany(Project::class, 'project_spb_project', 'spb_project_id', 'project_id');
     }
 
     public function products()

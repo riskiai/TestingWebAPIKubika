@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Carbon\Carbon;
 use App\Models\Role;
+use App\Models\Product;
 use App\Models\Project;
 use App\Models\SpbProject;
 use Illuminate\Support\Str;
@@ -43,8 +44,13 @@ class SPBController extends Controller
 
         // Filter berdasarkan project ID
         if ($request->has('project')) {
-            $query->where('id', $request->project);
+            $query->whereHas('project', function ($query) use ($request) {
+                // Tentukan nama tabel untuk kolom 'id'
+                $query->where('projects.id', $request->project);
+            });
         }
+
+ 
 
         // Filter berdasarkan range date (tanggal_dibuat_spb atau tanggal tertentu dari SPB Project)
         if ($request->has('tanggal_dibuat_spb')) {
@@ -91,82 +97,122 @@ class SPBController extends Controller
     public function store(CreateRequest $request)
     {
         DB::beginTransaction();
-
+    
         try {
             // Mendapatkan kategori SPB yang dipilih
             $spbCategory = SpbProject_Category::find($request->spbproject_category_id);
-
+    
             // Pastikan kategori ditemukan
             if (!$spbCategory) {
                 throw new \Exception("Kategori SPB tidak ditemukan.");
             }
-
-            // Cek apakah sudah ada SpbProject dengan project_id dan spbproject_category_id yang sama
-            $existingSpbProject = SpbProject::where('spbproject_category_id', $request->spbproject_category_id)
-                                            ->where('project_id', $request->project_id)
-                                            ->first();
-
-            // Jika ada SpbProject yang duplikat, return error
-            if ($existingSpbProject) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'SPB Project with the same project ID and category already exists.',
-                ], 400);
-            }
-
+    
             // Mendapatkan doc_no_spb terakhir berdasarkan kategori SPB
             $maxDocNo = SpbProject::where('spbproject_category_id', $request->spbproject_category_id)
                                     ->orderByDesc('doc_no_spb')
                                     ->first();
-
+    
             // Ambil bagian numerik terakhir dari doc_no_spb
             $maxNumericPart = $maxDocNo ? (int) substr($maxDocNo->doc_no_spb, strpos($maxDocNo->doc_no_spb, '-') + 1) : 0;
-
+    
             // Menambahkan data untuk doc_no_spb dan doc_type_spb
             $request->merge([
-                'doc_no_spb' => $this->generateDocNo($maxNumericPart, $spbCategory),
+                'doc_no_spb' => $this->generateDocNo($maxNumericPart, $spbCategory),  // Generate doc_no_spb
                 'doc_type_spb' => strtoupper($spbCategory->name),  // Menggunakan nama kategori SPB untuk doc_type
                 'spbproject_status_id' => SpbProject_Status::AWAITING,
-                'user_id' => auth()->user()->id, // Menetapkan user_id berdasarkan pengguna yang sedang login
+                'user_id' => auth()->user()->id,  // Menetapkan user_id berdasarkan pengguna yang sedang login
             ]);
-
+    
             // Membuat SPB baru dengan data yang telah dimodifikasi
-            $spbProject = SpbProject::create($request->except('produk_id')); // Jangan sertakan produk_id di sini
-
-            // Menyimpan produk yang terkait ke tabel pivot product_spb_project
-            $spbProject->products()->sync($request->produk_id);  // Menyinkronkan produk yang dipilih
-
+            $spbProject = SpbProject::create($request->only([
+                'doc_no_spb', 'doc_type_spb', 'spbproject_category_id', 'spbproject_status_id', 'user_id', 
+                'tanggal_berahir_spb', 'tanggal_dibuat_spb', 'unit_kerja', 'nama_toko'
+            ]));
+    
+            // Mengecek apakah produk_id ada atau tidak
+            if (empty($request->produk_id)) {
+                // Jika produk_id kosong, buat produk baru untuk setiap data produk yang ada
+                foreach ($request->produk as $productData) {
+                    $product = Product::create([
+                        'nama' => $productData['nama'], 
+                        'id_kategori' => $productData['id_kategori'],  
+                        'deskripsi' => $productData['deskripsi'],  
+                        'stok' => $productData['stok'],  
+                        'type_pembelian' => $productData['type_pembelian'],  
+                        'harga' => $productData['harga'],  
+                    ]);
+    
+                    // Pastikan produk berhasil dibuat dan ID-nya ada
+                    if ($product && $product->exists) {
+                        // Menyimpan produk yang baru dibuat ke tabel pivot
+                        $spbProject->products()->syncWithoutDetaching([$product->id]);
+                    } else {
+                        // Jika gagal menyimpan produk, lemparkan exception
+                        throw new \Exception("Produk baru gagal disimpan.");
+                    }
+                }
+            } else {
+                // Jika produk_id ada, cari produk yang sesuai
+                $products = Product::whereIn('id', $request->produk_id)->get();
+    
+                // Menyimpan produk yang terkait ke tabel pivot
+                foreach ($products as $product) {
+                    $spbProject->products()->syncWithoutDetaching([$product->id]);
+                }
+            }
+    
+            // Commit transaksi jika semua berhasil
             DB::commit();
-
+    
             return response()->json([
                 'status' => 'success',
-                'message' => "doc no $spbProject->doc_no_spb has been created",
+                'message' => "doc no $spbProject->doc_no_spb has been created and products have been associated",
             ]);
         } catch (\Throwable $th) {
+            // Rollback transaksi jika ada error
             DB::rollBack();
+    
             return response()->json([
                 'status' => 'error',
                 'message' => $th->getMessage(),
             ], 500);
         }
     }
+    
+
+    protected function generateDocNo($maxNumericPart, $spbCategory)
+    {
+        // Pastikan kategori SPB memiliki format yang benar
+        if (!$spbCategory || !isset($spbCategory->short)) {
+            throw new \Exception("Kategori SPB tidak valid atau tidak ditemukan.");
+        }
+
+        // Jika tidak ada doc_no_spb sebelumnya, mulai dari nomor 001
+        if ($maxNumericPart === 0) {
+            return "{$spbCategory->short}-001";
+        }
+
+        // Tambahkan 1 pada bagian numerik dan format menjadi 3 digit
+        $nextNumber = sprintf('%03d', $maxNumericPart + 1);
+        return "{$spbCategory->short}-$nextNumber";
+    }
 
     public function update(UpdateRequest $request, $docNoSpb)
     {
         DB::beginTransaction();
-
+    
         try {
             // Mendapatkan kategori SPB yang dipilih
             $spbCategory = SpbProject_Category::find($request->spbproject_category_id);
-
+    
             // Pastikan kategori ditemukan
             if (!$spbCategory) {
                 throw new \Exception("Kategori SPB tidak ditemukan.");
             }
-
+    
             // Mendapatkan SpbProject yang akan diperbarui
             $spbProject = SpbProject::where('doc_no_spb', $docNoSpb)->first();
-
+    
             // Pastikan SpbProject ditemukan
             if (!$spbProject) {
                 return response()->json([
@@ -174,24 +220,8 @@ class SPBController extends Controller
                     'message' => 'SPB Project not found.',
                 ], 404);
             }
-
-            // Cek apakah sudah ada SpbProject lain dengan project_id dan spbproject_category_id yang sama
-            // Kecuali untuk SpbProject yang sedang diperbarui
-            $existingSpbProject = SpbProject::where('spbproject_category_id', $request->spbproject_category_id)
-                                            ->where('project_id', $request->project_id)
-                                            ->where('doc_no_spb', '!=', $docNoSpb)
-                                            ->first();
-
-            // Jika ada SpbProject yang duplikat, return error
-            if ($existingSpbProject) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'SPB Project with the same project ID and category already exists.',
-                ], 400);
-            }
-
+    
             // Mengupdate data SPB Project sesuai dengan input yang ada pada request
-            // Hanya data yang ada pada request yang akan diupdate, tidak ada penambahan manual
             $spbProject->update($request->only([
                 'spbproject_category_id',
                 'project_id',
@@ -200,17 +230,138 @@ class SPBController extends Controller
                 'unit_kerja',
                 'nama_toko'
             ]));
-
-            // Menyinkronkan produk yang terkait ke tabel pivot product_spb_project
-            $spbProject->products()->sync($request->produk_id);  // Menyinkronkan produk sesuai dengan array produk_id
-
+    
+            // Mengecek apakah produk_id ada atau tidak
+            if (!empty($request->produk_id)) {
+                // Jika produk_id ada, cari produk yang sesuai
+                $products = Product::whereIn('id', $request->produk_id)->get();
+    
+                // Menyinkronkan produk yang terkait ke tabel pivot product_spb_project
+                // Hanya produk yang ada pada request yang akan disinkronkan, yang tidak ada akan dihapus
+                $spbProject->products()->sync($products->pluck('id')->toArray());
+    
+                // Update data produk yang ada sesuai dengan input di request
+                foreach ($products as $product) {
+                    $productData = collect($request->produk)->firstWhere('id', $product->id);
+                    if ($productData) {
+                        $product->update([
+                            'nama' => $productData['nama'] ?? $product->nama,
+                            'id_kategori' => $productData['id_kategori'] ?? $product->id_kategori,
+                            'deskripsi' => $productData['deskripsi'] ?? $product->deskripsi,
+                            'stok' => $productData['stok'] ?? $product->stok,
+                            'type_pembelian' => $productData['type_pembelian'] ?? $product->type_pembelian,
+                            'harga' => $productData['harga'] ?? $product->harga,
+                        ]);
+                    }
+                }
+            } else {
+                // Jika produk_id kosong, hanya update produk yang sudah ada
+                foreach ($spbProject->products as $product) {
+                    $productData = collect($request->produk)->firstWhere('id', $product->id);
+                    if ($productData) {
+                        $product->update([
+                            'nama' => $productData['nama'] ?? $product->nama,
+                            'id_kategori' => $productData['id_kategori'] ?? $product->id_kategori,
+                            'deskripsi' => $productData['deskripsi'] ?? $product->deskripsi,
+                            'stok' => $productData['stok'] ?? $product->stok,
+                            'type_pembelian' => $productData['type_pembelian'] ?? $product->type_pembelian,
+                            'harga' => $productData['harga'] ?? $product->harga,
+                        ]);
+                    }
+                }
+            }
+    
+            // Commit transaksi jika semua berhasil
             DB::commit();
-
+    
             return response()->json([
                 'status' => 'success',
                 'message' => "doc no $spbProject->doc_no_spb has been updated",
             ]);
         } catch (\Throwable $th) {
+            // Rollback transaksi jika ada error
+            DB::rollBack();
+    
+            return response()->json([
+                'status' => 'error',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
+    
+
+
+    public function addspbtoproject(Request $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Temukan proyek berdasarkan ID
+            $project = Project::find($id);
+
+            if (!$project) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Project not found.',
+                ], 404);
+            }
+
+            // Validasi array doc_no_spb yang diterima dalam request
+            $docNos = $request->input('doc_no_spb', []);
+
+            if (empty($docNos)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No SPB doc_no_spb provided.',
+                ], 400);
+            }
+
+            // Loop setiap doc_no_spb dan tambahkan ke proyek yang dipilih
+            foreach ($docNos as $docNo) {
+                $SpbProject = SpbProject::where('doc_no_spb', $docNo)->first();
+
+                if (!$SpbProject) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "SPB Project with doc_no_spb {$docNo} not found.",
+                    ], 404);
+                }
+
+                // Tambahkan relasi many-to-many ke proyek
+                $project->spbProjects()->attach($SpbProject->doc_no_spb, ['project_id' => $project->id]);
+
+                // Buat atau update log status
+                $existingLog = $SpbProject->logs()->where('tab', SpbProject::TAB_VERIFIED)
+                                                    ->where('name', auth()->user()->name)
+                                                    ->first();
+
+                if ($existingLog) {
+                    // Update log yang sudah ada
+                    $existingLog->update([
+                        'message' => 'SPB Project has been accepted.',
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    // Buat log baru jika belum ada
+                    LogsSPBProject::create([
+                        'spb_project_id' => $SpbProject->doc_no_spb,
+                        'tab' => SpbProject::TAB_VERIFIED,
+                        'name' => auth()->user()->name,
+                        'message' => 'SPB Project has been accepted.',
+                    ]);
+                }
+            }
+
+            // Commit transaksi
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "SPB Projects have been successfully assigned to the project.",
+            ], 200);
+
+        } catch (\Throwable $th) {
+            // Rollback transaksi jika terjadi error
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
@@ -244,23 +395,6 @@ class SPBController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
-    
-    protected function generateDocNo($maxNumericPart, $spbCategory)
-    {
-        // Pastikan kategori SPB memiliki format yang benar
-        if (!$spbCategory || !isset($spbCategory->short)) {
-            throw new \Exception("Kategori SPB tidak valid atau tidak ditemukan.");
-        }
-
-        // Jika tidak ada doc_no_spb sebelumnya, mulai dari nomor 001
-        if ($maxNumericPart === 0) {
-            return "{$spbCategory->short}-001";
-        }
-
-        // Tambahkan 1 pada bagian numerik dan format menjadi 3 digit
-        $nextNumber = sprintf('%03d', $maxNumericPart + 1);
-        return "{$spbCategory->short}-$nextNumber";
-    }
 
     public function show($id)
     {
@@ -277,10 +411,13 @@ class SPBController extends Controller
             "doc_no_spb" => $spbProject->doc_no_spb,
             "doc_type_spb" => $spbProject->doc_type_spb,
             "status" => $this->getStatus($spbProject),
-            'project' => $spbProject->project ? [ // Periksa apakah ada data project
-                'id' => $spbProject->project->id,
-                'nama' => $spbProject->project->name,
-            ] : null,   
+            'project' => $spbProject->project->isNotEmpty() ? [
+                'id' => $spbProject->project->first()->id,
+                'nama' => $spbProject->project->first()->name,
+            ] : [
+                'id' => 'N/A',
+                'nama' => 'No Project Available'
+            ],  
             'produk' => $spbProject->products ? $spbProject->products->map(function ($product) {
                 return [
                     'id' => $product->id,
