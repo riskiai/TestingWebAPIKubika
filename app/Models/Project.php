@@ -36,7 +36,7 @@ class Project extends Model
     const DEFAULT_STATUS_PROJECT = self::INFORMASI_PROYEK;
 
     protected $primaryKey = 'id'; // Set doc_no as the primary key
-    public $incrementing = false; // Indicate that the primary key is not auto-incrementing
+    // public $incrementing = false; 
     protected $table = 'projects';
     protected $keyType = 'string';
 
@@ -58,10 +58,46 @@ class Project extends Model
         'status_step_project',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            // Ambil tahun dari input 'date' yang dimasukkan oleh pengguna
+            $year = date('y', strtotime($model->date)); // Ambil tahun dari input tanggal
+
+            // Tentukan ID proyek berdasarkan tahun
+            $model->id = 'PRO-' . $year . '-' . $model->generateSequenceNumber($year);
+
+            $model->request_status_owner = self::DEFAULT_STATUS;
+            $model->status_step_project = self::DEFAULT_STATUS_PROJECT;
+        });
+    }
+
+        /**
+     * Generate urutan ID proyek berdasarkan tahun yang diberikan
+     */
+    protected function generateSequenceNumber($year)
+    {
+        // Ambil ID proyek terakhir untuk tahun yang sama
+        $lastId = static::where('id', 'like', 'PRO-' . $year . '%')->max('id');
+        
+        if ($lastId) {
+            // Ambil nomor urut dari ID terakhir dan increment
+            $numericPart = (int) substr($lastId, strrpos($lastId, '-') + 1);
+            $nextNumber = sprintf('%03d', $numericPart + 1);
+        } else {
+            // Jika belum ada, mulai dari nomor urut 001
+            $nextNumber = '001';
+        }
+        
+        return $nextNumber;
+    }
+
     /**
      * Boot method untuk menangani generate ID dan status default.
      */
-    protected static function boot()
+    /* protected static function boot()
     {
         parent::boot();
 
@@ -73,12 +109,12 @@ class Project extends Model
             $model->request_status_owner = self::DEFAULT_STATUS;
             $model->status_step_project = self::DEFAULT_STATUS_PROJECT;
         });
-    }
+    } */
 
     /**
      * Generate ID urutan proyek
      */
-    public static function generateSequenceNumber()
+    /* public static function generateSequenceNumber()
     {
         // Ambil proyek terakhir berdasarkan ID
         $lastProject = self::orderBy('id', 'desc')->first();
@@ -103,7 +139,7 @@ class Project extends Model
     
         Log::info("Generated sequence number: $generatedId");
         return $generatedId;
-    }
+    } */
 
     /**
      * Perbarui status proyek berdasarkan kondisi.

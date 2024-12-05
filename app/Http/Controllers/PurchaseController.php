@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use App\Facades\Filters\Purchase\ByTab;
 use App\Facades\Filters\Purchase\ByTax;
 use App\Facades\Filters\Purchase\ByDate;
-use Illuminate\Support\Facades\Pipeline;
+use Illuminate\Pipeline\Pipeline;
 use App\Facades\Filters\Purchase\BySearch;
 use App\Facades\Filters\Purchase\ByStatus;
 use App\Facades\Filters\Purchase\ByVendor;

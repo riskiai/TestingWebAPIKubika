@@ -96,7 +96,12 @@ class ProjectController extends Controller
             $query->whereYear('date', $year);
         }
 
-        $projects = $query->orderBy('created_at', 'desc')->paginate($request->per_page);
+         // Urutkan berdasarkan tahun proyek (yang ada pada id proyek), kemudian urutkan berdasarkan created_at dan updated_at
+         $projects = $query->selectRaw('*, CAST(SUBSTRING_INDEX(id, "-", -2) AS UNSIGNED) as year')
+         ->orderBy('year', 'desc')  // Urutkan berdasarkan tahun (PRO-25 vs PRO-24)
+         ->orderBy('updated_at', 'desc') // Jika tahun sama, urutkan berdasarkan updated_at
+         ->orderBy('created_at', 'desc') // Jika tahun dan updated_at sama, urutkan berdasarkan created_at
+         ->paginate($request->per_page);
 
         return new ProjectCollection($projects);
     }
@@ -183,14 +188,23 @@ class ProjectController extends Controller
         DB::beginTransaction(); // Mulai transaksi manual
 
         try {
+            // Temukan perusahaan berdasarkan client_id
             $company = Company::find($request->client_id);
-            if ($company->contact_type_id != ContactType::CLIENT) {
+            if (!$company || $company->contact_type_id != ContactType::CLIENT) {
                 return MessageActeeve::warning("This contact is not a client type");
             }
 
             // Persiapkan data yang akan disimpan
             $project = new Project();
-            $project->id = Project::generateSequenceNumber(); // Panggil ID generator
+
+            // Ambil tahun dari tanggal input
+            $year = date('y', strtotime($request->date)); // Ambil tahun dua digit dari input tanggal
+
+            // Generate ID dengan mengirimkan tahun ke function generateSequenceNumber
+            $sequenceNumber = Project::generateSequenceNumber($year); // Panggil ID generator dengan $year
+            $project->id = 'PRO-' . $year . '-' . $sequenceNumber; // Generate ID
+
+            // Isi field lainnya
             $project->name = $request->name;
             $project->billing = $request->billing;
             $project->cost_estimate = $request->cost_estimate;
@@ -209,22 +223,18 @@ class ProjectController extends Controller
                 $project->file = null; // Tidak ada file, set null
             }
 
-
             // Simpan proyek ke database
             $project->save();
 
             // Log ID proyek setelah berhasil disimpan
-            Log::info("Project created successfully. ID: {$project->id}");
-
-            // Perbarui status proyek
-            $project->updateStepStatus();
+            Log::info("Project created successfully with ID: " . $project->id);
 
             DB::commit(); // Commit transaksi
-            return MessageActeeve::success("Project {$project->name} has been created");
-        } catch (\Throwable $th) {
-            DB::rollBack(); // Rollback jika ada error
-            Log::error("Error creating project: {$th->getMessage()}");
-            return MessageActeeve::error($th->getMessage());
+            return MessageActeeve::success("Project created successfully.");
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback jika terjadi error
+            Log::error("Error creating project: " . $e->getMessage());
+            return MessageActeeve::error("Error creating project.");
         }
     }
 
@@ -308,6 +318,17 @@ class ProjectController extends Controller
             $request->merge([
                 'company_id' => $company->id,
             ]);
+
+             // Ambil tahun dari tanggal baru dan tanggal lama
+            $newYear = date('y', strtotime($request->date));  // Tahun dari tanggal baru
+            $currentYear = date('y', strtotime($project->date)); // Tahun dari tanggal lama
+
+            // Jika tahun berubah, update ID proyek
+            if ($newYear != $currentYear) {
+                // Generate new ID for the new year
+                $newId = 'PRO-' . $newYear . '-' . Project::generateSequenceNumber($newYear); // Static call
+                $project->id = $newId; // Update ID proyek dengan ID baru
+            }
     
             // Jika ada file baru (attachment_file), hapus file lama dan simpan yang baru
             if ($request->hasFile('attachment_file')) {
