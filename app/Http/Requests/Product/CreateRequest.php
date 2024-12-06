@@ -27,7 +27,7 @@ class CreateRequest extends FormRequest
     {
         return [
             'nama' => 'required|string|max:255',
-            'id_kategori' => 'required|exists:kategori,id',
+            'id_kategori' => 'nullable|exists:kategori,id',
             'deskripsi' => 'nullable|string',
             'deskripsi' => 'nullable|string',
             'stok' => 'required|integer|min:0',

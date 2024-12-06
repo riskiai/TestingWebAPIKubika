@@ -23,7 +23,7 @@ class PurchaseCollection extends ResourceCollection
             $data[$key] = [
                 "doc_no" => $purchase->doc_no,
                 "doc_type" => $purchase->doc_type,
-                "purchase_type" => $purchase->purchase_id == Purchase::TYPE_EVENT ? Purchase::TEXT_EVENT : Purchase::TEXT_OPERATIONAL,
+                "purchase_type" => $purchase->type_purchase_id == Purchase::TYPE_EVENT ? Purchase::TEXT_EVENT : Purchase::TEXT_OPERATIONAL,
                 "vendor_name" => [
                     "id" => $purchase->company->id,
                     "name" => $purchase->company->name,
@@ -40,7 +40,7 @@ class PurchaseCollection extends ResourceCollection
                 "date" => $purchase->date,
                 "due_date" => $purchase->due_date,
                 "ppn" => $this->getPpn($purchase),
-                "logs_rejected" => $purchase->logs()->select('name', 'note_reject', 'created_at')->where('note_reject', '!=', null)->orderBy('id', 'desc')->get(),
+                // "logs_rejected" => $purchase->logs()->select('name', 'note_reject', 'created_at')->where('note_reject', '!=', null)->orderBy('id', 'desc')->get(),
                 "created_at" => $purchase->created_at->format('Y-m-d'),
                 "updated_at" => $purchase->updated_at->format('Y-m-d'),                
                 
@@ -88,40 +88,66 @@ class PurchaseCollection extends ResourceCollection
     {
         $data = [];
 
-        if ($purchase->tab == Purchase::TAB_SUBMIT) {
-            $data = [
-                "id" => $purchase->purchaseStatus->id,
-                "name" => $purchase->purchaseStatus->name,
-            ];
+        // Nama tab berdasarkan konstanta yang ada di model SpbProject
+        $tabNames = [
+            Purchase::TAB_SUBMIT => 'Submit',
+            Purchase::TAB_VERIFIED => 'Verified',
+            Purchase::TAB_PAYMENT_REQUEST => 'Payment Request',
+            Purchase::TAB_PAID => 'Paid',
+        ];
 
-            if ($purchase->purchase_status_id == PurchaseStatus::REJECTED) {
-                $data["note"] = $purchase->reject_note;
+        // Ambil nama tab berdasarkan nilai tab
+        $tabName = $tabNames[$purchase->tab_purchase] ?? 'Unknown';  // Default jika tidak ditemukan
+
+        // Pengecekan status yang berkaitan dengan TAB_SUBMIT
+        if ($purchase->tab_purchase == Purchase::TAB_SUBMIT) {
+            // Pastikan status ada, jika tidak set default ke AWAITING
+            if ($purchase->status) {
+                $data = [
+                    "id" => $purchase->status->id ?? PurchaseStatus::AWAITING,
+                    "name" => $purchase->status->name ?? PurchaseStatus::TEXT_AWAITING,
+                    "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                ];
+
+                // Jika status adalah REJECTED, tambahkan note
+                if ($purchase->status->id == PurchaseStatus::REJECTED) {
+                    $data["reject_note"] = $purchase->reject_note ?? 'No reject note';
+                }
+            } else {
+                // Jika status tidak ada, set ke AWAITING
+                $data = [
+                    "id" => PurchaseStatus::AWAITING,
+                    "name" => PurchaseStatus::TEXT_AWAITING,
+                    "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                ];
             }
         }
 
-        if ($purchase->tab == Purchase::TAB_PAID) {
+        // Pengecekan untuk TAB_PAID
+        elseif ($purchase->tab_purchase == Purchase::TAB_PAID) {
             $data = [
-                "id" => $purchase->purchaseStatus->id,
-                "name" => $purchase->purchaseStatus->name,
+                "id" => $purchase->status->id ?? null,
+                "name" => $purchase->status ? $purchase->status->name : 'Unknown',
+                "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
             ];
         }
 
-        if (
-            $purchase->tab == Purchase::TAB_VERIFIED ||
-            $purchase->tab == Purchase::TAB_PAYMENT_REQUEST
-        ) {
+        // Pengecekan untuk TAB_VERIFIED
+        elseif ($purchase->tab_purchase == Purchase::TAB_VERIFIED) {
             $dueDate = Carbon::createFromFormat("Y-m-d", $purchase->due_date);
             $nowDate = Carbon::now();
 
             $data = [
                 "id" => PurchaseStatus::OPEN,
                 "name" => PurchaseStatus::TEXT_OPEN,
+                "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
             ];
 
             if ($nowDate->gt($dueDate)) {
                 $data = [
                     "id" => PurchaseStatus::OVERDUE,
                     "name" => PurchaseStatus::TEXT_OVERDUE,
+                    "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
             }
 
@@ -129,10 +155,40 @@ class PurchaseCollection extends ResourceCollection
                 $data = [
                     "id" => PurchaseStatus::DUEDATE,
                     "name" => PurchaseStatus::TEXT_DUEDATE,
+                    "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
             }
         }
 
+        // Pengecekan untuk TAB_PAYMENT_REQUEST
+        elseif ($purchase->tab_purchase == Purchase::TAB_PAYMENT_REQUEST) {
+            $dueDate = Carbon::createFromFormat("Y-m-d", $purchase->due_date);
+            $nowDate = Carbon::now();
+
+            $data = [
+                "id" => PurchaseStatus::OPEN,
+                "name" => PurchaseStatus::TEXT_OPEN,
+                "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+            ];
+
+            if ($nowDate->gt($dueDate)) {
+                $data = [
+                    "id" => PurchaseStatus::OVERDUE,
+                    "name" => PurchaseStatus::TEXT_OVERDUE,
+                    "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                ];
+            }
+
+            if ($nowDate->toDateString() == $purchase->due_date) {
+                $data = [
+                    "id" => PurchaseStatus::DUEDATE,
+                    "name" => PurchaseStatus::TEXT_DUEDATE,
+                    "tab_purchase" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                ];
+            }
+        }
+
+        // Kembalikan data status yang sesuai dengan tab
         return $data;
     }
 

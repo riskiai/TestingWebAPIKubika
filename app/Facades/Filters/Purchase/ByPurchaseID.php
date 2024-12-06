@@ -18,7 +18,7 @@ class ByPurchaseID
             return $next($query);
         }
 
-        $query->where('purchase_id', request('purchase_id'));
+        $query->where('type_purchase_id', request('type_purchase_id'));
 
         return $next($query);
     }
