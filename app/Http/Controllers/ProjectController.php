@@ -100,7 +100,7 @@ class ProjectController extends Controller
         $projects = $query->selectRaw('*, CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(id, "-", -2), "-", 1) AS UNSIGNED) as year')
         ->selectRaw('CAST(SUBSTRING_INDEX(id, "-", -1) AS UNSIGNED) as increment')
         ->orderBy('year', 'desc')  // Urutkan berdasarkan tahun (PRO-25 vs PRO-24)
-        ->orderBy('increment', 'desc')  // Urutkan berdasarkan increment (001, 002, ...)
+        ->orderBy('increment', 'asc')  // Urutkan berdasarkan increment (001, 002, ...)
         ->orderBy('updated_at', 'desc') // Jika tahun dan increment sama, urutkan berdasarkan updated_at
         ->orderBy('created_at', 'desc') // Jika tahun, increment, dan updated_at sama, urutkan berdasarkan created_at
         ->paginate($request->per_page);
