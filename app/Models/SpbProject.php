@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class SpbProject extends Model
 {
@@ -14,6 +15,8 @@ class SpbProject extends Model
     protected $primaryKey = 'doc_no_spb';
     public $incrementing = false;
     protected $keyType = 'string';
+
+    const ATTACHMENT_FILE_SPB = 'attachment/spbproject';
 
     const TAB_SUBMIT = 1;
     const TAB_VERIFIED = 2;
@@ -27,6 +30,7 @@ class SpbProject extends Model
         'spbproject_status_id',
         'tab',
         'user_id',
+        'company_id',
         'project_id',
         'produk_id',
         'unit_kerja',
@@ -38,6 +42,7 @@ class SpbProject extends Model
         'know_marketing',
         'know_kepalagudang',
         'request_owner',
+        'file_pembayaran',
     ];
 
     public function category(): BelongsTo
@@ -49,6 +54,29 @@ class SpbProject extends Model
     {
         return $this->belongsTo(SpbProject_Status::class, 'spbproject_status_id');
     }
+
+     // Tambahkan relasi hasMany ke ProductCompanySpbProject
+     public function productCompanySpbprojects()
+     {
+         return $this->hasMany(ProductCompanySpbproject::class, 'spb_project_id', 'doc_no_spb');
+     }
+ 
+     // Relasi dengan Vendor (Company)
+     public function vendors()
+     {
+         return $this->belongsToMany(Company::class, 'product_company_spbproject', 'spb_project_id', 'company_id');
+     }
+ 
+     // Relasi SpbProject ke Product
+     public function products()
+     {
+         return $this->belongsToMany(Product::class, 'product_company_spbproject', 'spb_project_id', 'produk_id');
+     }
+
+     public function company(): HasOne
+     {
+         return $this->hasOne(Company::class, 'id', 'company_id');
+     }
 
 
     public function user(): BelongsTo
@@ -64,12 +92,6 @@ class SpbProject extends Model
     public function project()
     {
         return $this->belongsTo(Project::class, 'project_id', 'id'); // Menggunakan 'project_id' di tabel spb_projects
-    }
-
-
-    public function products()
-    {
-        return $this->belongsToMany(Product::class, 'product_spb_project', 'spb_project_id', 'product_id');
     }
 
     public function logs()

@@ -51,7 +51,7 @@ class ProjectController extends Controller
         $query = Project::query();
                  
         // Eager load untuk mengurangi query N+1
-        $query->with(['company', 'user', 'product']);
+        $query->with(['company', 'user', 'product', 'tenagaKerja']);
 
         // Filter pencarian
         if ($request->has('search')) {
@@ -94,6 +94,14 @@ class ProjectController extends Controller
         if ($request->has('year')) {
             $year = $request->year;
             $query->whereYear('date', $year);
+        }
+
+       // Filter berdasarkan tenaga kerja (tukang)
+        if ($request->has('tukang')) {
+            $tukangIds = explode(',', $request->tukang); // Mengambil ID tukang dari parameter yang dipisah dengan koma
+            $query->whereHas('tenagaKerja', function ($query) use ($tukangIds) {
+                $query->whereIn('users.id', $tukangIds); // Pastikan menggunakan 'users.id'
+            });
         }
 
         // Urutkan berdasarkan tahun dan increment ID proyek

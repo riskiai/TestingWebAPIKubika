@@ -22,6 +22,7 @@ class Product extends Model
         'type_pembelian',
         'harga',
         'stok',
+        'ongkir',
     ];
 
     // Relasi ke model Kategori (many to one)

@@ -27,6 +27,18 @@ class ProjectCollection extends ResourceCollection
                     'name' => optional($project->company)->name,
                     'contact_type' => $project->company->contactType->name,
                 ],
+                'tukang' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'divisi' => [
+                            'id' => optional($user->divisi)->id,
+                            'name' => optional($user->divisi)->name,
+                        ],
+                    ];
+                }),
                 // Menambahkan data spbProjects yang terkait dengan project
                 'spb_project' => $project->spbProjects->map(function ($spbProject) {
                     return [
@@ -67,20 +79,6 @@ class ProjectCollection extends ResourceCollection
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
                 ],
-
-                'user' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
-                ->get()
-                ->map(function ($user) {
-                    return [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'divisi' => [
-                            'id' => optional($user->divisi)->id,
-                            'name' => optional($user->divisi)->name,
-                        ],
-                    ];
-                }),
-
                 'date' => $project->date,
                 'name' => $project->name,
                 'billing' => $project->billing,

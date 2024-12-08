@@ -25,11 +25,12 @@ class ProductCollection extends ResourceCollection
                 'stok' => $product->stok, 
                 'type_pembelian' => $product->type_pembelian, 
                 'harga'=> $product->harga, 
-               'kategori' => [
-                    'id' => optional($product->kategori)->id,
-                    'name' => optional($product->kategori)->name,
-                    'kode_kategori' => optional($product->kategori)->kode_kategori,
-                ],
+                'ongkir' => $product->ongkir,
+                'kategori' => [
+                        'id' => optional($product->kategori)->id,
+                        'name' => optional($product->kategori)->name,
+                        'kode_kategori' => optional($product->kategori)->kode_kategori,
+                    ],
                 'created_at' => $product->created_at,
                 'updated_at' => $product->updated_at,
             ];

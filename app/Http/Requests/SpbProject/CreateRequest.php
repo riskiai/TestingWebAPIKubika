@@ -26,14 +26,17 @@ class CreateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'spbproject_category_id' => 'nullable|exists:spb_project__categories,id',
-            'project_id' => 'nullable|string|max:255',
-            'produk_id' => 'nullable|array',
-           'produk_id.*' => 'nullable|exists:products,id|numeric|min:1',
-            'tanggal_berahir_spb' => 'nullable|date',
-            'tanggal_dibuat_spb' => 'nullable|date',
-            'unit_kerja' => 'nullable|string|max:255',
-            'nama_toko' => 'nullable|string|max:255',
+            'spbproject_category_id' => 'required|exists:spb_project__categories,id',
+            'project_id' => 'required|string|max:255',
+            'tanggal_dibuat_spb' => 'required|date',
+            'tanggal_berahir_spb' => 'required|date',
+            'unit_kerja' => 'required|string|max:255',
+            'vendors' => 'required|array',
+            'vendors.*.vendor_id' => 'required|exists:companies,id',
+            'vendors.*.produk' => 'required|array',
+            'vendors.*.produk.*.produk_id' => 'nullable|array',  // Produk ID bisa berupa array kosong atau berisi ID produk
+            'vendors.*.produk.*.produk_id.*' => 'nullable|integer|exists:products,id',  // Setiap produk_id dalam array harus valid
+            'vendors.*.produk.*.produk_data' => 'nullable|array',
         ];
     }
 

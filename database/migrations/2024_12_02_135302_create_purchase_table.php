@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('company_id')->nullable();
             $table->unsignedBigInteger('purchase_category_id'); 
             $table->unsignedBigInteger('purchase_status_id');
+            $table->unsignedBigInteger('user_id');
             $table->integer('type_purchase_id')->nullable();
             $table->string('tab_purchase')->default('1');
             $table->text('description')->nullable();
@@ -33,6 +34,7 @@ return new class extends Migration
             $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
             $table->foreign('purchase_category_id')->references('id')->on('purchase_category')->onDelete('cascade');
             $table->foreign('purchase_status_id')->references('id')->on('purchase_status')->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

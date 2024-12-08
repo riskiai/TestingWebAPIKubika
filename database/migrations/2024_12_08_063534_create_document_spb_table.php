@@ -11,8 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('spb_projects', function (Blueprint $table) {
-            $table->string('tab')->default('1');
+        Schema::create('document_spb', function (Blueprint $table) {
+            $table->id();
+            $table->string('doc_no_spb')->nullable();
+            $table->string('file_name')->nullable();
+            $table->string('file_path')->nullable();
+            $table->timestamps();
         });
     }
 
@@ -21,8 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('spb_projects', function (Blueprint $table) {
-            $table->dropColumn('tab');
-        });
+        Schema::dropIfExists('document_spb');
     }
 };

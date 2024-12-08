@@ -18,16 +18,21 @@ return new class extends Migration
             Schema::dropIfExists('spb_projects');
             $table->string('doc_no_spb')->primary(); // Primary key doc_no
             $table->string('doc_type_spb')->nullable(); // Jenis dokumen (misalnya: SPB, Invoice)
+            $table->unsignedBigInteger('company_id')->nullable();
             $table->unsignedBigInteger('spbproject_category_id')->nullable();
             $table->unsignedBigInteger('spbproject_status_id')->nullable();
             $table->unsignedBigInteger('user_id')->nullable(); // role_kepalagudang
             $table->string('project_id')->nullable();
+            $table->string('tab_spb')->default('1');
             $table->unsignedBigInteger('produk_id')->nullable();
             $table->date('tanggal_berahir_spb')->nullable(); // Tanggal berakhir SPB
             $table->date('tanggal_dibuat_spb')->nullable();
             $table->string('unit_kerja')->nullable();
             $table->string('nama_toko')->nullable();
             $table->string('reject_note')->nullable();
+            $table->string('ppn')->nullable();
+            $table->string('pph')->nullable();
+            $table->string('file_pembayaran')->nullable();
             $table->timestamps(); // created_at dan updated_at
 
             // Menambahkan kolom-kolom baru di bawah
@@ -42,6 +47,7 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
             $table->foreign('produk_id')->references('id')->on('products')->onDelete('cascade');
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
         });
     }
 

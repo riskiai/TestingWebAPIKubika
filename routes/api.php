@@ -142,4 +142,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::get('purchase', [PurchaseController::class, 'index']);
+    Route::get('purchase/{id}', [PurchaseController::class, 'show']);
+    Route::get('purchase-counting', [PurchaseController::class, 'counting']);
+    Route::post('purchase-create', [PurchaseController::class, 'store']);
+    Route::put('purchase-update/{id}', [PurchaseController::class, 'update']);
+    Route::delete('purchase-destroy/{id}', [PurchaseController::class, 'destroy']);
+   
 });

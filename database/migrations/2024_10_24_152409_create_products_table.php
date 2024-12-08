@@ -14,12 +14,13 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id(); // Primary key: id produk
             $table->string('nama'); // Nama produk
-            $table->unsignedBigInteger('id_kategori'); // Foreign key: id kategori
+            $table->unsignedBigInteger('id_kategori')->nullable(); 
             $table->text('deskripsi')->nullable(); // Deskripsi produk
             $table->string('kode_produk')->unique(); // Kode produk, harus unik
             $table->string('type_pembelian')->nullable(); // Contoh: box, satuan, dll
             $table->string('harga')->nullable(); // Contoh: box, satuan, dll
-            $table->integer('stok'); // Stok produk
+            $table->integer('stok')->nullable(); // Stok produk
+            $table->string('ongkir')->nullable();
             $table->timestamps(); // Created at & updated at
 
             // Foreign key constraint

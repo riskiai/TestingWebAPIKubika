@@ -65,6 +65,7 @@ class ProdukController extends Controller
                 'stok' => $request->stok,
                 'type_pembelian' => $request->type_pembelian,
                 'harga' => $request->harga,
+                'ongkir' => $request->ongkir,
             ]);
 
             DB::commit();
@@ -97,6 +98,7 @@ class ProdukController extends Controller
                 'stok' => $product->stok,
                 'type_pembelian' => $product->type_pembelian,
                 'harga' => $product->harga,
+                'ongkir' => $product->ongkir,
                 'kategori' => [
                     'id' => $product->kategori->id,
                     'name' => $product->kategori->name,
@@ -163,6 +165,7 @@ class ProdukController extends Controller
                 'kode_produk' => $newKodeProduk, // Update kode produk
                 'type_pembelian' => $request->input('type_pembelian', $product->stok),
                 'harga' => $request->input('harga', $product->stok),
+                'ongkir' => $request->input('ongkir', $product->ongkir),
             ]);
 
             DB::commit();
