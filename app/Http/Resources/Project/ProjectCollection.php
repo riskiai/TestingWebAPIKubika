@@ -27,6 +27,17 @@ class ProjectCollection extends ResourceCollection
                     'name' => optional($project->company)->name,
                     'contact_type' => $project->company->contactType->name,
                 ],
+                'produk' => optional($project->product)->map(function ($product) {
+                        return [
+                            'id' => $product->id,
+                            'nama' => $product->nama,
+                            'deskripsi' => $product->deskripsi,
+                            'stok' => $product->stok,
+                            'harga' => $product->harga,
+                            'type_pembelian' => $product->type_pembelian,
+                            'kode_produk' => $product->kode_produk,
+                        ];
+                    }),
                 'tukang' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
                 ->get()
                 ->map(function ($user) {
@@ -85,12 +96,13 @@ class ProjectCollection extends ResourceCollection
                 'cost_estimate' => $project->cost_estimate,
                 'margin' => $project->margin,
                 'percent' => $this->formatPercent($project->percent),
+                'harga_type_project' => $project->harga_type_project ?? 0,
                 'file_attachment' => [
                     'name' => $project->file ? date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->file, PATHINFO_EXTENSION) : null,
                     'link' => $project->file ? asset("storage/$project->file") : null,
                 ],
                 'cost_progress' => $project->status_cost_progress,
-                'status_step_project' => $this->getStepStatus($project->status_step_project),
+                // 'status_step_project' => $this->getStepStatus($project->status_step_project),
                 'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
                 'created_at' => $project->created_at,
                 'updated_at' => $project->updated_at,
@@ -140,7 +152,7 @@ class ProjectCollection extends ResourceCollection
         ];
     }
 
-    protected function getStepStatus($step)
+   /*  protected function getStepStatus($step)
     {
         $steps = [
             Project::INFORMASI_PROYEK => "Informasi Proyek",
@@ -150,9 +162,9 @@ class ProjectCollection extends ResourceCollection
     
         return [
             "id" => $step,
-            "name" => $steps[$step] ?? "Unknown", // Tetap tampilkan "Unknown" jika step tidak dikenal
+            "name" => $steps[$step] ?? "Unknown", 
         ];
-    }
+    } */
     
 
     /**

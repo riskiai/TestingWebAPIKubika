@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Company;
+use App\Models\Product;
 use App\Models\Project;
 use App\Models\ContactType;
 use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
+use App\Models\ProjectUserProduk;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -224,30 +226,51 @@ class ProjectController extends Controller
             $project->company_id = $company->id;
             $project->user_id = auth()->user()->id;
             $project->request_status_owner = Project::DEFAULT_STATUS;
-            $project->status_step_project = Project::DEFAULT_STATUS_PROJECT;
+
+            // Set harga_type_project to 0 if it's not provided
+            $project->harga_type_project = $request->has('harga_type_project') ? $request->harga_type_project : 0;
 
             // Periksa apakah file dilampirkan sebelum menyimpannya
             if ($request->hasFile('attachment_file')) {
                 $project->file = $request->file('attachment_file')->store(Project::ATTACHMENT_FILE);
             } else {
-                $project->file = null; // Tidak ada file, set null
+                $project->file = null; 
             }
 
-            // Simpan proyek ke database
-            $project->save();
+            if ($request->hasFile('attachment_file_spb')) {
+                $project->spb_file = $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB);
+            } else {
+                $project->spb_file = null; // Tidak ada file, set null
+            }
 
-            // Log ID proyek setelah berhasil disimpan
-            Log::info("Project created successfully with ID: " . $project->id);
+            // Simpan proyek ke database, ID proyek akan ter-set setelah ini
+            $project->save();  // Pastikan proyek disimpan terlebih dahulu untuk mendapatkan ID
 
+                // Ambil produk_id dan user_id dari request
+            $produkIds = $request->input('produk_id', []);
+            $userIds = $request->input('user_id', []);
+
+            // Sinkronisasi produk_id di pivot table
+            if (!empty($produkIds)) {
+                $project->product()->syncWithoutDetaching($produkIds); // Sinkronkan produk ke pivot table
+            }
+
+            // Sinkronisasi user_id di pivot table
+            if (!empty($userIds)) {
+                $project->tenagaKerja()->syncWithoutDetaching($userIds); // Sinkronkan user ke pivot table
+            }
+
+            // Commit transaksi
             DB::commit(); // Commit transaksi
             return MessageActeeve::success("Project created successfully.");
         } catch (\Exception $e) {
-            DB::rollBack(); // Rollback jika terjadi error
+            // Rollback jika terjadi error
+            DB::rollBack();
             Log::error("Error creating project: " . $e->getMessage());
             return MessageActeeve::error("Error creating project.");
         }
     }
-
+    
 
     public function UpdatePenggunaMuatan(UpdatePengunaMuatanRequest $request, $id)
     {
@@ -354,6 +377,12 @@ class ProjectController extends Controller
                     'file' => $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB),
                 ]);
             }
+
+            if ($request->has('harga_type_project')) {
+                $request->merge([
+                    'harga_type_project' => $request->input('harga_type_project') ?? 0, // Ensure it defaults to 0 if not provided
+                ]);
+            }
     
             // Update proyek dengan data baru
             $project->update($request->except(['produk_id', 'user_id'])); // Update proyek tanpa produk_id dan user_id
@@ -446,6 +475,29 @@ class ProjectController extends Controller
                 'name' => optional($project->company)->name,
                 'contact_type' => optional($project->company->contactType)->name,
             ],
+            'produk' => optional($project->product)->map(function ($product) {
+                    return [
+                        'id' => $product->id,
+                        'nama' => $product->nama,
+                        'deskripsi' => $product->deskripsi,
+                        'stok' => $product->stok,
+                        'harga' => $product->harga,
+                        'type_pembelian' => $product->type_pembelian,
+                        'kode_produk' => $product->kode_produk,
+                    ];
+                }),
+            'tukang' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'divisi' => [
+                        'id' => optional($user->divisi)->id,
+                        'name' => optional($user->divisi)->name,
+                    ],
+                ];
+            }),
             'spb_project' => $project->spbProjects->map(function ($spbProject) {
                 return [
                     'doc_no_spb' => $spbProject->doc_no_spb,
@@ -485,18 +537,6 @@ class ProjectController extends Controller
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
                 ],
-            'user' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'divisi' => [
-                        'id' => optional($user->divisi)->id,
-                        'name' => optional($user->divisi)->name,
-                    ],
-                ];
-            }),
             'date' => $project->date,
             'name' => $project->name,
             'billing' => $project->billing,

@@ -62,5 +62,10 @@ class Product extends Model
         return 'PRD-' . $nextNumber . '-' . $nameSlug . '-' . $date;
     }
     
-    
+    // public function projects()
+    // {
+    //     return $this->belongsToMany(Project::class, 'project_user_produk', 'produk_id', 'project_id')
+    //                 ->withPivot('user_id');
+    // }
+
 }

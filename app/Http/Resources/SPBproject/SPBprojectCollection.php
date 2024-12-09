@@ -38,14 +38,14 @@ class SPBprojectCollection extends ResourceCollection
                     'id' => 'N/A',
                     'nama' => 'No Project Available',
                 ],
-                  // Menangani data vendor
+                // Menangani data vendor dan produk
                 "vendors" => is_iterable($spbProject->vendors) ? $spbProject->vendors->map(function ($vendor) use ($spbProject) {
                     $produkData = [];
                     
-                    // Periksa apakah produk vendor ada
+                    // Ambil produk yang sudah ada di pivot table (relasi SPB dan Vendor)
                     if (is_iterable($vendor->products)) {
                         foreach ($vendor->products as $product) {
-                            // Jika produk sudah terdaftar dalam product_ids
+                            // Jika produk sudah terdaftar dalam product_ids (relasi di SPB)
                             if (in_array($product->id, $spbProject->product_ids ?? [])) {
                                 $produkData[] = [
                                     'produk_id' => [$product->id],
@@ -73,6 +73,7 @@ class SPBprojectCollection extends ResourceCollection
                         }
                     }
 
+                    // Menggabungkan produk yang sudah ada dan produk baru
                     return [
                         "vendor_id" => $vendor->id,
                         "produk" => array_merge($produkData, $newProdukData)

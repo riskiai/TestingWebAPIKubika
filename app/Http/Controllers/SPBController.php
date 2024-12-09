@@ -97,95 +97,106 @@ class SPBController extends Controller
 
     public function store(CreateRequest $request)
     {
-        DB::beginTransaction();
+            DB::beginTransaction();
 
-        try {
-            // Mendapatkan kategori SPB yang dipilih
-            $spbCategory = SpbProject_Category::find($request->spbproject_category_id);
-            if (!$spbCategory) {
-                throw new \Exception("Kategori SPB tidak ditemukan.");
-            }
-
-            // Mendapatkan project yang dipilih
-            $project = Project::find($request->project_id);
-            if (!$project) {
-                throw new \Exception("Project dengan ID {$request->project_id} tidak ditemukan.");
-            }
-
-            // Mendapatkan doc_no_spb terakhir berdasarkan kategori SPB
-            $maxDocNo = SpbProject::where('spbproject_category_id', $request->spbproject_category_id)
-                ->orderByDesc('doc_no_spb')
-                ->first();
-
-            // Ambil bagian numerik terakhir dari doc_no_spb
-            $maxNumericPart = $maxDocNo ? (int) substr($maxDocNo->doc_no_spb, strpos($maxDocNo->doc_no_spb, '-') + 1) : 0;
-
-            // Menambahkan data untuk doc_no_spb dan doc_type_spb
-            $request->merge([
-                'doc_no_spb' => $this->generateDocNo($maxNumericPart, $spbCategory),
-                'doc_type_spb' => strtoupper($spbCategory->name),
-                'spbproject_status_id' => SpbProject_Status::AWAITING,
-                'user_id' => auth()->user()->id,
-            ]);
-
-          
-           // Membuat SPB baru
-        $spbProject = SpbProject::create($request->only([
-            'doc_no_spb',
-            'doc_type_spb',
-            'spbproject_category_id',
-            'spbproject_status_id',
-            'user_id',
-            'project_id',
-            'unit_kerja',
-            'nama_toko',
-            'tanggal_dibuat_spb',
-            'tanggal_berahir_spb'
-        ]));
-
-        // Loop untuk menyimpan vendor dan produk
-        foreach ($request->vendors as $vendorData) {
-            $vendor = Company::find($vendorData['vendor_id']);
-            if (!$vendor || $vendor->contact_type_id != ContactType::VENDOR) {
-                throw new \Exception("Vendor ID {$vendorData['vendor_id']} tidak valid atau bukan vendor.");
-            }
-
-            // Loop untuk menyimpan produk terkait dengan vendor
-            foreach ($vendorData['produk'] as $produkData) {
-                // Jika produk_id ada, gunakan produk yang ada
-                if (count($produkData['produk_id']) > 0) {
-                    foreach ($produkData['produk_id'] as $produkId) {
-                        ProductCompanySpbProject::create([
-                            'spb_project_id' => $spbProject->doc_no_spb,
-                            'produk_id' => $produkId,
-                            'company_id' => $vendor->id
-                        ]);
-                    }
+            try {
+                // Mendapatkan kategori SPB yang dipilih
+                $spbCategory = SpbProject_Category::find($request->spbproject_category_id);
+                if (!$spbCategory) {
+                    throw new \Exception("Kategori SPB tidak ditemukan.");
                 }
 
-                // Jika produk_id kosong, maka buat produk baru dan simpan
-                if (count($produkData['produk_id']) == 0 && count($produkData['produk_data']) > 0) {
-                    foreach ($produkData['produk_data'] as $newProduct) {
-                        $newProduct = Product::create([
-                            'nama' => $newProduct['nama'],
-                            'id_kategori' => $newProduct['id_kategori'] ?: null, // Jika kosong, set null
-                            'deskripsi' => $newProduct['deskripsi'],
-                            'harga' => $newProduct['harga'],
-                            'stok' => $newProduct['stok'],
-                            'type_pembelian' => $newProduct['type_pembelian']
-                        ]);
+                // Mendapatkan project yang dipilih
+                $project = Project::find($request->project_id);
+                if (!$project) {
+                    throw new \Exception("Project dengan ID {$request->project_id} tidak ditemukan.");
+                }
 
-                        // Simpan produk baru tersebut ke pivot table
-                        ProductCompanySpbProject::create([
-                            'spb_project_id' => $spbProject->doc_no_spb,
-                            'produk_id' => $newProduct->id,
-                            'company_id' => $vendor->id
-                        ]);
+                // Mendapatkan doc_no_spb terakhir berdasarkan kategori SPB
+                $maxDocNo = SpbProject::where('spbproject_category_id', $request->spbproject_category_id)
+                    ->orderByDesc('doc_no_spb')
+                    ->first();
+
+                // Ambil bagian numerik terakhir dari doc_no_spb
+                $maxNumericPart = $maxDocNo ? (int) substr($maxDocNo->doc_no_spb, strpos($maxDocNo->doc_no_spb, '-') + 1) : 0;
+
+                // Menambahkan data untuk doc_no_spb dan doc_type_spb
+                $request->merge([
+                    'doc_no_spb' => $this->generateDocNo($maxNumericPart, $spbCategory),
+                    'doc_type_spb' => strtoupper($spbCategory->name),
+                    'spbproject_status_id' => SpbProject_Status::AWAITING,
+                    'user_id' => auth()->user()->id,
+                ]);
+
+            
+            // Membuat SPB baru
+            $spbProject = SpbProject::create($request->only([
+                'doc_no_spb',
+                'doc_type_spb',
+                'spbproject_category_id',
+                'spbproject_status_id',
+                'user_id',
+                'project_id',
+                'unit_kerja',
+                'nama_toko',
+                'tanggal_dibuat_spb',
+                'tanggal_berahir_spb'
+            ]));
+
+            // Data untuk produk dan vendor
+            $productData = [];
+
+            // Loop untuk menyimpan vendor dan produk
+            foreach ($request->vendors as $vendorData) {
+                $vendor = Company::find($vendorData['vendor_id']);
+                if (!$vendor || $vendor->contact_type_id != ContactType::VENDOR) {
+                    throw new \Exception("Vendor ID {$vendorData['vendor_id']} tidak valid atau bukan vendor.");
+                }
+
+                // Loop untuk menyimpan produk terkait dengan vendor
+                foreach ($vendorData['produk'] as $produkData) {
+                    // Jika produk_id ada, masukkan produk ke pivot table
+                    if (count($produkData['produk_id']) > 0) {
+                        foreach ($produkData['produk_id'] as $produkId) {
+                            // Gunakan firstOrCreate untuk menghindari duplikasi
+                            ProductCompanySpbProject::firstOrCreate([
+                                'spb_project_id' => $spbProject->doc_no_spb,
+                                'produk_id' => $produkId,
+                                'company_id' => $vendor->id
+                            ]);
+                        }
+                    }
+
+                    // Jika produk_id kosong, maka buat produk baru dan simpan
+                    if (count($produkData['produk_id']) == 0 && count($produkData['produk_data']) > 0) {
+                        foreach ($produkData['produk_data'] as $newProductData) {
+                            // Buat produk baru
+                            $newProduct = Product::create([
+                                'nama' => $newProductData['nama'],
+                                'id_kategori' => $newProductData['id_kategori'] ?: null, // Jika kosong, set null
+                                'deskripsi' => $newProductData['deskripsi'],
+                                'harga' => $newProductData['harga'],
+                                'stok' => $newProductData['stok'],
+                                'type_pembelian' => $newProductData['type_pembelian']
+                            ]);
+
+                            // Simpan produk baru ke pivot table
+                            $productData[] = [
+                                'spb_project_id' => $spbProject->doc_no_spb,
+                                'produk_id' => $newProduct->id,
+                                'company_id' => $vendor->id,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
                     }
                 }
             }
-        }
 
+            // Insert atau update data produk secara massal menggunakan upsert
+            if (count($productData) > 0) {
+                ProductCompanySpbProject::upsert($productData, ['spb_project_id', 'produk_id', 'company_id'], ['updated_at']);
+            }
 
             // Commit transaksi jika semua berhasil
             DB::commit();

@@ -39,6 +39,7 @@ class Project extends Model
     // public $incrementing = false; 
     protected $table = 'projects';
     protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
         'id',
@@ -56,8 +57,10 @@ class Project extends Model
         'date',
         'request_status_owner',
         'status_step_project',
+        'harga_type_project',
     ];
 
+    // Project.php (Model)
     protected static function boot()
     {
         parent::boot();
@@ -66,17 +69,14 @@ class Project extends Model
             // Ambil tahun dari input 'date' yang dimasukkan oleh pengguna
             $year = date('y', strtotime($model->date)); // Ambil tahun dari input tanggal
 
-            // Tentukan ID proyek berdasarkan tahun
+            // Tentukan ID proyek berdasarkan tahun dan nomor urut
             $model->id = 'PRO-' . $year . '-' . $model->generateSequenceNumber($year);
 
             $model->request_status_owner = self::DEFAULT_STATUS;
-            $model->status_step_project = self::DEFAULT_STATUS_PROJECT;
+            // $model->status_step_project = self::DEFAULT_STATUS_PROJECT;
         });
     }
 
-        /**
-     * Generate urutan ID proyek berdasarkan tahun yang diberikan
-     */
     protected function generateSequenceNumber($year)
     {
         // Ambil ID proyek terakhir untuk tahun yang sama
@@ -85,7 +85,7 @@ class Project extends Model
         if ($lastId) {
             // Ambil nomor urut dari ID terakhir dan increment
             $numericPart = (int) substr($lastId, strrpos($lastId, '-') + 1);
-            $nextNumber = sprintf('%03d', $numericPart + 1);
+            $nextNumber = sprintf('%03d', $numericPart + 1); // Increment dan pad dengan 0s
         } else {
             // Jika belum ada, mulai dari nomor urut 001
             $nextNumber = '001';
@@ -93,6 +93,7 @@ class Project extends Model
         
         return $nextNumber;
     }
+
 
     /**
      * Boot method untuk menangani generate ID dan status default.
@@ -215,8 +216,7 @@ class Project extends Model
      // Relasi many-to-many dengan User
     public function tenagaKerja()
     {
-        return $this->belongsToMany(User::class, 'project_user_produk', 'project_id', 'user_id')
-                    ->withPivot('produk_id'); // Menyimpan produk_id dalam pivot
+        return $this->belongsToMany(User::class, 'project_user_produk', 'project_id', 'user_id');
     }
 
     // Relasi many-to-many dengan Product
@@ -224,7 +224,6 @@ class Project extends Model
     {
         return $this->belongsToMany(Product::class, 'project_user_produk', 'project_id', 'produk_id');
     }
-
 
     public function divisi(): BelongsTo
     {

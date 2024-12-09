@@ -31,6 +31,7 @@ class UpdateRequest extends FormRequest
             'cost_estimate' => 'required|numeric',
             'percent' => 'required|numeric',
             'date' => 'required|date',
+            'harga_type_project' => 'nullable|numeric',
             'attachment_file' => 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls|max:3072',
             'attachment_file_spb' => 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls|max:3072',
 

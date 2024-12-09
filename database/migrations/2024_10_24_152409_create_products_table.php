@@ -15,13 +15,13 @@ return new class extends Migration
             $table->id(); // Primary key: id produk
             $table->string('nama'); // Nama produk
             $table->unsignedBigInteger('id_kategori')->nullable(); 
-            $table->text('deskripsi')->nullable(); // Deskripsi produk
-            $table->string('kode_produk')->unique(); // Kode produk, harus unik
-            $table->string('type_pembelian')->nullable(); // Contoh: box, satuan, dll
-            $table->string('harga')->nullable(); // Contoh: box, satuan, dll
-            $table->integer('stok')->nullable(); // Stok produk
+            $table->text('deskripsi')->nullable(); 
+            $table->string('kode_produk')->unique(); 
+            $table->string('type_pembelian')->nullable(); 
+            $table->string('harga')->nullable(); 
+            $table->integer('stok')->nullable();
             $table->string('ongkir')->nullable();
-            $table->timestamps(); // Created at & updated at
+            $table->timestamps(); 
 
             // Foreign key constraint
             $table->foreign('id_kategori')->references('id')->on('kategori')->onDelete('cascade');
