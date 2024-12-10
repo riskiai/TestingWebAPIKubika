@@ -27,7 +27,7 @@ class ProjectCollection extends ResourceCollection
                     'name' => optional($project->company)->name,
                     'contact_type' => $project->company->contactType->name,
                 ],
-                'produk' => optional($project->product)->map(function ($product) {
+                /* 'produk' => optional($project->product)->map(function ($product) {
                         return [
                             'id' => $product->id,
                             'nama' => $product->nama,
@@ -37,7 +37,7 @@ class ProjectCollection extends ResourceCollection
                             'type_pembelian' => $product->type_pembelian,
                             'kode_produk' => $product->kode_produk,
                         ];
-                    }),
+                    }), */
                 'tukang' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
                 ->get()
                 ->map(function ($user) {
@@ -55,17 +55,48 @@ class ProjectCollection extends ResourceCollection
                     return [
                         'doc_no_spb' => $spbProject->doc_no_spb,
                         'doc_type_spb' => $spbProject->doc_type_spb,
-                        'produk' => $spbProject->products->map(function ($product) {
+                        'vendors' => is_iterable($spbProject->vendors) ? $spbProject->vendors->map(function ($vendor) use ($spbProject) {
+                            $produkData = [];
+
+                            // Ambil produk yang sudah ada di pivot table (relasi SPB dan Vendor)
+                            if (is_iterable($vendor->products)) {
+                                foreach ($vendor->products as $product) {
+                                    // Jika produk sudah terdaftar dalam product_ids (relasi di SPB)
+                                    if (in_array($product->id, $spbProject->product_ids ?? [])) {
+                                        $produkData[] = [
+                                            'produk_id' => [$product->id],
+                                            'produk_data' => []  // Kosongkan array produk_data untuk produk yang sudah ada
+                                        ];
+                                    }
+                                }
+                            }
+
+                            // Menambahkan produk baru yang belum terdaftar
+                            $newProdukData = [];
+                            if (is_iterable($spbProject->products)) {
+                                foreach ($spbProject->products as $product) {
+                                    // Menambahkan produk baru jika belum ada di produkData
+                                    if (!in_array($product->id, array_column($produkData, 'produk_id'))) {
+                                        $newProdukData[] = [
+                                            'nama' => $product->nama,
+                                            'id_kategori' => $product->id_kategori,
+                                            'deskripsi' => $product->deskripsi,
+                                            'harga' => $product->harga,
+                                            'stok' => $product->stok,
+                                            'type_pembelian' => $product->type_pembelian
+                                            // 'ongkir' => $product->ongkir
+                                        ];
+                                    }
+                                }
+                            }
+
+                            // Menggabungkan produk yang sudah ada dan produk baru
                             return [
-                                'id' => $product->id,
-                                'nama' => $product->nama,
-                                'deskripsi' => $product->deskripsi,
-                                'stok' => $product->stok,
-                                'harga' => $product->harga,
-                                'type_pembelian' => $product->type_pembelian,
-                                'kode_produk' => $product->kode_produk,
+                                "vendor_id" => $vendor->id,
+                                "produk" => array_merge($produkData, $newProdukData)
                             ];
-                        }),
+
+                        }) : [],
                         'unit_kerja' => $spbProject->unit_kerja,
                         'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
                         'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
@@ -86,6 +117,7 @@ class ProjectCollection extends ResourceCollection
                         })->values()->all(),
                     ];
                 }),
+
                'file_attachment_spb' => [
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,

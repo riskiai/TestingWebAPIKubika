@@ -43,11 +43,12 @@ public function rules(): array
         'harga_type_project' => 'nullable|numeric',
             
         // Produk dan User ID harus berupa array
-        'user_id' => 'nullable|array', 
-        'produk_id' => 'nullable|array', 
-        
-        'produk_id.*' => 'exists:products,id|numeric|min:1',  
-        'user_id.*' => 'exists:users,id|numeric|min:1', 
+        'produk_id' => 'nullable|array',
+        'produk_id.*' => 'nullable|exists:products,id|numeric|min:1',
+    
+        'user_id' => 'nullable|array',
+        'user_id.*' => 'nullable|exists:users,id|numeric|min:1',
+
     ];
 }
 

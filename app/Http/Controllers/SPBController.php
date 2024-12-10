@@ -178,6 +178,7 @@ class SPBController extends Controller
                                 'harga' => $newProductData['harga'],
                                 'stok' => $newProductData['stok'],
                                 'type_pembelian' => $newProductData['type_pembelian']
+                                // 'ongkir' => $newProductData['ongkir']
                             ]);
 
                             // Simpan produk baru ke pivot table
@@ -216,7 +217,6 @@ class SPBController extends Controller
         }
     }
     
-
     protected function generateDocNo($maxNumericPart, $spbCategory)
     {
         // Pastikan kategori SPB memiliki format yang benar
@@ -460,16 +460,47 @@ class SPBController extends Controller
                     'id' => 'N/A',
                     'nama' => 'No Project Available',
             ],
-            'produk' => $spbProject->products ? $spbProject->products->map(function ($product) {
+            // Menangani data vendor dan produk
+            "vendors" => is_iterable($spbProject->vendors) ? $spbProject->vendors->map(function ($vendor) use ($spbProject) {
+                $produkData = [];
+                
+                // Ambil produk yang sudah ada di pivot table (relasi SPB dan Vendor)
+                if (is_iterable($vendor->products)) {
+                    foreach ($vendor->products as $product) {
+                        // Jika produk sudah terdaftar dalam product_ids (relasi di SPB)
+                        if (in_array($product->id, $spbProject->product_ids ?? [])) {
+                            $produkData[] = [
+                                'produk_id' => [$product->id],
+                                'produk_data' => []  // Kosongkan array produk_data untuk produk yang sudah ada
+                            ];
+                        }
+                    }
+                }
+
+                // Menambahkan produk baru yang belum terdaftar
+                $newProdukData = [];
+                if (is_iterable($spbProject->products)) {
+                    foreach ($spbProject->products as $product) {
+                        // Menambahkan produk baru jika belum ada di produkData
+                        if (!in_array($product->id, array_column($produkData, 'produk_id'))) {
+                            $newProdukData[] = [
+                                'nama' => $product->nama,
+                                'id_kategori' => $product->id_kategori,
+                                'deskripsi' => $product->deskripsi,
+                                'harga' => $product->harga,
+                                'stok' => $product->stok,
+                                'type_pembelian' => $product->type_pembelian
+                            ];
+                        }
+                    }
+                }
+
+                // Menggabungkan produk yang sudah ada dan produk baru
                 return [
-                    'id' => $product->id,
-                    'nama' => $product->nama,
-                    'deskripsi' => $product->deskripsi,
-                    'stok' => $product->stok,
-                    'harga' => $product->harga,
-                    'type_pembelian' => $product->type_pembelian,
-                    'kode_produk' => $product->kode_produk,
+                    "vendor_id" => $vendor->id,
+                    "produk" => array_merge($produkData, $newProdukData)
                 ];
+
             }) : [],
             "unit_kerja" => $spbProject->unit_kerja,
             "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
@@ -538,16 +569,16 @@ class SPBController extends Controller
         ];
 
         // Ambil nama tab berdasarkan nilai tab
-        $tabName = $tabNames[$spbProject->tab] ?? 'Unknown';  // Default jika tidak ditemukan
+        $tabName = $tabNames[$spbProject->tab_spb] ?? 'Unknown';  // Default jika tidak ditemukan
 
         // Pengecekan status yang berkaitan dengan TAB_SUBMIT
-        if ($spbProject->tab == SpbProject::TAB_SUBMIT) {
+        if ($spbProject->tab_spb == SpbProject::TAB_SUBMIT) {
             // Pastikan status ada, jika tidak set default ke AWAITING
             if ($spbProject->status) {
                 $data = [
                     "id" => $spbProject->status->id ?? SpbProject_Status::AWAITING,
                     "name" => $spbProject->status->name ?? SpbProject_Status::TEXT_AWAITING,
-                    "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
 
                 // Jika status adalah REJECTED, tambahkan note
@@ -559,17 +590,17 @@ class SPBController extends Controller
                 $data = [
                     "id" => SpbProject_Status::AWAITING,
                     "name" => SpbProject_Status::TEXT_AWAITING,
-                    "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
             }
         }
 
         // Pengecekan untuk TAB_PAID
-        elseif ($spbProject->tab == SpbProject::TAB_PAID) {
+        elseif ($spbProject->tab_spb == SpbProject::TAB_PAID) {
             $data = [
                 "id" => $spbProject->status->id ?? null,
                 "name" => $spbProject->status ? $spbProject->status->name : 'Unknown',
-                "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
             ];
         }
 
@@ -581,14 +612,14 @@ class SPBController extends Controller
             $data = [
                 "id" => SpbProject_Status::OPEN,
                 "name" => SpbProject_Status::TEXT_OPEN,
-                "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
             ];
 
             if ($nowDate->gt($dueDate)) {
                 $data = [
                     "id" => SpbProject_Status::OVERDUE,
                     "name" => SpbProject_Status::TEXT_OVERDUE,
-                    "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
             }
 
@@ -596,27 +627,27 @@ class SPBController extends Controller
                 $data = [
                     "id" => SpbProject_Status::DUEDATE,
                     "name" => SpbProject_Status::TEXT_DUEDATE,
-                    "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
             }
         }
 
         // Pengecekan untuk TAB_PAYMENT_REQUEST
-        elseif ($spbProject->tab == SpbProject::TAB_PAYMENT_REQUEST) {
+        elseif ($spbProject->tab_spb == SpbProject::TAB_PAYMENT_REQUEST) {
             $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
             $nowDate = Carbon::now();
 
             $data = [
                 "id" => SpbProject_Status::OPEN,
                 "name" => SpbProject_Status::TEXT_OPEN,
-                "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
             ];
 
             if ($nowDate->gt($dueDate)) {
                 $data = [
                     "id" => SpbProject_Status::OVERDUE,
                     "name" => SpbProject_Status::TEXT_OVERDUE,
-                    "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
             }
 
@@ -624,7 +655,7 @@ class SPBController extends Controller
                 $data = [
                     "id" => SpbProject_Status::DUEDATE,
                     "name" => SpbProject_Status::TEXT_DUEDATE,
-                    "tab" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
             }
         }

@@ -68,6 +68,7 @@ class SPBprojectCollection extends ResourceCollection
                                     'harga' => $product->harga,
                                     'stok' => $product->stok,
                                     'type_pembelian' => $product->type_pembelian
+                                    // 'ongkir' => $product->ongkir
                                 ];
                             }
                         }
