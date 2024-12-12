@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -39,12 +40,16 @@ class User extends Authenticatable
         return $this->belongsTo(Divisi::class);
     }
 
+    public function salary() : HasOne {
+        return $this->hasOne(UserSalary::class, 'user_id', 'id');
+    }
+
     // public function projects()
     // {
     //     return $this->belongsToMany(Project::class, 'project_user_produk', 'user_id', 'project_id')
     //                 ->withPivot('produk_id');
     // }
 
-    
+
 
 }

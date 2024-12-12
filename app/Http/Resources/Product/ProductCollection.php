@@ -22,9 +22,9 @@ class ProductCollection extends ResourceCollection
                 'nama' => $product->nama,
                 'kode_produk' => $product->kode_produk,
                 'deskripsi' => $product->deskripsi,
-                'stok' => $product->stok, 
-                'type_pembelian' => $product->type_pembelian, 
-                'harga'=> $product->harga, 
+                'stok' => $product->stok,
+                'type_pembelian' => $product->type_pembelian,
+                'harga'=> $product->harga,
                 'ongkir' => $product->ongkir,
                 'kategori' => [
                         'id' => optional($product->kategori)->id,

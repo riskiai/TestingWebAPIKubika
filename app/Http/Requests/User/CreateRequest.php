@@ -22,6 +22,9 @@ class CreateRequest extends FormRequest
             'email' => 'required|email|unique:users,email',
             'role' => 'required|exists:roles,id',
             'divisi' => 'nullable|exists:divisis,id',
+            'daily_salary' => 'required|numeric|min:0',
+            'hourly_salary' => 'required|numeric|min:0',
+            'hourly_overtime_salary' => 'required|numeric|min:0',
         ];
     }
 

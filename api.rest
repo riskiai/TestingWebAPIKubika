@@ -1,0 +1,30 @@
+GET  http://127.0.0.1:8000/api/man-power HTTP/1.1
+
+GET  http://127.0.0.1:8000/api/man-power/1 HTTP/1.1
+
+POST  http://127.0.0.1:8000/api/man-power HTTP/1.1
+Content-Type: "application/json"
+
+{
+    "user_id": 13,
+    "project_id": 1,
+    "work_type": true,
+    "project_type": true,
+    "hour_salary": 0,
+    "hour_overtime": 4,
+    "description": "Test"
+}
+
+PUT  http://127.0.0.1:8000/api/man-power/3 HTTP/1.1
+Content-Type: "application/json"
+
+{
+    "work_type": true,
+    "project_type": true,
+    "hour_salary": 8,
+    "hour_overtime": 8,
+    "description": "Test 1"
+}
+
+DELETE   http://127.0.0.1:8000/api/man-power/3 HTTP/1.1
+

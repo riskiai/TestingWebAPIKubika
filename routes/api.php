@@ -10,6 +10,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactTypeController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\KategoriController;
+use App\Http\Controllers\ManPowerController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchaseCategoryController;
@@ -57,7 +58,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::get('contactall', [ContactController::class, 'contactall']);
      Route::get('contact-showtype', [ContactController::class, 'showByContactType']);
      Route::delete('contact-destroy/{id}', [ContactController::class, 'destroy']);
-     
+
      // ContactType
      Route::prefix('contact-type')->group(function () {
         Route::get('/', [ContactTypeController::class, 'index']);
@@ -97,7 +98,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::put('projects/update_lengkap/{id}', [ProjectController::class, 'UpdateLengkap']);
      Route::put('projects/update/{id}', [ProjectController::class, 'update']);
      Route::delete('projects/delete/{id}', [ProjectController::class, 'destroy']);
-     
+
     // SPB PROJECTS
     // end point SPB PROJECT CATEGORY
     Route::prefix('spbproject-category')->group(function () {
@@ -147,5 +148,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('purchase-create', [PurchaseController::class, 'store']);
     Route::put('purchase-update/{id}', [PurchaseController::class, 'update']);
     Route::delete('purchase-destroy/{id}', [PurchaseController::class, 'destroy']);
-   
+
+
+    Route::prefix('man-power')->group(function () {
+        Route::get('/', [ManPowerController::class, 'index']);
+        Route::post('/', [ManPowerController::class, 'store']);
+        Route::get('/{id}', [ManPowerController::class, 'show']);
+        Route::put('/{id}', [ManPowerController::class, 'update']);
+        Route::delete('/{id}', [ManPowerController::class, 'destroy']);
+    });
 });

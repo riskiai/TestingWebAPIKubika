@@ -63,7 +63,7 @@ class UsersController extends Controller
         if (!$user) {
             return MessageActeeve::notFound('User not found!');
         }
-    
+
         return MessageActeeve::render([
             'status' => MessageActeeve::SUCCESS,
             'status_code' => MessageActeeve::HTTP_OK,
@@ -103,6 +103,12 @@ class UsersController extends Controller
                 'divisi_id' => $request->divisi,
             ]);
 
+            $user->salary()->create([
+                "daily_salary" => $request->daily_salary,
+                "hourly_salary" => $request->hourly_salary,
+                "hourly_overtime_salary" => $request->hourly_overtime_salary,
+            ]);
+
             // Simpan password acak dalam atribut sementara untuk email
             $user->passwordRecovery = $randomPassword;
 
@@ -110,7 +116,7 @@ class UsersController extends Controller
             Mail::to($user->email)->send(new RegisterMail($user));
 
             DB::commit();
-            
+
             // Tambahkan info password acak ke pesan sukses
             return MessageActeeve::success("User {$user->name} has been successfully created with role {$user->role->role_name}");
         } catch (\Throwable $th) {
@@ -148,6 +154,12 @@ class UsersController extends Controller
 
             $user->update($userData);
 
+            $user->salary->update([
+                "daily_salary" => $request->daily_salary,
+                "hourly_salary" => $request->hourly_salary,
+                "hourly_overtime_salary" => $request->hourly_overtime_salary,
+            ]);
+
             DB::commit();
             return MessageActeeve::success("User $user->name has been updated");
         } catch (\Throwable $th) {
@@ -171,20 +183,20 @@ class UsersController extends Controller
     public function updatepassword(UpdatePasswordRequest $request)
     {
         DB::beginTransaction();
-    
+
         $user = User::findOrFail(auth()->user()->id);
-    
+
         // Verifikasi apakah old_password cocok dengan kata sandi saat ini
         if (!Hash::check($request->old_password, $user->password)) {
             return MessageActeeve::error("Old password does not match");
         }
-    
+
         try {
             // Update password dengan password baru yang di-hash
             $user->update([
                 "password" => Hash::make($request->new_password)
             ]);
-    
+
             DB::commit();
             return MessageActeeve::success("User $user->name has been updated");
         } catch (\Throwable $th) {
@@ -242,5 +254,5 @@ class UsersController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
-    
+
 }
