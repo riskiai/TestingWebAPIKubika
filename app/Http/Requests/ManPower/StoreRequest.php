@@ -27,7 +27,7 @@ class StoreRequest extends FormRequest
     {
          return [
             'user_id' => 'required|numeric|exists:users,id',
-            'project_id' => 'required|numeric|exists:projects,id',
+            'project_id' => 'required|exists:projects,id',
             'work_type' => 'required|boolean',
             'project_type' => 'required|boolean',
             'hour_salary' => 'required|numeric|min:0|max:8',

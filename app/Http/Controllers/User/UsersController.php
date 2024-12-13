@@ -153,12 +153,20 @@ class UsersController extends Controller
             }
 
             $user->update($userData);
-
-            $user->salary->update([
-                "daily_salary" => $request->daily_salary,
-                "hourly_salary" => $request->hourly_salary,
-                "hourly_overtime_salary" => $request->hourly_overtime_salary,
-            ]);
+            
+            if ($user->salary ) {
+                $user->salary->update([
+                    "daily_salary" => $request->daily_salary,
+                    "hourly_salary" => $request->hourly_salary,
+                    "hourly_overtime_salary" => $request->hourly_overtime_salary,
+                ]);
+            }else {
+                $user->salary()->create([
+                    "daily_salary" => $request->daily_salary,
+                    "hourly_salary" => $request->hourly_salary,
+                    "hourly_overtime_salary" => $request->hourly_overtime_salary,
+                ]);
+            }
 
             DB::commit();
             return MessageActeeve::success("User $user->name has been updated");

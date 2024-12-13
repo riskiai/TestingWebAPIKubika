@@ -27,7 +27,7 @@ return new class extends Migration
             $table->double('hour_overtime')->default(0);
             $table->unsignedInteger('current_salary')->default(0);
             $table->unsignedInteger('current_overtime_salary')->default(0);
-            $table->text('description')->default("-");
+            $table->text('description');
             $table->string("created_by", 100)->default("-");
             $table->timestamp("entry_at")->default(DB::raw("CURRENT_TIMESTAMP"));
             $table->timestamps();
