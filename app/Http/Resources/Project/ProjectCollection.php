@@ -79,10 +79,10 @@ class ProjectCollection extends ResourceCollection
                     ];
                 }),
 
-               'file_attachment_spb' => [
+               /* 'file_attachment_spb' => [
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
-                ],
+                ], */
                 'date' => $project->date,
                 'name' => $project->name,
                 'billing' => $project->billing,

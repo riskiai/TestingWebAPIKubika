@@ -459,20 +459,20 @@ class ProjectController extends Controller
                 ]);
             }
     
-            // Update proyek dengan data baru
-            $project->update($request->except(['produk_id', 'user_id'])); // Update proyek tanpa produk_id dan user_id
+             // Update proyek dengan data baru
+             $project->update($request->except(['produk_id', 'user_id'])); // Update proyek tanpa produk_id dan user_id
     
-            // Ambil data produk_id dan user_id dari request, pastikan keduanya berupa array
-            $produkIds = $request->input('produk_id');
-            $userIds = $request->input('user_id');
-    
-            // Hapus duplikat produk_id dan user_id jika ada
-            $produkIds = array_unique($produkIds);
-            $userIds = array_unique($userIds);
-    
-            // Sinkronkan data produk dan user pada tabel pivot
-            $project->product()->sync($produkIds); // Menyinkronkan data produk
-            $project->tenagaKerja()->sync($userIds); // Menyinkronkan data user
+             // Ambil data produk_id dan user_id dari request, pastikan keduanya berupa array
+             $produkIds = $request->input('produk_id', []); // Default ke array kosong jika tidak ada produk_id
+             $userIds = $request->input('user_id', []); // Default ke array kosong jika tidak ada user_id
+     
+             // Hapus duplikat produk_id dan user_id jika ada
+             $produkIds = array_unique($produkIds);
+             $userIds = array_unique($userIds);
+     
+             // Sinkronkan data produk dan user pada tabel pivot
+             $project->product()->sync($produkIds); // Menyinkronkan data produk
+             $project->tenagaKerja()->sync($userIds); // Menyinkronkan data user
     
             // Commit transaksi
             DB::commit();

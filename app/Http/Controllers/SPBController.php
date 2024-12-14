@@ -51,6 +51,29 @@ class SPBController extends Controller
             });
         }
 
+        if ($request->has('doc_no_spb')) {
+            $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
+        }
+        
+
+        if ($request->has('status')) {
+            $status = $request->status;
+            // Pastikan status valid dan cocok dengan ID status
+            if (in_array($status, [
+                SpbProject_Status::AWAITING,
+                SpbProject_Status::VERIFIED,
+                SpbProject_Status::OPEN,
+                SpbProject_Status::OVERDUE,
+                SpbProject_Status::DUEDATE,
+                SpbProject_Status::REJECTED,
+                SpbProject_Status::PAID
+            ])) {
+                $query->whereHas('status', function ($query) use ($status) {
+                    $query->where('id', $status);
+                });
+            }
+        }
+
         // Filter berdasarkan project ID
         if ($request->has('project')) {
             $query->whereHas('project', function ($query) use ($request) {
@@ -106,17 +129,8 @@ class SPBController extends Controller
         $userId = auth()->id();
         $role = auth()->user()->role_id;
 
-        // Inisialisasi variabel lainnya
-        $submit = 0;
-        $verified = 0;
-        $over_due = 0;
-        $open = 0;
-        $tanggal_berahir_spb = 0;
-        $payment_request = 0;
-        $paid = 0;
-
-        // Inisialisasi query
-        $query = SpbProject::where('doc_no_spb', $request->doc_no_spb);
+        // Ambil semua data SPB (tidak melakukan filter berdasarkan doc_no_spb)
+        $query = SpbProject::query();
 
         // Filter berdasarkan project ID jika ada
         if ($request->has('project')) {
@@ -125,23 +139,54 @@ class SPBController extends Controller
             });
         }
 
-        // Filter berdasarkan range date (tanggal_dibuat_spb atau tanggal tertentu dari SPB Project)
+        if ($request->has('status')) {
+            $status = $request->status;
+            // Pastikan status valid dan cocok dengan ID status
+            if (in_array($status, [
+                SpbProject_Status::AWAITING,
+                SpbProject_Status::VERIFIED,
+                SpbProject_Status::OPEN,
+                SpbProject_Status::OVERDUE,
+                SpbProject_Status::DUEDATE,
+                SpbProject_Status::REJECTED,
+                SpbProject_Status::PAID
+            ])) {
+                $query->whereHas('status', function ($query) use ($status) {
+                    $query->where('id', $status);
+                });
+            }
+        }
+
+        if ($request->has('doc_no_spb')) {
+            $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
+        }
+
+        // Filter berdasarkan range date (tanggal_dibuat_spb)
         if ($request->has('tanggal_dibuat_spb')) {
             $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb));
             $query->whereBetween('tanggal_dibuat_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
         }
 
-        // Filter berdasarkan due_date (tanggal_berahir_spb)
+        // Filter berdasarkan tanggal_berahir_spb
         if ($request->has('tanggal_berahir_spb')) {
             $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_berahir_spb));
             $query->whereBetween('tanggal_berahir_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
         }
 
-        // Ambil data SPB berdasarkan query yang sudah difilter
+        // Inisialisasi variabel untuk menghitung masing-masing status
+        $submit = 0;
+        $verified = 0;
+        $over_due = 0;
+        $open = 0;
+        $tanggal_berahir_spb = 0;
+        $payment_request = 0;
+        $paid = 0;
+
+        // Ambil semua data SPB yang sudah difilter
         $spbProjects = $query->get();
 
-        // Mengambil jumlah total SPB yang dibeli berdasarkan doc_no_spb
-        $received = $query->count();
+        // Mengambil jumlah total SPB yang dibeli
+        $received = $spbProjects->count();
 
         foreach ($spbProjects as $spbProject) {
             $total = $spbProject->getTotalAttribute(); // Mengambil nilai total dari setiap objek SPB
@@ -180,11 +225,12 @@ class SPBController extends Controller
             'verified' => $verified,
             'over_due' => $over_due,
             'open' => $open,
-            'tanggal_berahir_spb' => $tanggal_berahir_spb,
+            'due_date' => $tanggal_berahir_spb,
             'payment_request' => $payment_request,
             'paid' => $paid
         ]);
     }
+
 
 
     public function store(CreateRequest $request)

@@ -51,8 +51,8 @@ class UpdateRequest extends FormRequest
     {
         // Mengubah produk_id dan user_id menjadi array jika hanya satu nilai yang diberikan
         $this->merge([
-            'produk_id' => is_array($this->input('produk_id')) ? $this->input('produk_id') : [$this->input('produk_id')],
-            'user_id' => is_array($this->input('user_id')) ? $this->input('user_id') : [$this->input('user_id')],
+            'produk_id' => $this->input('produk_id') ? (is_array($this->input('produk_id')) ? $this->input('produk_id') : [$this->input('produk_id')]) : [],
+            'user_id' => $this->input('user_id') ? (is_array($this->input('user_id')) ? $this->input('user_id') : [$this->input('user_id')]) : [],
         ]);
     }
 
