@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources\SPBproject;
 
-use App\Models\SpbProject;
-use App\Models\SpbProject_Status;
 use Carbon\Carbon;
+use App\Models\SpbProject;
 use Illuminate\Http\Request;
+use App\Models\SpbProject_Status;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class SPBprojectCollection extends ResourceCollection
@@ -24,6 +25,22 @@ class SPBprojectCollection extends ResourceCollection
                 "doc_no_spb" => $spbProject->doc_no_spb,
                 "doc_type_spb" => $spbProject->doc_type_spb,
                 "status" => $this->getStatus($spbProject),
+                // Menambahkan logs ke dalam data proyek
+                'logs_status_hakakses_pembayaran' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
+                    // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
+                    $lastLog = $logsByUser->sortByDesc('created_at')->first();
+
+                    // Ambil reject_note dari spbProject
+                    $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
+
+                    return [
+                        'tab_spb' => $lastLog->tab_spb, // Ambil tab dari log terakhir
+                        'name' => $lastLog->name, // Ambil nama pengguna
+                        'created_at' => $lastLog->created_at, // Ambil waktu terakhir log
+                        'message' => $lastLog->message, // Ambil pesan dari log terakhir
+                        'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
+                    ];
+                })->values()->all(),
                 // 'project' => $spbProject->project->isNotEmpty() ? [
                 //     'id' => $spbProject->project->first()->id,
                 //     'nama' => $spbProject->project->first()->name,
@@ -38,77 +55,21 @@ class SPBprojectCollection extends ResourceCollection
                     'id' => 'N/A',
                     'nama' => 'No Project Available',
                 ],
-                // Menangani data vendor dan produk
-                "vendors" => is_iterable($spbProject->vendors) ? $spbProject->vendors->map(function ($vendor) use ($spbProject) {
-                    $produkData = [];
-                    
-                    // Ambil produk yang sudah ada di pivot table (relasi SPB dan Vendor)
-                    if (is_iterable($vendor->products)) {
-                        foreach ($vendor->products as $product) {
-                            // Jika produk sudah terdaftar dalam product_ids (relasi di SPB)
-                            if (in_array($product->id, $spbProject->product_ids ?? [])) {
-                                $produkData[] = [
-                                    'produk_id' => [$product->id],
-                                    'produk_data' => []  // Kosongkan array produk_data untuk produk yang sudah ada
-                                ];
-                            }
-                        }
-                    }
-
-                    // Menambahkan produk baru yang belum terdaftar
-                    $newProdukData = [];
-                    if (is_iterable($spbProject->products)) {
-                        foreach ($spbProject->products as $product) {
-                            // Menambahkan produk baru jika belum ada di produkData
-                            if (!in_array($product->id, array_column($produkData, 'produk_id'))) {
-                                $newProdukData[] = [
-                                    'nama' => $product->nama,
-                                    'id_kategori' => $product->id_kategori,
-                                    'deskripsi' => $product->deskripsi,
-                                    'harga' => $product->harga,
-                                    'stok' => $product->stok,
-                                    'type_pembelian' => $product->type_pembelian
-                                    // 'ongkir' => $product->ongkir
-                                ];
-                            }
-                        }
-                    }
-
-                    // Menggabungkan produk yang sudah ada dan produk baru
-                    return [
-                        "vendor_id" => $vendor->id,
-                        "produk" => array_merge($produkData, $newProdukData)
-                    ];
-
-                }) : [],
+                "vendors" => $this->getVendorsWithProducts($spbProject),
+                "subtotal" => $spbProject->getSubtotal(),
+                "ppn" => $this->getPpn($spbProject),
+                "total" => $spbProject->total,
+                'file_attachement' => $this->getDocument($spbProject),
                 "unit_kerja" => $spbProject->unit_kerja,
                 "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
                 "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
-                "nama_toko" => $spbProject->nama_toko,
+                // "nama_toko" => $spbProject->nama_toko,
                 "know_marketing" => $this->getUserRole($spbProject->know_marketing),
                 "know_supervisor" => $this->getUserRole($spbProject->know_supervisor),
                 "know_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
                 "request_owner" => $this->getUserRole($spbProject->request_owner),
                 "created_at" => $spbProject->created_at->format('Y-m-d'),
                 "updated_at" => $spbProject->updated_at->format('Y-m-d'),
-
-                  // Menambahkan logs ke dalam data proyek
-                'logs' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
-                    // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
-                    $lastLog = $logsByUser->sortByDesc('created_at')->first();
-
-                    // Ambil reject_note dari spbProject
-                    $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
-
-                    return [
-                        'tab' => $lastLog->tab, // Ambil tab dari log terakhir
-                        'name' => $lastLog->name, // Ambil nama pengguna
-                        'created_at' => $lastLog->created_at, // Ambil waktu terakhir log
-                        'message' => $lastLog->message, // Ambil pesan dari log terakhir
-                        'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
-                    ];
-                })->values()->all(),
-
             ];
 
             // Add created_by if user is associated
@@ -118,9 +79,126 @@ class SPBprojectCollection extends ResourceCollection
                     "name" => $spbProject->user->name,
                 ];
             }
+
+            // Jika ada PPH, tambahkan data PPH
+            if ($spbProject->pph) {
+            $data[$key]['pph'] = $this->getPph($spbProject);
+        }
         }
 
         return $data;
+    }
+
+    protected function getDocument($documents)
+    {
+        $data = [];
+
+        // Pastikan menggunakan relasi yang benar, dalam hal ini 'documents_spb'
+        foreach ($documents->documents as $document) {
+            $data[] = [
+                "id" => $document->id,
+                "name" => $document->spbProject->doc_type_spb . "/$document->doc_no_spb.$document->id/" . date('Y', strtotime($document->created_at)) . "." . pathinfo($document->file_path, PATHINFO_EXTENSION),
+                "link" => asset("storage/$document->file_path"),
+            ];
+        }
+
+        return $data;
+    }
+
+    /* Validasi Data Vendors Dan Produk */
+    private function getVendorsWithProducts(SpbProject $spbProject)
+    {
+        // Ambil data produk yang terkait dengan spb_project_id tertentu
+        $produkRelated = DB::table('product_company_spbproject')
+                            ->where('spb_project_id', $spbProject->doc_no_spb)
+                            ->get();
+
+        // Ambil produk berdasarkan vendor_id dan relasikan dengan produk yang terkait
+        return is_iterable($spbProject->vendors)
+            ? $spbProject->vendors->sortBy('id')
+                ->groupBy('id')  // Mengelompokkan vendor berdasarkan id
+                ->map(function ($vendors) use ($spbProject, $produkRelated) {
+                    // Ambil vendor pertama dalam kelompok
+                    $vendor = $vendors->first();
+
+                    // Filter produk yang sesuai dengan company_id vendor
+                    $produkData = $produkRelated->where('company_id', $vendor->id)
+                        ->map(function ($produk) {
+                            // Ambil detail produk berdasarkan produk_id
+                            $product = DB::table('products')->find($produk->produk_id);
+                            return [
+                                'produk_id' => $product->id,
+                                'produk_data' => [
+                                    'nama' => $product->nama,
+                                    'id_kategori' => $product->id_kategori,
+                                    'deskripsi' => $product->deskripsi,
+                                    'harga' => $product->harga,
+                                    'stok' => $product->stok,
+                                    'type_pembelian' => $product->type_pembelian
+                                ]
+                            ];
+                        });
+
+                    // Ambil ongkir hanya sekali per vendor (menghindari duplikasi ongkir)
+                    $ongkir = $produkRelated->where('company_id', $vendor->id)->pluck('ongkir')->first();
+
+                    // Menghindari duplikasi produk dalam vendor
+                    return [
+                        "vendor_id" => $vendor->id,
+                        "ongkir" => $ongkir,  // Menampilkan ongkir hanya satu kali untuk vendor
+                        "produk" => $this->removeDuplicatesByProductId($produkData->toArray())
+                    ];
+                })
+                ->values()  // Mengubah array menjadi numerik tanpa key angka
+            : [];
+    }
+
+    /**
+    * Fungsi untuk menghapus duplikasi produk berdasarkan produk_id
+    */
+    private function removeDuplicatesByProductId(array $produkData)
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($produkData as $produk) {
+            if (!in_array($produk['produk_id'], $seen)) {
+                $seen[] = $produk['produk_id'];
+                $result[] = $produk;
+            }
+        }
+
+        return $result;
+    }
+
+    protected function getPpn($spbProject)
+    {
+        if (is_numeric($spbProject->ppn) && $spbProject->ppn > 0) {
+            return ($spbProject->getSubtotal() * $spbProject->ppn) / 100;
+        } else {
+            return 0;
+        }
+    }
+
+    protected function getPph($spbProject)
+    {
+        if (is_numeric($spbProject->pph)) {
+            // Hitung hasil PPH berdasarkan nilai PPH dan subtotal
+            $pphResult = round((($spbProject->getSubtotal()) * $spbProject->taxPph->percent) / 100);
+
+            // Mengembalikan hasil PPH dalam format yang sesuai
+            return [
+                "pph_type" => $spbProject->taxPph->name,
+                "pph_rate" => $spbProject->taxPph->percent,
+                "pph_hasil" => $pphResult
+            ];
+        } else {
+            return [
+                "pph_type" => "", // Atau nilai default lainnya jika pph bukan numerik
+                "pph_rate" => 0,
+                "pph_hasil" => 0
+            ];
+        }
     }
 
     /**
@@ -198,7 +276,7 @@ class SPBprojectCollection extends ResourceCollection
         }
 
         // Pengecekan untuk TAB_VERIFIED
-        elseif ($spbProject->tab == SpbProject::TAB_VERIFIED) {
+        elseif ($spbProject->tab_spb == SpbProject::TAB_VERIFIED) {
             $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
             $nowDate = Carbon::now();
 

@@ -91,6 +91,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::get('projectall', [ProjectController::class, 'projectall']);
      Route::get('projects/counting', [ProjectController::class, 'counting']);
      Route::get('project/{id}', [ProjectController::class, 'show']);
+     Route::get('project/invoice/{id}', [ProjectController::class, 'invoice']);
      Route::post('project/create-informasi', [ProjectController::class, 'createInformasi']);
      Route::put('project/accept/{id}', [ProjectController::class, 'accept']);
      Route::put('project/reject/{id}', [ProjectController::class, 'reject']);
@@ -98,7 +99,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::put('projects/update_lengkap/{id}', [ProjectController::class, 'UpdateLengkap']);
      Route::put('projects/update/{id}', [ProjectController::class, 'update']);
      Route::delete('projects/delete/{id}', [ProjectController::class, 'destroy']);
-
+     
     // SPB PROJECTS
     // end point SPB PROJECT CATEGORY
     Route::prefix('spbproject-category')->group(function () {
@@ -113,6 +114,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::get('spbproject', [SPBController::class, 'index']);
+    Route::get('spbproject/counting', [SPBController::class, 'counting']); 
     Route::post('spbproject/create-spb', [SPBController::class, 'store']);
     Route::put('addspbproject/toproject/{id}', [SPBController::class, 'addspbtoproject']);
     Route::post('spbproject/update-spb/{id}', [SPBController::class, 'update']);
@@ -124,7 +126,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('spbproject/undo/{id}', [SPBController::class, 'undo']);
     Route::put('spbproject/request/{id}', [SPBController::class, 'request']);
     Route::put('spbproject/payment/{id}', [SPBController::class, 'payment']);
+    Route::put('spbproject/update-payment/{id}', [SPBController::class, 'updatepayment']);
     Route::put('spbproject/accSpbProject/{id}', [SPBController::class, 'accSpbProject']);
+    Route::delete('spbproject/delete-document/{id}', [SPBController::class, 'deleteDocument']);
     Route::put('spbproject/knowmarketing/{id}', [SPBController::class, 'knowmarketing']);
     Route::put('spbproject/knowmarkepalagudang/{id}', [SPBController::class, 'knowmarkepalagudang']);
     Route::put('spbproject/menyetujuiowner/{id}', [SPBController::class, 'menyetujuiowner']);

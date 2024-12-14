@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Company;
 use App\Models\Product;
 use App\Models\Project;
+use App\Models\SpbProject;
 use App\Models\ContactType;
 use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
@@ -18,6 +19,7 @@ use App\Http\Requests\Project\StoreRequest;
 use App\Http\Requests\Project\UpdateRequest;
 use App\Http\Resources\Project\ProjectCollection;
 use App\Http\Requests\Project\UpdatePengunaMuatanRequest;
+use App\Models\SpbProject_Status;
 
 class ProjectController extends Controller
 {
@@ -117,6 +119,79 @@ class ProjectController extends Controller
 
         return new ProjectCollection($projects);
     }
+
+    public function invoice(Request $request, $id)
+    {
+        $project = Project::find($id);
+        if (!$project) {
+            return MessageActeeve::notFound('data not found!');
+        }
+
+        // Menginisialisasi query untuk SpbProject terkait dengan project yang diberikan
+        $query = SpbProject::where('project_id', $id);
+
+        // Filter berdasarkan status request_status_owner
+        if ($request->has('request_status_owner')) {
+            $query->where('request_owner', $request->request_status_owner);
+        }
+
+        // Filter berdasarkan status cost progress
+        if ($request->has('status_cost_progress')) {
+            $query->where('spbproject_status_id', $request->status_cost_progress);
+        }
+
+        // Filter berdasarkan vendor (contact)
+        if ($request->has('contact')) {
+            $query->where('company_id', $request->contact);
+        }
+
+        // Filter berdasarkan tanggal
+        if ($request->has('date')) {
+            $date = str_replace(['[', ']'], '', $request->date);
+            $date = explode(", ", $date);
+            $query->whereBetween('tanggal_dibuat_spb', $date); // Pastikan menggunakan kolom tanggal yang tepat
+        }
+
+        // Filter berdasarkan tahun
+        if ($request->has('year')) {
+            $year = $request->year;
+            $query->whereYear('tanggal_dibuat_spb', $year);
+        }
+
+        // Mengambil data dari hasil query
+        $spbProjects = $query->orderBy('tanggal_dibuat_spb', 'desc')
+                            ->paginate($request->per_page);
+
+        $data = [];
+        foreach ($spbProjects as $spbProject) {
+            $data[] = [
+                "doc_no_spb" => $spbProject->doc_no_spb,
+                "company" => $spbProject->company->name, // Pastikan ada relasi ke model company
+                "produk" => $spbProject->produk_id, // Menyesuaikan dengan kolom produk
+                "subtotal" => $spbProject->subtotal,
+                "ppn" => $spbProject->ppn,
+                "pph" => $spbProject->pph,
+                "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
+                "status" => $spbProject->spbprojectStatus->name, // Menyesuaikan dengan relasi status
+            ];
+        }
+
+        return MessageActeeve::render([
+            'status' => MessageActeeve::SUCCESS,
+            'status_code' => MessageActeeve::HTTP_OK,
+            'data' => $data,
+            'meta' => [
+                'current_page' => $spbProjects->currentPage(),
+                'from' => $spbProjects->firstItem(),
+                'last_page' => $spbProjects->lastPage(),
+                'path' => $spbProjects->path(),
+                'per_page' => $spbProjects->perPage(),
+                'to' => $spbProjects->lastItem(),
+                'total' => $spbProjects->total(),
+            ]
+        ]);
+    }
+
 
     public function counting(Request $request)
     {
@@ -503,48 +578,7 @@ class ProjectController extends Controller
                 return [
                     'doc_no_spb' => $spbProject->doc_no_spb,
                     'doc_type_spb' => $spbProject->doc_type_spb,
-                    'vendors' => is_iterable($spbProject->vendors) ? $spbProject->vendors->map(function ($vendor) use ($spbProject) {
-                        $produkData = [];
-
-                        // Ambil produk yang sudah ada di pivot table (relasi SPB dan Vendor)
-                        if (is_iterable($vendor->products)) {
-                            foreach ($vendor->products as $product) {
-                                // Jika produk sudah terdaftar dalam product_ids (relasi di SPB)
-                                if (in_array($product->id, $spbProject->product_ids ?? [])) {
-                                    $produkData[] = [
-                                        'produk_id' => [$product->id],
-                                        'produk_data' => []  // Kosongkan array produk_data untuk produk yang sudah ada
-                                    ];
-                                }
-                            }
-                        }
-
-                        // Menambahkan produk baru yang belum terdaftar
-                        $newProdukData = [];
-                        if (is_iterable($spbProject->products)) {
-                            foreach ($spbProject->products as $product) {
-                                // Menambahkan produk baru jika belum ada di produkData
-                                if (!in_array($product->id, array_column($produkData, 'produk_id'))) {
-                                    $newProdukData[] = [
-                                        'nama' => $product->nama,
-                                        'id_kategori' => $product->id_kategori,
-                                        'deskripsi' => $product->deskripsi,
-                                        'harga' => $product->harga,
-                                        'stok' => $product->stok,
-                                        'type_pembelian' => $product->type_pembelian
-                                        // 'ongkir' => $product->ongkir
-                                    ];
-                                }
-                            }
-                        }
-
-                        // Menggabungkan produk yang sudah ada dan produk baru
-                        return [
-                            "vendor_id" => $vendor->id,
-                            "produk" => array_merge($produkData, $newProdukData)
-                        ];
-
-                    }) : [],
+                    "vendors" => $this->getVendorsWithProducts($spbProject),
                     'unit_kerja' => $spbProject->unit_kerja,
                     'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
                     'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
@@ -593,6 +627,67 @@ class ProjectController extends Controller
 
         // Kembalikan data dalam format yang sudah ditentukan
         return MessageActeeve::render($data);
+    }
+
+    private function getVendorsWithProducts(SpbProject $spbProject)
+    {
+        // Ambil data produk yang terkait dengan spb_project_id tertentu
+        $produkRelated = DB::table('product_company_spbproject')
+                            ->where('spb_project_id', $spbProject->doc_no_spb)
+                            ->get();
+
+        // Ambil produk berdasarkan vendor_id dan relasikan dengan produk yang terkait
+        return is_iterable($spbProject->vendors)
+            ? $spbProject->vendors->sortBy('id')
+                ->groupBy('id')  // Mengelompokkan vendor berdasarkan id
+                ->map(function ($vendors) use ($spbProject, $produkRelated) {
+                    // Ambil vendor pertama dalam kelompok
+                    $vendor = $vendors->first();
+
+                    // Filter produk yang sesuai dengan company_id vendor
+                    $produkData = $produkRelated->where('company_id', $vendor->id)
+                        ->map(function ($produk) {
+                            // Ambil detail produk berdasarkan produk_id
+                            $product = DB::table('products')->find($produk->produk_id);
+                            return [
+                                'produk_id' => $product->id,
+                                'produk_data' => [
+                                    'nama' => $product->nama,
+                                    'id_kategori' => $product->id_kategori,
+                                    'deskripsi' => $product->deskripsi,
+                                    'harga' => $product->harga,
+                                    'stok' => $product->stok,
+                                    'type_pembelian' => $product->type_pembelian
+                                ]
+                            ];
+                        });
+
+                    // Menghindari duplikasi produk dalam vendor
+                    return [
+                        "vendor_id" => $vendor->id,
+                        "produk" => $this->removeDuplicatesByProductId($produkData->toArray())
+                    ];
+                })
+                ->values()  // Mengubah array menjadi numerik tanpa key angka
+            : [];
+    }
+
+    /**
+     * Fungsi untuk menghapus duplikasi produk berdasarkan produk_id
+     */
+    private function removeDuplicatesByProductId(array $produkData)
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($produkData as $produk) {
+            if (!in_array($produk['produk_id'], $seen)) {
+                $seen[] = $produk['produk_id'];
+                $result[] = $produk;
+            }
+        }
+
+        return $result;
     }
 
     protected function getStepStatus($step)

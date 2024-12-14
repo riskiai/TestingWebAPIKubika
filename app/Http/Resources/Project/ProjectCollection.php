@@ -5,7 +5,9 @@ namespace App\Http\Resources\Project;
 use App\Models\User;
 use App\Models\Project;
 use App\Models\Purchase;
+use App\Models\SpbProject;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ProjectCollection extends ResourceCollection
@@ -55,48 +57,7 @@ class ProjectCollection extends ResourceCollection
                     return [
                         'doc_no_spb' => $spbProject->doc_no_spb,
                         'doc_type_spb' => $spbProject->doc_type_spb,
-                        'vendors' => is_iterable($spbProject->vendors) ? $spbProject->vendors->map(function ($vendor) use ($spbProject) {
-                            $produkData = [];
-
-                            // Ambil produk yang sudah ada di pivot table (relasi SPB dan Vendor)
-                            if (is_iterable($vendor->products)) {
-                                foreach ($vendor->products as $product) {
-                                    // Jika produk sudah terdaftar dalam product_ids (relasi di SPB)
-                                    if (in_array($product->id, $spbProject->product_ids ?? [])) {
-                                        $produkData[] = [
-                                            'produk_id' => [$product->id],
-                                            'produk_data' => []  // Kosongkan array produk_data untuk produk yang sudah ada
-                                        ];
-                                    }
-                                }
-                            }
-
-                            // Menambahkan produk baru yang belum terdaftar
-                            $newProdukData = [];
-                            if (is_iterable($spbProject->products)) {
-                                foreach ($spbProject->products as $product) {
-                                    // Menambahkan produk baru jika belum ada di produkData
-                                    if (!in_array($product->id, array_column($produkData, 'produk_id'))) {
-                                        $newProdukData[] = [
-                                            'nama' => $product->nama,
-                                            'id_kategori' => $product->id_kategori,
-                                            'deskripsi' => $product->deskripsi,
-                                            'harga' => $product->harga,
-                                            'stok' => $product->stok,
-                                            'type_pembelian' => $product->type_pembelian
-                                            // 'ongkir' => $product->ongkir
-                                        ];
-                                    }
-                                }
-                            }
-
-                            // Menggabungkan produk yang sudah ada dan produk baru
-                            return [
-                                "vendor_id" => $vendor->id,
-                                "produk" => array_merge($produkData, $newProdukData)
-                            ];
-
-                        }) : [],
+                        "vendors" => $this->getVendorsWithProducts($spbProject),
                         'unit_kerja' => $spbProject->unit_kerja,
                         'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
                         'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
@@ -156,6 +117,67 @@ class ProjectCollection extends ResourceCollection
         }
 
         return $data;
+    }
+
+    private function getVendorsWithProducts(SpbProject $spbProject)
+    {
+        // Ambil data produk yang terkait dengan spb_project_id tertentu
+        $produkRelated = DB::table('product_company_spbproject')
+                            ->where('spb_project_id', $spbProject->doc_no_spb)
+                            ->get();
+
+        // Ambil produk berdasarkan vendor_id dan relasikan dengan produk yang terkait
+        return is_iterable($spbProject->vendors)
+            ? $spbProject->vendors->sortBy('id')
+                ->groupBy('id')  // Mengelompokkan vendor berdasarkan id
+                ->map(function ($vendors) use ($spbProject, $produkRelated) {
+                    // Ambil vendor pertama dalam kelompok
+                    $vendor = $vendors->first();
+
+                    // Filter produk yang sesuai dengan company_id vendor
+                    $produkData = $produkRelated->where('company_id', $vendor->id)
+                        ->map(function ($produk) {
+                            // Ambil detail produk berdasarkan produk_id
+                            $product = DB::table('products')->find($produk->produk_id);
+                            return [
+                                'produk_id' => $product->id,
+                                'produk_data' => [
+                                    'nama' => $product->nama,
+                                    'id_kategori' => $product->id_kategori,
+                                    'deskripsi' => $product->deskripsi,
+                                    'harga' => $product->harga,
+                                    'stok' => $product->stok,
+                                    'type_pembelian' => $product->type_pembelian
+                                ]
+                            ];
+                        });
+
+                    // Menghindari duplikasi produk dalam vendor
+                    return [
+                        "vendor_id" => $vendor->id,
+                        "produk" => $this->removeDuplicatesByProductId($produkData->toArray())
+                    ];
+                })
+                ->values()  // Mengubah array menjadi numerik tanpa key angka
+            : [];
+    }
+
+    /**
+     * Fungsi untuk menghapus duplikasi produk berdasarkan produk_id
+     */
+    private function removeDuplicatesByProductId(array $produkData)
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($produkData as $produk) {
+            if (!in_array($produk['produk_id'], $seen)) {
+                $seen[] = $produk['produk_id'];
+                $result[] = $produk;
+            }
+        }
+
+        return $result;
     }
 
     /**
