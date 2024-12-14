@@ -173,15 +173,14 @@ class SPBprojectCollection extends ResourceCollection
 
     protected function getPpn($spbProject)
     {
-        // Ganti ppn dengan tax_ppn sesuai data yang dikirim
-        if (isset($spbProject->tax_ppn) && is_numeric($spbProject->tax_ppn) && $spbProject->tax_ppn > 0) {
-            return ($spbProject->getSubtotal() * $spbProject->tax_ppn) / 100;
+        // Cek apakah properti ppn ada dan nilai lebih dari 0
+        if (isset($spbProject->ppn) && is_numeric($spbProject->ppn) && $spbProject->ppn > 0) {
+            return ($spbProject->getSubtotal() * $spbProject->ppn) / 100;
         } else {
             return 0;
         }
     }
-
-
+    
     protected function getPph($spbProject)
     {
         if (is_numeric($spbProject->pph)) {
