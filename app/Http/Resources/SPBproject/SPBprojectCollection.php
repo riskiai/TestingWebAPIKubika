@@ -121,6 +121,12 @@ class SPBprojectCollection extends ResourceCollection
                     // Ambil vendor pertama dalam kelompok
                     $vendor = $vendors->first();
 
+                    // Ambil nama perusahaan berdasarkan vendor_id (company_id)
+                    $company = DB::table('companies')->where('id', $vendor->id)->first();
+                    $companyName = $company ? $company->name : 'Unknown';
+                    $companyBankName = $company ? $company->bank_name : 'Unknown';
+                    $companyAccountNumber = $company ? $company->account_number : 'Unknown';
+
                     // Filter produk yang sesuai dengan company_id vendor
                     $produkData = $produkRelated->where('company_id', $vendor->id)
                         ->map(function ($produk) {
@@ -145,6 +151,9 @@ class SPBprojectCollection extends ResourceCollection
                     // Menghindari duplikasi produk dalam vendor
                     return [
                         "vendor_id" => $vendor->id,
+                        "company_name" => $companyName, 
+                        "bank_toko_vendor" => $companyBankName,
+                        "account_number_toko_vendor" => $companyAccountNumber, 
                         "ongkir" => $ongkir,  // Menampilkan ongkir hanya satu kali untuk vendor
                         "produk" => $this->removeDuplicatesByProductId($produkData->toArray())
                     ];
@@ -180,7 +189,8 @@ class SPBprojectCollection extends ResourceCollection
             return 0;
         }
     }
-    
+
+
     protected function getPph($spbProject)
     {
         if (is_numeric($spbProject->pph)) {
@@ -335,7 +345,5 @@ class SPBprojectCollection extends ResourceCollection
         // Kembalikan data status yang sesuai dengan tab
         return $data;
     }
-
-
 
 }

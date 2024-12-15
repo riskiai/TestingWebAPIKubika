@@ -30,6 +30,7 @@ class ManPowerCollection extends ResourceCollection
                 "current_overtime_salary" => $manPower->current_overtime_salary,
                 "total_salary" => $manPower->current_salary + $manPower->current_overtime_salary,
                 "description" => $manPower->description,
+                "entry_at" => $manPower->entry_at,
                 "project" => [
                     "id" => $manPower->project->id,
                     "name" => $manPower->project->name,
@@ -37,6 +38,10 @@ class ManPowerCollection extends ResourceCollection
                 "user" => [
                     "id" => $manPower->user->id,
                     "name" => $manPower->user->name,
+                    'divisi' => [
+                        'name' => $manPower->user->divisi->name ?? null,
+                        'kode_divisi' => $manPower->user->divisi->kode_divisi ?? null,
+                    ],
                 ],
                 "created_by" => $manPower->created_by,
                 "created_at" => $manPower->created_at,

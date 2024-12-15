@@ -15,8 +15,8 @@ return new class extends Migration
         Schema::create('log_man_powers', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(ManPower::class)->references("id")->on("man_powers")->cascadeOnDelete();
-            $table->string("created_by", 100)->default("-");
-            $table->text("message")->default("-");
+            $table->string("created_by", 100);
+            $table->text("message");
             $table->timestamps();
         });
     }

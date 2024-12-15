@@ -2,23 +2,24 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SPBController;
 use App\Http\Controllers\TaxController;
+use App\Http\Controllers\DivisiController;
+use App\Http\Controllers\ProdukController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\KategoriController;
+use App\Http\Controllers\ManPowerController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\SpbStatusController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\User\UsersController;
 use App\Http\Controllers\Auth\LogoutController;
-use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactTypeController;
-use App\Http\Controllers\DivisiController;
-use App\Http\Controllers\KategoriController;
-use App\Http\Controllers\ManPowerController;
-use App\Http\Controllers\ProdukController;
-use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\PurchaseCategoryController;
-use App\Http\Controllers\PurchaseController;
-use App\Http\Controllers\PurchaseStatusController;
 use App\Http\Controllers\SpbCategoryController;
-use App\Http\Controllers\SPBController;
-use App\Http\Controllers\SpbStatusController;
+use App\Http\Controllers\PurchaseStatusController;
+use App\Http\Controllers\PurchaseCategoryController;
 
 Route::prefix('auth')->group(function () {
     Route::post('login', LoginController::class);
@@ -132,6 +133,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('spbproject/knowmarketing/{id}', [SPBController::class, 'knowmarketing']);
     Route::put('spbproject/knowmarkepalagudang/{id}', [SPBController::class, 'knowmarkepalagudang']);
     Route::put('spbproject/menyetujuiowner/{id}', [SPBController::class, 'menyetujuiowner']);
+
+     // Report 
+     Route::get('spbproject-report-pph', [ReportController::class, 'reportPPH']);
+     Route::get('spbproject-report-ppn', [ReportController::class, 'reportPPN']);
+     Route::get('spbproject-report-paid', [ReportController::class, 'reportPaid']);
+     Route::get('manpower-report', [ReportController::class, 'reportManpower']);
+     Route::get('project-report', [ReportController::class, 'reportProject']);
 
     // Purchase
     // end point Purchase Category

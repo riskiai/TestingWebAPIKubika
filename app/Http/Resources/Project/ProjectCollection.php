@@ -46,12 +46,20 @@ class ProjectCollection extends ResourceCollection
                     return [
                         'id' => $user->id,
                         'name' => $user->name,
+                        'daily_salary' => $user->salary ? $user->salary->daily_salary : 0,
+                        'hourly_salary' => $user->salary ? $user->salary->hourly_salary : 0,
+                        'hourly_overtime_salary' => $user->salary ? $user->salary->hourly_overtime_salary : 0,
                         'divisi' => [
                             'id' => optional($user->divisi)->id,
                             'name' => optional($user->divisi)->name,
                         ],
                     ];
                 }),
+                'summary_salary_manpower' => [
+                    'tukang_harian' => $this->tukangHarianSalary($project->manPowers()),
+                    'tukang_borongan' => $this->tukangBoronganSalary($project->manPowers()),
+                    'total' => $this->tukangHarianSalary($project->manPowers()) + $this->tukangBoronganSalary($project->manPowers()),
+                ],
                 // Menambahkan data spbProjects yang terkait dengan project
                 'spb_project' => $project->spbProjects->map(function ($spbProject) {
                     return [
@@ -69,11 +77,11 @@ class ProjectCollection extends ResourceCollection
                             $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
 
                             return [
-                                'tab' => $lastLog->tab, // Ambil tab dari log terakhir
-                                'name' => $lastLog->name, // Ambil nama pengguna
-                                'created_at' => $lastLog->created_at, // Ambil waktu terakhir log
-                                'message' => $lastLog->message, // Ambil pesan dari log terakhir
-                                'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
+                                'tab' => $lastLog->tab, 
+                                'name' => $lastLog->name, 
+                                'created_at' => $lastLog->created_at, 
+                                'message' => $lastLog->message, 
+                                'reject_note' => $rejectNote, 
                             ];
                         })->values()->all(),
                     ];
@@ -89,19 +97,14 @@ class ProjectCollection extends ResourceCollection
                 'cost_estimate' => $project->cost_estimate,
                 'margin' => $project->margin,
                 'percent' => $this->formatPercent($project->percent),
+                'cost_progress_paid_spb' => $this->costProgress($project),
                 'harga_type_project' => $project->harga_type_project ?? 0,
                 'file_attachment' => [
                     'name' => $project->file ? date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->file, PATHINFO_EXTENSION) : null,
                     'link' => $project->file ? asset("storage/$project->file") : null,
                 ],
-                'cost_progress' => $project->status_cost_progress,
                 // 'status_step_project' => $this->getStepStatus($project->status_step_project),
                 'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
-                'summary_salary' => [
-                    'tukang_harian' => $this->tukangHarianSalary($project->manPowers()),
-                    'tukang_borongan' => $this->tukangBoronganSalary($project->manPowers()),
-                    'total' => $this->tukangHarianSalary($project->manPowers()) + $this->tukangBoronganSalary($project->manPowers()),
-                ],
                 'created_at' => $project->created_at,
                 'updated_at' => $project->updated_at,
             ];
@@ -124,6 +127,54 @@ class ProjectCollection extends ResourceCollection
         return $data;
     }
 
+    protected function costProgress($project)
+    {
+        $status = Project::STATUS_OPEN;
+        $total = 0;
+
+        // Ambil semua SPB Project dengan status 'PAID'
+        $spbProjects = $project->spbProjects()->where('tab_spb', SpbProject::TAB_PAID)->get();
+
+        // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
+        foreach ($spbProjects as $spbProject) {
+            // Ambil total dari masing-masing SpbProject
+            $total += $spbProject->getTotalAttribute();  // Menggunakan method getTotalAttribute yang sudah ada
+        }
+
+        /* // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
+        foreach ($spbProjects as $spbProject) {
+            // Ambil subtotal dari masing-masing SpbProject
+            $total += $spbProject->getSubtotal();  // Menggunakan field 'subtotal' langsung
+        } */
+
+        // Cek jika cost_estimate lebih besar dari 0 sebelum melakukan pembagian
+        if ($project->cost_estimate > 0) {
+            $costEstimate = round(($total / $project->cost_estimate) * 100, 2);
+        } else {
+            // Default value jika cost_estimate adalah 0
+            $costEstimate = 0;
+        }
+
+        // Tentukan status berdasarkan progres biaya
+        if ($costEstimate > 90) {
+            $status = Project::STATUS_NEED_TO_CHECK;
+        }
+
+        if ($costEstimate == 100) {
+            $status = Project::STATUS_CLOSED;
+        }
+
+        // Update status proyek di database
+        $project->update(['status_cost_progres' => $status]);
+
+        // Kembalikan data progres biaya
+        return [
+            'status_cost_progres' => $status,
+            'percent' => $costEstimate . '%',
+            'real_cost' => $total
+        ];
+    }
+
     protected function tukangHarianSalary($query) {
         return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", true)->first()->total;
     }
@@ -131,6 +182,7 @@ class ProjectCollection extends ResourceCollection
     protected function tukangBoronganSalary($query) {
         return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", false)->first()->total;
     }
+
     private function getVendorsWithProducts(SpbProject $spbProject)
     {
         // Ambil data produk yang terkait dengan spb_project_id tertentu
@@ -225,13 +277,13 @@ class ProjectCollection extends ResourceCollection
             Project::PENGGUNA_MUATAN => "Pengguna Muatan",
             Project::PRATINJAU => "Pratinjau",
         ];
-
+    
         return [
             "id" => $step,
-            "name" => $steps[$step] ?? "Unknown",
+            "name" => $steps[$step] ?? "Unknown", 
         ];
     } */
-
+    
 
     /**
      * Calculate the cost progress and determine the project status.

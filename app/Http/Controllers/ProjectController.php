@@ -57,6 +57,12 @@ class ProjectController extends Controller
         // Eager load untuk mengurangi query N+1
         $query->with(['company', 'user', 'product', 'tenagaKerja']);
 
+         // Terapkan filter berdasarkan peran pengguna (role MARKETING)
+        if (auth()->user()->role_id == Role::MARKETING) {
+            // Jika yang login adalah MARKETING, tampilkan hanya project yang dibuat oleh user tersebut
+            $query->where('user_id', auth()->user()->id);
+        }
+
         // Filter pencarian
         if ($request->has('search')) {
             $query->where(function ($query) use ($request) {
@@ -74,8 +80,8 @@ class ProjectController extends Controller
         }
 
         // Filter berdasarkan status cost progress
-        if ($request->has('status_cost_progress')) {
-            $query->where('status_cost_progress', $request->status_cost_progress);
+        if ($request->has('status_cost_progres')) {
+            $query->where('status_cost_progres', $request->status_cost_progres);
         }
 
         // Filter berdasarkan ID proyek
@@ -108,6 +114,20 @@ class ProjectController extends Controller
             });
         }
 
+        // Filter berdasarkan work_type jika ada parameter di request
+        if ($request->has('work_type')) {
+            $workType = $request->work_type;
+            if ($workType == 1) {
+                $query->whereHas('manPowers', function ($q) {
+                    $q->where('work_type', 1); // Hanya ambil tukang harian
+                });
+            } elseif ($workType == 0) {
+                $query->whereHas('manPowers', function ($q) {
+                    $q->where('work_type', 0); // Hanya ambil tukang borongan
+                });
+            }
+        }
+
         // Urutkan berdasarkan tahun dan increment ID proyek
         $projects = $query->selectRaw('*, CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(id, "-", -2), "-", 1) AS UNSIGNED) as year')
         ->selectRaw('CAST(SUBSTRING_INDEX(id, "-", -1) AS UNSIGNED) as increment')
@@ -122,57 +142,63 @@ class ProjectController extends Controller
 
     public function invoice(Request $request, $id)
     {
+        // Menemukan proyek berdasarkan ID
         $project = Project::find($id);
         if (!$project) {
-            return MessageActeeve::notFound('data not found!');
+            return MessageActeeve::notFound('Project not found!');
         }
 
-        // Menginisialisasi query untuk SpbProject terkait dengan project yang diberikan
-        $query = SpbProject::where('project_id', $id);
+        // Mengambil semua SPB Projects yang terkait dengan Project
+        $spbProjects = $project->spbProjects()->paginate($request->per_page);
 
-        // Filter berdasarkan status request_status_owner
-        if ($request->has('request_status_owner')) {
-            $query->where('request_owner', $request->request_status_owner);
-        }
-
-        // Filter berdasarkan status cost progress
-        if ($request->has('status_cost_progress')) {
-            $query->where('spbproject_status_id', $request->status_cost_progress);
-        }
-
-        // Filter berdasarkan vendor (contact)
-        if ($request->has('contact')) {
-            $query->where('company_id', $request->contact);
-        }
-
-        // Filter berdasarkan tanggal
-        if ($request->has('date')) {
-            $date = str_replace(['[', ']'], '', $request->date);
-            $date = explode(", ", $date);
-            $query->whereBetween('tanggal_dibuat_spb', $date); // Pastikan menggunakan kolom tanggal yang tepat
-        }
-
-        // Filter berdasarkan tahun
-        if ($request->has('year')) {
-            $year = $request->year;
-            $query->whereYear('tanggal_dibuat_spb', $year);
-        }
-
-        // Mengambil data dari hasil query
-        $spbProjects = $query->orderBy('tanggal_dibuat_spb', 'desc')
-                            ->paginate($request->per_page);
-
+        // Menyiapkan array untuk data output
         $data = [];
         foreach ($spbProjects as $spbProject) {
+            // Ambil semua data dari pivot table product_company_spbproject berdasarkan spb_project_id
+            $pivotData = DB::table('product_company_spbproject')
+                ->where('spb_project_id', $spbProject->doc_no_spb) // Assuming doc_no_spb is spb_project_id
+                ->get(); // Use get() to fetch all vendors for this SPB project
+
+            // Mengambil status pembayaran dengan pengecekan null
+            $status = $spbProject->status ? $spbProject->status->name : 'Unknown';
+
+            // Siapkan array untuk menyimpan vendor
+            $vendors = [];
+            $vendorIds = []; // Array untuk menyimpan vendor_id yang sudah ada
+
+            // Loop untuk mengambil informasi vendor
+            foreach ($pivotData as $pivot) {
+                // Cek apakah vendor dengan vendor_id yang sama sudah ada
+                if (!in_array($pivot->company_id, $vendorIds)) {
+                    // Ambil nama perusahaan dari pivot table
+                    $company = DB::table('companies')->where('id', $pivot->company_id)->first();
+                    $companyName = $company ? $company->name : 'Unknown';
+
+                    // Menyusun data vendor
+                    $vendorData = [
+                        'vendor_id' => $pivot->company_id, // Assuming the vendor_id is the company_id
+                        'company_name' => $companyName,
+                    ];
+
+                    // Tambahkan vendor ke dalam array vendors
+                    $vendors[] = $vendorData;
+
+                    // Simpan vendor_id yang sudah ditambahkan ke dalam array vendorIds
+                    $vendorIds[] = $pivot->company_id;
+                }
+            }
+
+            // Menambahkan data SPB project ke dalam array data
             $data[] = [
                 "doc_no_spb" => $spbProject->doc_no_spb,
-                "company" => $spbProject->company->name, // Pastikan ada relasi ke model company
-                "produk" => $spbProject->produk_id, // Menyesuaikan dengan kolom produk
-                "subtotal" => $spbProject->subtotal,
-                "ppn" => $spbProject->ppn,
-                "pph" => $spbProject->pph,
-                "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
-                "status" => $spbProject->spbprojectStatus->name, // Menyesuaikan dengan relasi status
+                "doc_type_spb" => $spbProject->doc_type_spb,
+                "total" => $spbProject->total,
+                "status" => [
+                    'id' => $spbProject->status ? $spbProject->status->id : null,
+                    'tab_spb' => $spbProject->tab_spb,
+                    'name' => $status,
+                ],
+                "vendors" => $vendors, // Menambahkan data vendor yang telah disusun
             ];
         }
 
@@ -191,7 +217,6 @@ class ProjectController extends Controller
             ]
         ]);
     }
-
 
     public function counting(Request $request)
     {
@@ -599,10 +624,15 @@ class ProjectController extends Controller
                     })->values()->all(),
                 ];
             }),
-            'file_attachment_spb' => [
+            'summary_salary_manpower' => [
+                'tukang_harian' => $this->tukangHarianSalary($project->manPowers()),
+                'tukang_borongan' => $this->tukangBoronganSalary($project->manPowers()),
+                'total' => $this->tukangHarianSalary($project->manPowers()) + $this->tukangBoronganSalary($project->manPowers()),
+            ],
+            /* 'file_attachment_spb' => [
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
-                ],
+                ], */
             'date' => $project->date,
             'name' => $project->name,
             'billing' => $project->billing,
@@ -610,7 +640,7 @@ class ProjectController extends Controller
             'margin' => $project->margin,
             'percent' => round($project->percent, 2),
             'file_attachment' => $file_attachment,
-            'cost_progress' => $project->status_cost_progress,
+            'cost_progress_paid_spb' => $this->costProgress($project),
             // 'status_step_project' => $this->getStepStatus($project->status_step_project),
             'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
             'created_at' => $project->created_at,
@@ -629,6 +659,56 @@ class ProjectController extends Controller
         return MessageActeeve::render($data);
     }
 
+    protected function costProgress($project)
+    {
+        $status = Project::STATUS_OPEN;
+        $total = 0;
+
+        // Ambil semua SPB Project dengan status 'PAID'
+        $spbProjects = $project->spbProjects()->where('tab_spb', SpbProject::TAB_PAID)->get();
+
+        // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
+        foreach ($spbProjects as $spbProject) {
+            // Ambil total dari masing-masing SpbProject
+            $total += $spbProject->getTotalAttribute();  // Menggunakan method getTotalAttribute yang sudah ada
+        }
+
+        // Cek jika cost_estimate lebih besar dari 0 sebelum melakukan pembagian
+        if ($project->cost_estimate > 0) {
+            $costEstimate = round(($total / $project->cost_estimate) * 100, 2);
+        } else {
+            // Default value jika cost_estimate adalah 0
+            $costEstimate = 0;
+        }
+
+        // Tentukan status berdasarkan progres biaya
+        if ($costEstimate > 90) {
+            $status = Project::STATUS_NEED_TO_CHECK;
+        }
+
+        if ($costEstimate == 100) {
+            $status = Project::STATUS_CLOSED;
+        }
+
+        // Update status proyek di database
+        $project->update(['status_cost_progres' => $status]);
+
+        // Kembalikan data progres biaya
+        return [
+            'status_cost_progres' => $status,
+            'percent' => $costEstimate . '%',
+            'real_cost' => $total
+        ];
+    }
+
+    protected function tukangHarianSalary($query) {
+        return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", true)->first()->total;
+    }
+
+    protected function tukangBoronganSalary($query) {
+        return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", false)->first()->total;
+    }
+    
     private function getVendorsWithProducts(SpbProject $spbProject)
     {
         // Ambil data produk yang terkait dengan spb_project_id tertentu
