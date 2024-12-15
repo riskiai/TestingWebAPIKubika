@@ -27,7 +27,6 @@ class UpdateRequest extends FormRequest
     {
          return [
             'work_type' => 'required|boolean',
-            'project_type' => 'required|boolean',
             'hour_salary' => 'required|numeric|min:0|max:8',
             'hour_overtime' => 'required|numeric|min:0|max:8',
             'description' => 'required|max:300',

@@ -136,6 +136,11 @@ class ProjectCollection extends ResourceCollection
                 'cost_progress' => $project->status_cost_progress,
                 // 'status_step_project' => $this->getStepStatus($project->status_step_project),
                 'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
+                'summary_salary' => [
+                    'tukang_harian' => $this->tukangHarianSalary($project->manPowers()),
+                    'tukang_borongan' => $this->tukangBoronganSalary($project->manPowers()),
+                    'total' => $this->tukangHarianSalary($project->manPowers()) + $this->tukangBoronganSalary($project->manPowers()),
+                ],
                 'created_at' => $project->created_at,
                 'updated_at' => $project->updated_at,
             ];
@@ -156,6 +161,14 @@ class ProjectCollection extends ResourceCollection
         }
 
         return $data;
+    }
+
+    protected function tukangHarianSalary($query) {
+        return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", true)->first()->total;
+    }
+
+    protected function tukangBoronganSalary($query) {
+        return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", false)->first()->total;
     }
 
     /**
@@ -191,13 +204,13 @@ class ProjectCollection extends ResourceCollection
             Project::PENGGUNA_MUATAN => "Pengguna Muatan",
             Project::PRATINJAU => "Pratinjau",
         ];
-    
+
         return [
             "id" => $step,
-            "name" => $steps[$step] ?? "Unknown", 
+            "name" => $steps[$step] ?? "Unknown",
         ];
     } */
-    
+
 
     /**
      * Calculate the cost progress and determine the project status.

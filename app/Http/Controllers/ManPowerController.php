@@ -67,14 +67,25 @@ class ManPowerController extends Controller
             return MessageActeeve::notFound('Project not found!');
         }
 
-        // $manPower = $this->manPower->where([
-        //     "user_id" => $user->id,
-        //     "project_id" => $project->id
-        // ])->whereDate("created_at", Carbon::now())->first();
+        if (!$request->has("entry_at")) {
+            $request->merge([
+                "entry_at" => Carbon::now()
+            ]);
+        }
 
-        // if ($manPower) {
-        //     return MessageActeeve::warning('Man power date now has exists!');
-        // }
+        $manPower = $this->manPower->where([
+            "user_id" => $user->id,
+            "project_id" => $project->id,
+            "project_type" => $request->project_type
+        ])->whereDate("entry_at", $request->entry_at)->first();
+
+        if ($manPower && $manPower->project_type == true) {
+            return MessageActeeve::warning('Man power active project has exists!');
+        }
+
+        if ($manPower && $manPower->project_type == false) {
+            return MessageActeeve::warning('Man power non project has exists!');
+        }
 
         $request->merge([
             'daily_salary_master' => $user->salary->daily_salary,
@@ -85,7 +96,7 @@ class ManPowerController extends Controller
         $sumSalary = $this->sumSalary($request);
 
         try {
-            $this->manPower->create([
+            $manPower = $this->manPower->create([
                 "user_id" => $user->id,
                 "project_id" => $project->id,
                 "work_type" => $request->work_type,
@@ -98,7 +109,13 @@ class ManPowerController extends Controller
                 "hourly_overtime_salary_master" => $request->hourly_overtime_salary_master,
                 "current_salary" => $sumSalary["currentSalary"],
                 "current_overtime_salary" => $sumSalary["currentOvertimeSalary"],
-                "created_by" => $request->user()->name,
+                "created_by" => $request->user()->name ?? '-',
+                "entry_at"  => $request->entry_at
+            ]);
+
+            $manPower->logs()->create([
+                "created_by" => $request->user()->name ?? '-',
+                "message" => $request->description,
             ]);
 
             DB::commit();
@@ -132,6 +149,12 @@ class ManPowerController extends Controller
             return MessageActeeve::notFound('Man power not found!');
         }
 
+        if (!$request->has("entry_at")) {
+            $request->merge([
+                "entry_at" => $manPower->entry_at
+            ]);
+        }
+
         $request->merge([
             'daily_salary_master' => $manPower->daily_salary_master,
             'hourly_salary_master' => $manPower->hourly_salary_master,
@@ -143,13 +166,17 @@ class ManPowerController extends Controller
         try {
             $manPower->update([
                 "work_type" => $request->work_type,
-                "project_type" => $request->project_type,
                 "hour_salary" => $request->hour_salary,
                 "hour_overtime" => $request->hour_overtime,
                 "description" => $request->description,
                 "current_salary" => $sumSalary["currentSalary"],
                 "current_overtime_salary" => $sumSalary["currentOvertimeSalary"],
-                "created_by" => $request->user()->name,
+                "entry_at"  => $request->entry_at
+            ]);
+
+            $manPower->logs()->create([
+                "created_by" => $request->user()->name ?? '-',
+                "message" => $request->description,
             ]);
 
             DB::commit();

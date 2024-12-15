@@ -36,7 +36,7 @@ class Project extends Model
     const DEFAULT_STATUS_PROJECT = self::INFORMASI_PROYEK;
 
     protected $primaryKey = 'id'; // Set doc_no as the primary key
-    // public $incrementing = false; 
+    // public $incrementing = false;
     protected $table = 'projects';
     protected $keyType = 'string';
     public $incrementing = false;
@@ -45,7 +45,7 @@ class Project extends Model
         'id',
         'company_id',
         'user_id',
-        'produk_id', 
+        'produk_id',
         'name',
         'billing',
         'cost_estimate',
@@ -81,7 +81,7 @@ class Project extends Model
     {
         // Ambil ID proyek terakhir untuk tahun yang sama
         $lastId = static::where('id', 'like', 'PRO-' . $year . '%')->max('id');
-        
+
         if ($lastId) {
             // Ambil nomor urut dari ID terakhir dan increment
             $numericPart = (int) substr($lastId, strrpos($lastId, '-') + 1);
@@ -90,7 +90,7 @@ class Project extends Model
             // Jika belum ada, mulai dari nomor urut 001
             $nextNumber = '001';
         }
-        
+
         return $nextNumber;
     }
 
@@ -105,7 +105,7 @@ class Project extends Model
         static::creating(function ($model) {
             if (empty($model->id)) {
                 // Generate ID only once
-                $model->id = self::generateSequenceNumber(); 
+                $model->id = self::generateSequenceNumber();
             }
             $model->request_status_owner = self::DEFAULT_STATUS;
             $model->status_step_project = self::DEFAULT_STATUS_PROJECT;
@@ -120,24 +120,24 @@ class Project extends Model
         // Ambil proyek terakhir berdasarkan ID
         $lastProject = self::orderBy('id', 'desc')->first();
         Log::info("Last Project: " . json_encode($lastProject));
-    
+
         // Validasi format ID terakhir
         if ($lastProject && !preg_match('/^PRO-\d{2}-\d+$/', $lastProject->id)) {
             Log::error("Invalid ID format detected: {$lastProject->id}");
             $lastProject = null;
         }
-    
+
         // Ekstrak angka terakhir dari ID
         $numericPart = ($lastProject && preg_match('/PRO-\d{2}-(\d+)/', $lastProject->id, $matches))
             ? (int) $matches[1]
             : 0;
-    
+
         // Tambahkan 1 ke angka terakhir
         $nextNumber = sprintf('%03d', $numericPart + 1);
-    
+
         // Format ID baru
         $generatedId = 'PRO-' . date('y') . "-$nextNumber";
-    
+
         Log::info("Generated sequence number: $generatedId");
         return $generatedId;
     } */
@@ -151,12 +151,12 @@ class Project extends Model
             Log::error("Invalid Project ID detected during updateStepStatus. ID: {$this->id}");
             return;
         }
-    
+
         // Muat relasi jika belum dimuat
         $this->loadMissing(['tenagaKerja', 'product']);  // Load the 'tenagaKerja' and 'product' relations
-    
+
         $status = null;
-    
+
         // Kondisi untuk Informasi Proyek
         if (
             $this->company_id &&
@@ -171,7 +171,7 @@ class Project extends Model
             $status = self::INFORMASI_PROYEK;
             Log::info("Status set to INFORMASI_PROYEK for Project ID: {$this->id}");
         }
-    
+
         // Kondisi untuk Pengguna Muatan
         if (
             $this->tenagaKerja->isNotEmpty()  // Check if there are workers assigned to the project
@@ -180,7 +180,7 @@ class Project extends Model
             $status = self::PENGGUNA_MUATAN;
             Log::info("Status set to PENGGUNA_MUATAN for Project ID: {$this->id}");
         }
-    
+
         // Kondisi untuk Pratinjau (Jika sudah ada informasi proyek dan pengguna muatan)
         /* if (
             $this->company_id &&
@@ -191,13 +191,13 @@ class Project extends Model
             $this->percent &&
             $this->file &&
             $this->date &&
-            $this->tenagaKerja->isNotEmpty() &&  
-            $this->product->isNotEmpty() 
+            $this->tenagaKerja->isNotEmpty() &&
+            $this->product->isNotEmpty()
         ) {
             $status = self::PRATINJAU;
             Log::info("Status set to PRATINJAU for Project ID: {$this->id}");
         } */
-    
+
         if ($status !== null) {
             $this->status_step_project = $status;
             $this->save();
@@ -245,11 +245,15 @@ class Project extends Model
         return $this->hasMany(SpbProject::class, 'project_id', 'id'); // Project memiliki banyak SpbProject
     }
 
+    public function manPowers() : HasMany {
+        return $this->hasMany(ManPower::class, 'project_id', 'id');
+    }
 
-/* 
+
+/*
     public function purchases(): HasMany
     {
         return $this->hasMany(Purchase::class, 'project_id', 'id');
-    } 
+    }
 */
 }
