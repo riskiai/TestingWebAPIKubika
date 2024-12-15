@@ -26,14 +26,20 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'spbproject_category_id' => 'nullable|exists:spb_project__categories,id',
-            'project_id' => 'nullable|string|max:255',
-            'produk_id' => 'nullable|array',
-            'produk_id.*' => 'nullable|exists:products,id|numeric|min:1',
-            'tanggal_berahir_spb' => 'nullable|date',
-            'tanggal_dibuat_spb' => 'nullable|date',
-            'unit_kerja' => 'nullable|string|max:255',
-            'nama_toko' => 'nullable|string|max:255',
+           'spbproject_category_id' => 'required|exists:spb_project__categories,id',
+            'project_id' => 'required|string|max:255',
+            'tanggal_dibuat_spb' => 'required|date',
+            'tanggal_berahir_spb' => 'required|date',
+            'unit_kerja' => 'required|string|max:255',
+            'tax_ppn' => 'nullable|string',
+            'subtotal' => 'nullable|numeric',
+            'vendors' => 'required|array',
+            'vendors.*.vendor_id' => 'required|exists:companies,id',
+            'vendors.*.ongkir' => 'nullable|numeric',
+            'vendors.*.produk' => 'required|array',
+            'vendors.*.produk.*.produk_id' => 'nullable|array', 
+            'vendors.*.produk.*.produk_id.*' => 'nullable|integer|exists:products,id', 
+            'vendors.*.produk.*.produk_data' => 'nullable|array',
         ];
     }
 

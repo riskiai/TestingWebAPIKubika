@@ -17,7 +17,8 @@ class ProductCompanySpbProject extends Model
     protected $fillable = [
         'spb_project_id', // ID proyek SPB
         'produk_id',      // ID produk yang terhubung
-        'company_id',     // ID perusahaan/vendor yang terkait
+        'company_id',   // ID perusahaan/vendor yang terkait
+        'ongkir',     
     ];
 
     // Tentukan relasi dengan SPBProject (many-to-one)

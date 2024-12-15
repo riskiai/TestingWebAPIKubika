@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\ManPower;
+namespace App\Http\Requests\SpbProject;
 
 use App\Facades\MessageActeeve;
 use Illuminate\Contracts\Validation\Validator;
@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
-class StoreRequest extends FormRequest
+class PaymentRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,23 +25,30 @@ class StoreRequest extends FormRequest
      */
     public function rules(): array
     {
-         return [
-            'user_id' => 'required|numeric|exists:users,id',
-            'project_id' => 'required|exists:projects,id',
-            'work_type' => 'required|boolean',
-            'project_type' => 'required|boolean',
-            'hour_salary' => 'required|numeric|min:0|max:8',
-            'hour_overtime' => 'required|numeric|min:0|max:8',
-            'description' => 'required|max:300',
-        ];
+        // Validasi file attachment jika ada
+        $rules = [];
+
+        // Validasi jika ada file yang diupload
+        if ($this->hasFile('attachment_file_spb')) {
+            $rules['attachment_file_spb'] = 'array';
+            $rules['attachment_file_spb.*'] = 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls,heic|max:3072';
+        }
+
+        return $rules;
     }
 
+    /**
+     * Handle a failed validation attempt.
+     *
+     * @param  \Illuminate\Contracts\Validation\Validator  $validator
+     * @return void
+     */
     protected function failedValidation(Validator $validator)
     {
         $response = new JsonResponse([
             'status' => MessageActeeve::WARNING,
             'status_code' => MessageActeeve::HTTP_UNPROCESSABLE_ENTITY,
-            'message' => $validator->errors(),
+            'message' => $validator->errors()
         ], MessageActeeve::HTTP_UNPROCESSABLE_ENTITY);
 
         throw new ValidationException($validator, $response);

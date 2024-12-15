@@ -31,11 +31,14 @@ class CreateRequest extends FormRequest
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
             'unit_kerja' => 'required|string|max:255',
+            'tax_ppn' => 'nullable|string',
+            'subtotal' => 'nullable|numeric',
             'vendors' => 'required|array',
             'vendors.*.vendor_id' => 'required|exists:companies,id',
+            'vendors.*.ongkir' => 'nullable|numeric',
             'vendors.*.produk' => 'required|array',
-            'vendors.*.produk.*.produk_id' => 'nullable|array',  // Produk ID bisa berupa array kosong atau berisi ID produk
-            'vendors.*.produk.*.produk_id.*' => 'nullable|integer|exists:products,id',  // Setiap produk_id dalam array harus valid
+            'vendors.*.produk.*.produk_id' => 'nullable|array', 
+            'vendors.*.produk.*.produk_id.*' => 'nullable|integer|exists:products,id', 
             'vendors.*.produk.*.produk_data' => 'nullable|array',
         ];
     }
