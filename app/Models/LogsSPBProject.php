@@ -13,7 +13,7 @@ class LogsSPBProject extends Model
 
     protected $fillable = [
         'spb_project_id',  // ID proyek SPB
-        'tab',  // Status tab
+        'tab_spb',  // Status tab
         'name',  // Nama user
         'message', // Tambahkan message di sini
     ];
