@@ -100,9 +100,9 @@ class ProdukController extends Controller
                 'harga' => $product->harga,
                 // 'ongkir' => $product->ongkir,
                 'kategori' => [
-                    'id' => $product->kategori->id,
-                    'name' => $product->kategori->name,
-                    'kode_kategori' => $product->kategori->kode_kategori,
+                    'id' => optional($product->kategori)->id,
+                    'name' => optional($product->kategori)->name,
+                    'kode_kategori' => optional($product->kategori)->kode_kategori,
                 ],
                 'created_at' => $product->created_at,
                 'updated_at' => $product->updated_at,
