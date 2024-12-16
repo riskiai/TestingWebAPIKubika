@@ -51,6 +51,43 @@ class ProdukController extends Controller
         return new ProductCollection($products);
     }
 
+    public function produkAll(Request $request)
+    {
+        $query = Product::query();
+
+        // Filter pencarian berdasarkan 'id' atau 'nama'
+        if ($request->has('search')) {
+            $query->where(function ($query) use ($request) {
+                $query->where('id', 'like', '%' . $request->search . '%')
+                      ->orWhere('nama', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Filter berdasarkan 'kode_produk'
+          if ($request->has('kode_produk')) {
+            $query->where('kode_produk', 'like', '%' . $request->kode_produk . '%');
+        }
+
+        // Filter berdasarkan 'kode_kategori' melalui relasi ke tabel kategori
+        if ($request->has('kode_kategori')) {
+            $query->whereHas('kategori', function ($query) use ($request) {
+                $query->where('kode_kategori', 'like', '%' . $request->kode_kategori . '%');
+            });
+        }
+
+        // Filter berdasarkan rentang tanggal pada 'created_at'
+        if ($request->has('date')) {
+            $date = str_replace(['[', ']'], '', $request->date);
+            $date = explode(", ", $date);
+            $query->whereBetween('created_at', [$date[0], $date[1]]);
+        }
+
+        // Ambil semua data tanpa pagination
+        $products = $query->get();
+
+        return new ProductCollection($products);
+    }
+
 
     public function store(CreateRequest $request)
     {
