@@ -641,6 +641,7 @@ class ProjectController extends Controller
             'percent' => round($project->percent, 2),
             'file_attachment' => $file_attachment,
             'cost_progress_paid_spb' => $this->costProgress($project),
+            'harga_type_project' => $project->harga_type_project ?? 0,
             // 'status_step_project' => $this->getStepStatus($project->status_step_project),
             'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
             'created_at' => $project->created_at,
