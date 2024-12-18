@@ -436,10 +436,10 @@ class ProjectController extends Controller
             }
     
             // Validasi role pengguna login sebagai "Marketing"
-            $currentUser = auth()->user();
+            /* $currentUser = auth()->user();
             if ($currentUser->role_id !== 3) {
                 throw new \Exception("Hanya pengguna dengan role 'Marketing' yang dapat mengupdate proyek.");
-            }
+            } */
     
             // Temukan perusahaan berdasarkan client_id yang dikirimkan di request
             $company = Company::find($request->client_id);
