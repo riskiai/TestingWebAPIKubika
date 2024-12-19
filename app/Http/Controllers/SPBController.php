@@ -251,11 +251,11 @@ class SPBController extends Controller
                 }
 
                 // Validasi bahwa tidak ada SPB dengan project_id yang sama
-                $existingSpb = SpbProject::where('project_id', $request->project_id)->first();
+                /* $existingSpb = SpbProject::where('project_id', $request->project_id)->first();
 
                 if ($existingSpb) {
                     throw new \Exception("SPB dengan Project ID {$request->project_id} sudah ada.");
-                }
+                } */
 
                 // Mendapatkan doc_no_spb terakhir berdasarkan kategori SPB
                 $maxDocNo = SpbProject::where('spbproject_category_id', $request->spbproject_category_id)
