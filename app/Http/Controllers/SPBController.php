@@ -1274,80 +1274,114 @@ class SPBController extends Controller
     public function activate(UpdateRequest $request, $docNo)
     {
         DB::beginTransaction();
-
+    
         try {
             // Cari SpbProject berdasarkan doc_no_spb
             $SpbProject = SpbProject::where('doc_no_spb', $docNo)->first();
             if (!$SpbProject) {
-                return MessageActeeve::notFound('Data not found!');
+                return MessageActeeve::notFound('Data tidak ditemukan!');
             }
-
+    
             // Pastikan bahwa SPB Project status sebelumnya adalah REJECTED
             if ($SpbProject->spbproject_status_id != SpbProject_Status::REJECTED) {
-                return MessageActeeve::error('SPB Project is not in rejected status!');
+                return MessageActeeve::error('SPB Project tidak dalam status REJECTED!');
             }
-
+    
             // Update status dan tab di SpbProject
+            $request->merge(['ppn' => $request->tax_ppn]);
+    
+            // Melakukan update terhadap SpbProject dengan data yang diterima pada request
+            $SpbProject->update($request->only([
+                'doc_no_spb',
+                'doc_type_spb',
+                'spbproject_category_id',
+                'spbproject_status_id',
+                'user_id',
+                'project_id',
+                'unit_kerja',
+                'nama_toko',
+                'tanggal_dibuat_spb',
+                'tanggal_berahir_spb',
+                'ppn',
+            ]));
+    
+            // Menghapus produk lama yang terkait dengan SPB Project sebelum mengaktifkannya
+            $SpbProject->products()->detach();
+    
+            // Pastikan reject_note dihapus saat SPB Project diaktifkan
             $SpbProject->update([
-                'spbproject_status_id' => SpbProject_Status::AWAITING, // Status diubah kembali menjadi AWAITING
+                'spbproject_status_id' => SpbProject_Status::AWAITING, // Status diubah menjadi AWAITING
                 'tab_spb' => SpbProject::TAB_SUBMIT, // Tab tetap di SUBMIT
                 'reject_note' => null, // Menghapus reject note yang sebelumnya
             ]);
-
+    
             // Menyinkronkan produk yang terkait (jika ada perubahan produk)
             $productData = [];
             foreach ($request->vendors as $vendorData) {
+                // Proses vendor
+                $vendor = Company::find($vendorData['vendor_id']);
+                if (!$vendor || $vendor->contact_type_id != ContactType::VENDOR) {
+                    throw new \Exception("Vendor ID {$vendorData['vendor_id']} tidak valid atau bukan vendor.");
+                }
+    
+                // Proses ongkir (jika ada)
+                $ongkir = isset($vendorData['ongkir']) ? (is_array($vendorData['ongkir']) ? $vendorData['ongkir'][0] : $vendorData['ongkir']) : 0;
+    
+                // Loop untuk mengupdate produk terkait dengan vendor
                 foreach ($vendorData['produk'] as $produkData) {
+                    // Menyimpan produk yang sudah ada di pivot table jika produk_id ada
                     if (count($produkData['produk_id']) > 0) {
                         foreach ($produkData['produk_id'] as $produkId) {
-                            $productData[] = [
+                            ProductCompanySpbProject::firstOrCreate([
                                 'spb_project_id' => $SpbProject->doc_no_spb,
                                 'produk_id' => $produkId,
-                                'company_id' => $vendorData['vendor_id'],
-                                'ongkir' => $vendorData['ongkir'] ?? 0,
-                            ];
+                                'company_id' => $vendor->id,
+                                'ongkir' => $ongkir,
+                            ]);
                         }
                     }
-
-                    // Proses produk baru jika ada
-                    if (count($produkData['produk_id']) == 0 && count($produkData['produk_data']) > 0) {
+    
+                    // Menyimpan produk baru ke pivot table jika ada produk baru
+                    if (count($produkData['produk_id']) > 0 && count($produkData['produk_data']) > 0) {
                         foreach ($produkData['produk_data'] as $newProductData) {
                             // Buat produk baru
                             $newProduct = Product::create([
                                 'nama' => $newProductData['nama'],
-                                'id_kategori' => $newProductData['id_kategori'] ?? null,
+                                'id_kategori' => $newProductData['id_kategori'] ?: null,
                                 'deskripsi' => $newProductData['deskripsi'],
                                 'harga' => $newProductData['harga'],
                                 'stok' => $newProductData['stok'],
                                 'type_pembelian' => $newProductData['type_pembelian'],
                             ]);
-
+    
                             // Simpan produk baru ke pivot table
                             $productData[] = [
                                 'spb_project_id' => $SpbProject->doc_no_spb,
                                 'produk_id' => $newProduct->id,
-                                'company_id' => $vendorData['vendor_id'],
-                                'ongkir' => $vendorData['ongkir'] ?? 0,
+                                'company_id' => $vendor->id,
+                                'ongkir' => $ongkir,
                             ];
                         }
                     }
                 }
+    
+                // Insert atau update produk secara massal menggunakan upsert
+                if (count($productData) > 0) {
+                    ProductCompanySpbProject::upsert($productData, ['spb_project_id', 'produk_id', 'company_id'], ['updated_at']);
+                }
+    
+                // Reset array untuk vendor berikutnya
+                $productData = [];
             }
-
-            // Menyimpan produk ke pivot table jika ada perubahan
-            if (count($productData) > 0) {
-                ProductCompanySpbProject::upsert($productData, ['spb_project_id', 'produk_id', 'company_id'], ['updated_at']);
-            }
-
             // Mengecek apakah log dengan tab SUBMIT sudah ada sebelumnya untuk user yang sama
             $existingLog = $SpbProject->logs()->where('tab_spb', SpbProject::TAB_SUBMIT)
                                                 ->where('name', auth()->user()->name)
                                                 ->first();
-
+    
             if ($existingLog) {
                 // Jika log sudah ada, update pesan log yang sesuai
                 $existingLog->update([
-                    'message' => 'SPB Project has been activated', // Update pesan log
+                    'message' => 'SPB Project telah diaktifkan', // Update pesan log
                     'created_at' => now(), // Update timestamp jika perlu
                     'reject_note' => null, // Tidak ada reject_note saat activate
                 ]);
@@ -1356,16 +1390,16 @@ class SPBController extends Controller
                 $SpbProject->logs()->create([
                     'tab_spb' => SpbProject::TAB_SUBMIT, // Tab tetap di SUBMIT
                     'name' => auth()->user()->name, // Nama pengguna yang melakukan aksi
-                    'message' => 'SPB Project has been activated and status set to awaiting', 
+                    'message' => 'SPB Project telah diaktifkan dan status diubah menjadi awaiting',
                     'reject_note' => null, // Tidak ada reject_note saat activate
                 ]);
             }
-
+    
             DB::commit();
-
+    
             // Kembali dengan pesan sukses
-            return MessageActeeve::success("SPB Project $docNo has been activated and is now in awaiting status.");
-
+            return MessageActeeve::success("SPB Project $docNo telah diaktifkan dan statusnya sekarang awaiting.");
+    
         } catch (\Throwable $th) {
             DB::rollBack();
             return MessageActeeve::error($th->getMessage());
