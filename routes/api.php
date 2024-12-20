@@ -171,3 +171,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{id}', [ManPowerController::class, 'destroy']);
     });
 });
+
+
+
+

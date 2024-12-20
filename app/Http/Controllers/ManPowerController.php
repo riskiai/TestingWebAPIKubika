@@ -26,11 +26,17 @@ class ManPowerController extends Controller
 
     public function index(Request $request)
     {
-        $query = $this->manPower->query();
+        $query = $this->manPower->with('user');
 
-        // Filter berdasarkan pencarian deskripsi
+        // Filter berdasarkan pencarian deskripsi atau nama pengguna
         if ($request->has('search')) {
-            $query->where('description', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', '%' . $search . '%')
+                ->orWhereHas('user', function ($query) use ($search) {
+                    $query->where('name', 'like', '%' . $search . '%');
+                });
+            });
         }
 
         // Filter berdasarkan user_id
