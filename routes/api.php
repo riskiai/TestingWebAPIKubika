@@ -119,12 +119,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('spbproject/counting', [SPBController::class, 'counting']); 
     Route::post('spbproject/create-spb', [SPBController::class, 'store']);
     Route::put('addspbproject/toproject/{id}', [SPBController::class, 'addspbtoproject']);
-    Route::post('spbproject/update-spb/{id}', [SPBController::class, 'update']);
+    Route::put('spbproject/update-spb/{id}', [SPBController::class, 'update']);
     Route::get('spbproject/{id}', [SPBController::class, 'show']);
     Route::delete('spbproject/destroy/{id}', [SPBController::class, 'destroy']);
     Route::put('spbproject/accept/{id}', [SPBController::class, 'accept']);
     Route::put('spbproject/reject/{id}', [SPBController::class, 'reject']);
+    Route::put('spbproject/reject-produk/{id}', [SPBController::class, 'rejectproduk']);
+
+    Route::put('spbproject/activate-produk/{id}', [SPBController::class, 'activateproduk']);
     Route::put('spbproject/activate/{id}', [SPBController::class, 'activate']);
+    Route::delete('spbproject/delete-produk/{id}', [SPBController::class, 'deleteProduk']);
+
     Route::put('spbproject/undo/{id}', [SPBController::class, 'undo']);
     Route::put('spbproject/request/{id}', [SPBController::class, 'request']);
     Route::put('spbproject/payment/{id}', [SPBController::class, 'payment']);
@@ -142,27 +147,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::get('manpower-report', [ReportController::class, 'reportManpower']);
      Route::get('project-report', [ReportController::class, 'reportProject']);
 
-    // Purchase
-    // end point Purchase Category
-    Route::prefix('purchase-category')->group(function () {
-        Route::get('/', [PurchaseCategoryController::class, 'index']);
-        Route::get('/{id}', [PurchaseCategoryController::class, 'show']);
-    });
-
-    // end point Purchase Status
-    Route::prefix('purchase-status')->group(function () {
-        Route::get('/', [PurchaseStatusController::class, 'index']);
-        Route::get('/{id}', [PurchaseStatusController::class, 'show']);
-    });
-
-    Route::get('purchase', [PurchaseController::class, 'index']);
-    Route::get('purchase/{id}', [PurchaseController::class, 'show']);
-    Route::get('purchase-counting', [PurchaseController::class, 'counting']);
-    Route::post('purchase-create', [PurchaseController::class, 'store']);
-    Route::put('purchase-update/{id}', [PurchaseController::class, 'update']);
-    Route::delete('purchase-destroy/{id}', [PurchaseController::class, 'destroy']);
-
-
+    /* Man Power */
     Route::prefix('man-power')->group(function () {
         Route::get('/', [ManPowerController::class, 'index']);
         Route::post('/', [ManPowerController::class, 'store']);

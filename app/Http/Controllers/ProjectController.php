@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Company;
@@ -12,14 +13,15 @@ use App\Models\ContactType;
 use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
 use App\Models\ProjectUserProduk;
+use App\Models\SpbProject_Status;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Models\ProductCompanySpbProject;
 use App\Http\Requests\Project\StoreRequest;
 use App\Http\Requests\Project\UpdateRequest;
 use App\Http\Resources\Project\ProjectCollection;
 use App\Http\Requests\Project\UpdatePengunaMuatanRequest;
-use App\Models\SpbProject_Status;
 
 class ProjectController extends Controller
 {
@@ -155,9 +157,7 @@ class ProjectController extends Controller
         $data = [];
         foreach ($spbProjects as $spbProject) {
             // Ambil semua data dari pivot table product_company_spbproject berdasarkan spb_project_id
-            $pivotData = DB::table('product_company_spbproject')
-                ->where('spb_project_id', $spbProject->doc_no_spb) // Assuming doc_no_spb is spb_project_id
-                ->get(); // Use get() to fetch all vendors for this SPB project
+            $pivotData = $spbProject->productCompanySpbprojects;
 
             // Mengambil status pembayaran dengan pengecekan null
             $status = $spbProject->status ? $spbProject->status->name : 'Unknown';
@@ -171,13 +171,15 @@ class ProjectController extends Controller
                 // Cek apakah vendor dengan vendor_id yang sama sudah ada
                 if (!in_array($pivot->company_id, $vendorIds)) {
                     // Ambil nama perusahaan dari pivot table
-                    $company = DB::table('companies')->where('id', $pivot->company_id)->first();
+                    $company = $pivot->company; // Menggunakan relasi yang sudah ada di model ProductCompanySpbProject
                     $companyName = $company ? $company->name : 'Unknown';
-
+    
                     // Menyusun data vendor
                     $vendorData = [
                         'vendor_id' => $pivot->company_id, // Assuming the vendor_id is the company_id
                         'company_name' => $companyName,
+                        'produk_id' => $pivot->produk_id,
+                        'produk_nama' => $pivot->product->nama ?? 'Unknown', // Mengambil nama produk melalui relasi
                     ];
 
                     // Tambahkan vendor ke dalam array vendors
@@ -192,13 +194,13 @@ class ProjectController extends Controller
             $data[] = [
                 "doc_no_spb" => $spbProject->doc_no_spb,
                 "doc_type_spb" => $spbProject->doc_type_spb,
-                "total" => $spbProject->total,
+                "total" => $spbProject->total_produk,
                 "status" => [
                     'id' => $spbProject->status ? $spbProject->status->id : null,
                     'tab_spb' => $spbProject->tab_spb,
                     'name' => $status,
                 ],
-                "vendors" => $vendors, // Menambahkan data vendor yang telah disusun
+                "produk" => $vendors, // Menambahkan data vendor yang telah disusun
             ];
         }
 
@@ -598,32 +600,27 @@ class ProjectController extends Controller
                     ],
                 ];
             }),
-             // Menambahkan data spbProjects yang terkait dengan project
-             'spb_project' => $project->spbProjects->map(function ($spbProject) {
-                return [
-                    'doc_no_spb' => $spbProject->doc_no_spb,
-                    'doc_type_spb' => $spbProject->doc_type_spb,
-                    "vendors" => $this->getVendorsWithProducts($spbProject),
-                    'unit_kerja' => $spbProject->unit_kerja,
-                    'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
-                    'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
-                    'logs' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
-                        // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
-                        $lastLog = $logsByUser->sortByDesc('created_at')->first();
-
-                        // Ambil reject_note dari spbProject
-                        $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
-
-                        return [
-                            'tab' => $lastLog->tab, // Ambil tab dari log terakhir
-                            'name' => $lastLog->name, // Ambil nama pengguna
-                            'created_at' => $lastLog->created_at, // Ambil waktu terakhir log
-                            'message' => $lastLog->message, // Ambil pesan dari log terakhir
-                            'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
-                        ];
-                    })->values()->all(),
-                ];
-            }),
+             // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
+             'spb_projects' => $project->spbProjects->map(function ($spbProject) {
+                    return [
+                        'doc_no_spb' => $spbProject->doc_no_spb,
+                        'doc_type_spb' => $spbProject->doc_type_spb,
+                        'unit_kerja' => $spbProject->unit_kerja,
+                        'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
+                        'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
+                        // Menampilkan seluruh produk yang terkait, tanpa filter status PAID
+                        'produk' => $spbProject->productCompanySpbprojects->map(function ($product) use ($spbProject) {
+                            return [
+                                'produk_id' => $product->produk_id,
+                                'produk_nama' => $product->product->nama ?? 'Unknown', // Hanya nama produk
+                                'vendor_id' => $product->company->id ?? 'Unknown',
+                                'vendor_name' => $product->company->name ?? 'Unknown',
+                                'total_per_produk' => $product->total_produk, // Total per produk
+                            ];
+                        }),
+                        'total_keseluruhanproduk' => $spbProject->total_produk,
+                    ];
+                }),
             'summary_salary_manpower' => [
                 'tukang_harian' => $this->tukangHarianSalary($project->manPowers()),
                 'tukang_borongan' => $this->tukangBoronganSalary($project->manPowers()),
@@ -671,7 +668,7 @@ class ProjectController extends Controller
         // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
         foreach ($spbProjects as $spbProject) {
             // Ambil total dari masing-masing SpbProject
-            $total += $spbProject->getTotalAttribute();  // Menggunakan method getTotalAttribute yang sudah ada
+            $total += $spbProject->getTotalProdukAttribute(); 
         }
 
         // Cek jika cost_estimate lebih besar dari 0 sebelum melakukan pembagian

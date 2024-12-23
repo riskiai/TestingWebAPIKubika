@@ -45,13 +45,13 @@ class SpbProject extends Model
         'know_kepalagudang',
         'request_owner',
         'file_pembayaran',
-        'subtotal',
+       /*  'subtotal',
         'ppn',
-        'pph',
+        'pph', */
         'updated_at',
     ];
 
-    public function getSubtotal()
+    /* public function getSubtotal()
     {
         $subtotal = 0;  // Inisialisasi subtotal keseluruhan
     
@@ -83,30 +83,20 @@ class SpbProject extends Model
         }
     
         return round($subtotal);  // Mengembalikan subtotal keseluruhan yang sudah dibulatkan
-    }
+    } */
 
-    
-    public function getTotalAttribute()
+    public function getTotalProdukAttribute()
     {
-        $subtotal = $this->getSubtotal();
-        $total = $subtotal;  // Inisialisasi total dengan subtotal
+        // Ambil semua produk terkait dengan SPB Project ini
+        $products = $this->productCompanySpbprojects;
 
-        // Jika ada PPN, hitung dan tambahkan
-        if ($this->attributes['ppn']) {
-            $ppn = ($subtotal * $this->attributes['ppn']) / 100;
-            $total += $ppn;
-        }
+        // Hitung total dari semua produk
+        $grandTotal = $products->sum(function ($product) {
+            return $product->total_produk; // Menggunakan atribut total_produk dari ProductCompanySpbProject
+        });
 
-        // Jika ada PPH, hitung dan kurangi
-        if ($this->attributes['pph']) {
-            $pph = ($subtotal * $this->taxPph->percent) / 100;
-            $total -= $pph;
-        }
-
-        return round($total);  // Bulatkan total hasil akhir
-
+        return round($grandTotal); // Pembulatan ke bilangan bulat
     }
-
 
     public function category(): BelongsTo
     {
@@ -118,24 +108,23 @@ class SpbProject extends Model
         return $this->belongsTo(SpbProject_Status::class, 'spbproject_status_id');
     }
 
-     // Tambahkan relasi hasMany ke ProductCompanySpbProject
-     public function productCompanySpbprojects()
-     {
-         return $this->hasMany(ProductCompanySpbproject::class, 'spb_project_id', 'doc_no_spb');
-     }
- 
-     // Relasi dengan Vendor (Company)
-     public function vendors()
+        // Tambahkan relasi hasMany ke ProductCompanySpbProject
+    public function productCompanySpbprojects()
+    {
+        return $this->hasMany(ProductCompanySpbproject::class, 'spb_project_id', 'doc_no_spb');
+    }
+
+    // Relasi dengan Vendor (Company)
+    public function vendors()
     {
         return $this->belongsToMany(Company::class, 'product_company_spbproject', 'spb_project_id', 'company_id')
-                                ->withPivot('ongkir'); 
+                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk']);
     }
- 
-     // Relasi SpbProject ke Product
-     public function products()
+
+    public function products()
     {
         return $this->belongsToMany(Product::class, 'product_company_spbproject', 'spb_project_id', 'produk_id')
-                                    ->withPivot('ongkir');  
+                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk']);
     }
 
     public function taxPpn(): HasOne

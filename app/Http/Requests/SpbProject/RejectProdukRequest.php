@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
-class AcceptRequest extends FormRequest
+class RejectProdukRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -18,18 +18,13 @@ class AcceptRequest extends FormRequest
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
             'produk' => 'required|array',
-            'produk.*.produk_data.*.produk_id.*' => 'nullable|exists:products,id',
-            'produk.*.produk_data.*.vendor_id' => 'required|exists:companies,id',
-            'produk.*.produk_data.*.pph_id' => 'nullable|exists:taxs,id',
+            'produk.*.produk_id' => 'required|exists:products,id',  // Validasi produk_id
+            'produk.*.vendor_id' => 'required|exists:companies,id', // Validasi vendor_id
+            'produk.*.note_reject_produk' => 'nullable|string|max:255', // Validasi catatan penolakan
         ];
     }
 

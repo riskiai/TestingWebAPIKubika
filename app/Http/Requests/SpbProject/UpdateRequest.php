@@ -26,20 +26,20 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-           'spbproject_category_id' => 'required|exists:spb_project__categories,id',
+            'spbproject_category_id' => 'required|exists:spb_project__categories,id',
             'project_id' => 'required|string|max:255',
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
             'unit_kerja' => 'required|string|max:255',
-            'tax_ppn' => 'nullable|string',
-            'subtotal' => 'nullable|numeric',
-            'vendors' => 'required|array',
-            'vendors.*.vendor_id' => 'required|exists:companies,id',
-            'vendors.*.ongkir' => 'nullable|numeric',
-            'vendors.*.produk' => 'required|array',
-            'vendors.*.produk.*.produk_id' => 'nullable|array', 
-            'vendors.*.produk.*.produk_id.*' => 'nullable|integer|exists:products,id', 
-            'vendors.*.produk.*.produk_data' => 'nullable|array',
+            'produk' => 'required|array',
+            'produk.*.produk_data.*.produk_id' => 'required|exists:products,id',
+            'produk.*.produk_data.*.vendor_id' => 'required|exists:companies,id',
+            'produk.*.produk_data.*.ongkir' => 'nullable|numeric|min:0',
+            'produk.*.produk_data.*.harga' => 'required|numeric|min:0',
+            'produk.*.produk_data.*.stok' => 'required|integer|min:0',
+            'produk.*.produk_data.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
+            'produk.*.produk_data.*.date' => 'nullable|date',
+            'produk.*.produk_data.*.due_date' => 'nullable|date',
         ];
     }
 

@@ -2,28 +2,27 @@
 
 namespace App\Http\Requests\SpbProject;
 
-use App\Facades\MessageActeeve;
-use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\JsonResponse;
 
 class CreateRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
+public function authorize(): bool
+{
+    return true;
+}
 
-    protected function prepareForValidation()
-    {
-        // Pastikan produk_id selalu menjadi array, meskipun hanya ada satu nilai
-        $this->merge([
-            'produk_id' => is_array($this->input('produk_id')) ? $this->input('produk_id') : [$this->input('produk_id')],
-        ]);
-    }
+protected function prepareForValidation()
+{
+    // Pastikan semua data dalam bentuk array yang sesuai
+    $this->merge([
+        'produk' => is_array($this->input('produk')) ? $this->input('produk') : [],
+    ]);
+}
 
-    public function rules(): array
+public function rules(): array
     {
         return [
             'spbproject_category_id' => 'required|exists:spb_project__categories,id',
@@ -31,39 +30,39 @@ class CreateRequest extends FormRequest
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
             'unit_kerja' => 'required|string|max:255',
-            'tax_ppn' => 'nullable|string',
-            'subtotal' => 'nullable|numeric',
-            'vendors' => 'required|array',
-            'vendors.*.vendor_id' => 'required|exists:companies,id',
-            'vendors.*.ongkir' => 'nullable|numeric',
-            'vendors.*.produk' => 'required|array',
-            'vendors.*.produk.*.produk_id' => 'nullable|array', 
-            'vendors.*.produk.*.produk_id.*' => 'nullable|integer|exists:products,id', 
-            'vendors.*.produk.*.produk_data' => 'nullable|array',
+            'produk' => 'required|array',
+            'produk.*.produk_data' => 'required|array',
+            'produk.*.produk_data.*.produk_id' => 'required|exists:products,id', // Produk ID harus ada dan bukan array
+            'produk.*.produk_data.*.vendor_id' => 'required|exists:companies,id',
+            'produk.*.produk_data.*.ongkir' => 'nullable|numeric|min:0',
+            'produk.*.produk_data.*.harga' => 'required|numeric|min:0',
+            'produk.*.produk_data.*.stok' => 'required|integer|min:0',
+            'produk.*.produk_data.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
+            'produk.*.produk_data.*.date' => 'nullable|date',
+            'produk.*.produk_data.*.due_date' => 'nullable|date',
         ];
     }
 
-    public function attributes(): array
-    {
-        return [
-            'spbproject_category_id' => 'SPB project category',
-            'project_id' => 'project ID',
-            'produk_id' => 'product ID',
-            'tanggal_berahir_spb' => 'SPB expiry date',
-            'tanggal_dibuat_spb' => 'SPB creation date',
-            'unit_kerja' => 'work unit',
-            'nama_toko' => 'store name',
-        ];
-    }
 
-    protected function failedValidation(Validator $validator)
-    {
-        $response = new JsonResponse([
-            'status' => MessageActeeve::WARNING,
-            'status_code' => MessageActeeve::HTTP_UNPROCESSABLE_ENTITY,
-            'message' => $validator->errors(),
-        ], MessageActeeve::HTTP_UNPROCESSABLE_ENTITY);
+public function attributes(): array
+{
+    return [
+        'spbproject_category_id' => 'SPB project category',
+        'project_id' => 'project ID',
+        'produk' => 'products',
+        'tanggal_berahir_spb' => 'SPB expiry date',
+        'tanggal_dibuat_spb' => 'SPB creation date',
+        'unit_kerja' => 'work unit',
+    ];
+}
 
-        throw new ValidationException($validator, $response);
-    }
+protected function failedValidation(Validator $validator)
+{
+    $response = new JsonResponse([
+        'status' => 'error',
+        'message' => $validator->errors(),
+    ], 422);
+
+    throw new ValidationException($validator, $response);
+}
 }

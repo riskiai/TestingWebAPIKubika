@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('product_company_spbproject', function (Blueprint $table) {
-            $table->string('ongkir', 255)->nullable()->after('company_id');
+            $table->date('date')->nullable()->after('status_produk'); // Tambahkan kolom `date`
+            $table->date('due_date')->nullable()->after('date'); // Tambahkan kolom `due_date`
         });
     }
 
@@ -22,7 +23,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('product_company_spbproject', function (Blueprint $table) {
-            $table->dropColumn('ongkir');
+            $table->dropColumn('date'); // Hapus kolom `date`
+            $table->dropColumn('due_date'); // Hapus kolom `due_date`
         });
     }
 };

@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('purchase_category', function (Blueprint $table) {
-            $table->id();
-            $table->string('name'); // kolom untuk nama kategori
-            $table->string('short'); // kolom untuk short name
-            $table->timestamps();
+        Schema::table('product_company_spbproject', function (Blueprint $table) {
+            $table->string('note_reject_produk')->nullable()->after('due_date');
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('purchase_category');
+        Schema::table('product_company_spbproject', function (Blueprint $table) {
+            //
+        });
     }
 };

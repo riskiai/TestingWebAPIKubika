@@ -30,9 +30,9 @@ class CreateRequest extends FormRequest
             'id_kategori' => 'nullable|exists:kategori,id',
             'deskripsi' => 'nullable|string',
             'deskripsi' => 'nullable|string',
-            'stok' => 'required|integer|min:0',
+            'stok' => 'nullable|integer|min:0',
             'type_pembelian' => 'nullable|string|max:255', // Validasi type_pembelian
-            'harga' => 'required|numeric|min:0', // Validasi harga
+            'harga' => 'nullable|numeric|min:0', // Validasi harga
             // 'ongkir' => 'required|numeric|min:0'
         ];
     }

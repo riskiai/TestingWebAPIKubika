@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Purchase;
+namespace App\Http\Requests\SpbProject;
 
 use App\Facades\MessageActeeve;
 use Illuminate\Contracts\Validation\Validator;
@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
-class UpdateRequest extends FormRequest
+class ActivateProdukRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,33 +25,16 @@ class UpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        $request = [
-            'type_purchase_id' => 'nullable|in:1,2',
-            'purchase_category_id' => 'nullable|exists:purchase_category,id',
-            'client_id' => 'nullable|exists:companies,id',
-            'tax_ppn' => 'nullable|string',
-            'sub_total' => 'nullable|numeric',
-            'attachment_file' => 'array',
-            'attachment_file.*' => 'mimes:pdf,png,jpg,jpeg,xlsx,xls|max:3072',
-            'date' => 'nullable|date',
-            'due_date' => 'nullable|date',
-            "created_at" => 'nullable|date',
-            "updated_at" => 'nullable|date',
-        ];
-
-        if (request()->purchase_id == 1) {
-            $request['project_id'] = 'nullable|exists:projects,id';
-        }
-
-        return $request;
-    }
-
-    public function attributes()
-    {
         return [
-            'client_id' => 'client',
-            'project_id' => 'project',
-            'tax_id' => 'tax',
+            'produk' => 'required|array',
+            'produk.*.produk_id' => 'required|exists:products,id',  // Validasi produk_id
+            'produk.*.vendor_id' => 'required|exists:companies,id', // Validasi vendor_id
+            'produk.*.ongkir' => 'nullable|numeric|min:0',
+            'produk.*.harga' => 'required|numeric|min:0',
+            'produk.*.stok' => 'required|integer|min:0',
+            'produk.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
+            'produk.*.date' => 'nullable|date',
+            'produk.*.due_date' => 'nullable|date',
         ];
     }
 

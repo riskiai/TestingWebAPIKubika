@@ -50,6 +50,19 @@ class ReportController extends Controller
             }
         }
 
+        // Filter berdasarkan tab_spb
+        if ($request->has('tab_spb')) {
+            $tab = $request->get('tab_spb');
+            if (in_array($tab, [
+                SpbProject::TAB_SUBMIT,
+                SpbProject::TAB_VERIFIED,
+                SpbProject::TAB_PAYMENT_REQUEST,
+                SpbProject::TAB_PAID
+            ])) {
+                $query->where('tab_spb', $tab);
+            }
+        }
+
         // Filter berdasarkan project ID
         if ($request->has('project')) {
             $query->whereHas('project', function ($query) use ($request) {

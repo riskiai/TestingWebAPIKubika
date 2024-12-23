@@ -7,6 +7,7 @@ use App\Models\SpbProject;
 use Illuminate\Http\Request;
 use App\Models\SpbProject_Status;
 use Illuminate\Support\Facades\DB;
+use App\Models\ProductCompanySpbProject;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class SPBprojectCollection extends ResourceCollection
@@ -21,12 +22,22 @@ class SPBprojectCollection extends ResourceCollection
         $data = [];
 
         foreach ($this as $key => $spbProject) {
+              // Determine the tab name
+            $tabNames = [
+                SpbProject::TAB_SUBMIT => 'Submit',
+                SpbProject::TAB_VERIFIED => 'Verified',
+                SpbProject::TAB_PAYMENT_REQUEST => 'Payment Request',
+                SpbProject::TAB_PAID => 'Paid',
+            ];
+
+            $tabName = $tabNames[$spbProject->tab_spb] ?? 'Unknown';
+            
             $data[$key] = [
                 "doc_no_spb" => $spbProject->doc_no_spb,
                 "doc_type_spb" => $spbProject->doc_type_spb,
-                "status" => $this->getStatus($spbProject),
+                "status_spb" => $this->getStatus($spbProject),
                 // Menambahkan logs ke dalam data proyek
-                'logs_status_hakakses_pembayaran' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
+                'logs_spb' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
                     // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
                     $lastLog = $logsByUser->sortByDesc('created_at')->first();
 
@@ -41,13 +52,6 @@ class SPBprojectCollection extends ResourceCollection
                         'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
                     ];
                 })->values()->all(),
-                // 'project' => $spbProject->project->isNotEmpty() ? [
-                //     'id' => $spbProject->project->first()->id,
-                //     'nama' => $spbProject->project->first()->name,
-                // ] : [
-                //     'id' => 'N/A',
-                //     'nama' => 'No Project Available'
-                // ],
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
@@ -55,15 +59,155 @@ class SPBprojectCollection extends ResourceCollection
                     'id' => 'N/A',
                     'nama' => 'No Project Available',
                 ],
-                "vendors" => $this->getVendorsWithProducts($spbProject),
-                "subtotal" => $spbProject->getSubtotal(),
-                "ppn" => $this->getPpn($spbProject),
-                "total" => $spbProject->total,
+                'produk' => $spbProject->productCompanySpbprojects->map(function ($product) use ($spbProject) {
+                            $dueDate = Carbon::createFromFormat("Y-m-d", $product->due_date); // Membaca due_date
+                            $nowDate = Carbon::now(); // Mendapatkan tanggal sekarang
+                            $status = $product->status_produk; // Status awal produk
+
+                            // Periksa jika status produk adalah "Paid"
+                            if ($status === ProductCompanySpbProject::TEXT_PAID_PRODUCT) {
+                                // Jika status adalah "Paid", set status ke "Paid"
+                                $notePaid = $product->note_paid_produk; // Ambil note_paid_produk jika statusnya "Paid"
+                                return [
+                                    'produk_data' => [
+                                        'produk_id' => $product->produk_id ?? 'Unknown',
+                                        'nama' => $product->product->nama ?? 'Unknown',
+                                        'id_kategori' => $product->product->id_kategori ?? null,
+                                        'deskripsi' => $product->product->deskripsi ?? '',
+                                        'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                                    ],
+                                    'vendor' => [
+                                        'id' => $product->company->id ?? 'Unknown',
+                                        'name' => $product->company->name ?? 'Unknown',
+                                        'bank_name' => $product->company->bank_name ?? 'Unknown',
+                                        'account_name' => $product->company->account_name ?? 'Unknown',
+                                    ],
+                                    'status_produk' => $status, // Status produk adalah "Paid"
+                                    'note_paid_produk' => $notePaid, // Catatan jika produk sudah dibayar
+                                    'date' => $product->date,
+                                    'due_date' => $product->due_date,
+                                    'ppn' => $product->ppn_value,
+                                    'ongkir' => $product->ongkir ?? 0,
+                                    'harga' => $product->harga ?? 0,
+                                    'stok' => $product->stok ?? 0,
+                                    'subtotal_item' => $product->subtotal_produk,
+                                    'pph' => [
+                                        'pph_type' => $product->taxPph->name ?? 'Unknown',
+                                        'pph_rate' => $product->taxPph->percent ?? 0,
+                                        'pph_hasil' => $product->pph_value,
+                                    ],
+                                    'total_item' => $product->total_produk,
+                                ];
+                            }
+
+                            // Cek jika produk sudah ditolak (Rejected), maka langsung set statusnya ke Rejected
+                            if ($status === ProductCompanySpbProject::TEXT_REJECTED_PRODUCT) {
+                                $noteReject = $product->note_reject_produk; // Ambil note_reject_produk jika statusnya "Rejected"
+                                return [
+                                    'produk_data' => [
+                                        'produk_id' => $product->produk_id ?? 'Unknown',
+                                        'nama' => $product->product->nama ?? 'Unknown',
+                                        'id_kategori' => $product->product->id_kategori ?? null,
+                                        'deskripsi' => $product->product->deskripsi ?? '',
+                                        'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                                    ],
+                                    'vendor' => [
+                                        'id' => $product->company->id ?? 'Unknown',
+                                        'name' => $product->company->name ?? 'Unknown',
+                                        'bank_name' => $product->company->bank_name ?? 'Unknown',
+                                        'account_name' => $product->company->account_name ?? 'Unknown',
+                                    ],
+                                    'status_produk' => $status, // Status produk adalah "Rejected"
+                                    'note_reject_produk' => $noteReject, // Catatan ditolak
+                                    'date' => $product->date,
+                                    'due_date' => $product->due_date,
+                                    'ppn' => $product->ppn_value,
+                                    'ongkir' => $product->ongkir ?? 0,
+                                    'harga' => $product->harga ?? 0,
+                                    'stok' => $product->stok ?? 0,
+                                    'subtotal_item' => $product->subtotal_produk,
+                                    'pph' => [
+                                        'pph_type' => $product->taxPph->name ?? 'Unknown',
+                                        'pph_rate' => $product->taxPph->percent ?? 0,
+                                        'pph_hasil' => $product->pph_value,
+                                    ],
+                                    'total_item' => $product->total_produk,
+                                ];
+                            }
+
+                            // Periksa apakah status produk bukan open, overdue, atau duedate
+                            if (!in_array($status, [
+                                ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
+                                ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
+                                ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT
+                            ])) {
+                                // Jika status produk bukan open, overdue, atau duedate, set status ke Awaiting
+                                $status = ProductCompanySpbProject::TEXT_AWAITING_PRODUCT;
+                            } else {
+                                // Jika status produk valid, periksa status berdasarkan due_date dan tab_spb
+                                $dueDateDayYear = $dueDate->format('d-Y'); // Format tanggal hanya hari dan tahun
+                                $nowDateDayYear = $nowDate->format('d-Y'); // Tanggal sekarang (hari dan tahun)
+
+                                // Periksa status berdasarkan due_date dan tab_spb hanya jika status belum "Awaiting"
+                                if ($status !== ProductCompanySpbProject::TEXT_AWAITING_PRODUCT) {
+                                    if ($spbProject->tab_spb == SpbProject::TAB_VERIFIED || $spbProject->tab_spb == SpbProject::TAB_PAYMENT_REQUEST) {
+                                        if ($nowDateDayYear > $dueDateDayYear) {
+                                            // Jika tanggal sekarang lebih besar dari due_date (terlambat), set status ke OVERDUE
+                                            $status = ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT;
+                                        } elseif ($nowDateDayYear == $dueDateDayYear) {
+                                            // Jika tanggal sekarang sama dengan due_date (tepat waktu), set status ke DUEDATE
+                                            $status = ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT;
+                                        } elseif ($nowDateDayYear < $dueDateDayYear) {
+                                            // Jika tanggal sekarang lebih kecil dari due_date (belum lewat), set status ke OPEN
+                                            $status = ProductCompanySpbProject::TEXT_OPEN_PRODUCT;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Menangani status "Rejected" jika tidak ditemukan sebelumnya
+                            if ($status === ProductCompanySpbProject::TEXT_REJECTED_PRODUCT) {
+                                $noteReject = $product->note_reject_produk;
+                            } else {
+                                $noteReject = null;
+                            }
+
+                            return [
+                                'produk_data' => [
+                                    'produk_id' => $product->produk_id ?? 'Unknown',
+                                    'nama' => $product->product->nama ?? 'Unknown',
+                                    'id_kategori' => $product->product->id_kategori ?? null,
+                                    'deskripsi' => $product->product->deskripsi ?? '',
+                                    'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                                ],
+                                'vendor' => [
+                                    'id' => $product->company->id ?? 'Unknown',
+                                    'name' => $product->company->name ?? 'Unknown',
+                                    'bank_name' => $product->company->bank_name ?? 'Unknown',
+                                    'account_name' => $product->company->account_name ?? 'Unknown',
+                                ],
+                                'status_produk' => $status,
+                                'note_reject_produk' => $noteReject,
+                            'date' => $product->date,
+                            'due_date' => $product->due_date,
+                            'ppn' => $product->ppn_value,
+                            'ongkir' => $product->ongkir ?? 0,
+                            'harga' => $product->harga ?? 0,
+                            'stok' => $product->stok ?? 0,
+                            'subtotal_item' => $product->subtotal_produk,
+                            'pph' => [
+                                'pph_type' => $product->taxPph->name ?? 'Unknown',
+                                'pph_rate' => $product->taxPph->percent ?? 0,
+                                'pph_hasil' => $product->pph_value,
+                            ],
+                            'total_item' => $product->total_produk,
+                        ];
+                    }),
+                "total" => $spbProject->total_produk,
                 'file_attachement' => $this->getDocument($spbProject),
                 "unit_kerja" => $spbProject->unit_kerja,
-                "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
                 "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
-                // "nama_toko" => $spbProject->nama_toko,
+                "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
                 "know_marketing" => $this->getUserRole($spbProject->know_marketing),
                 "know_supervisor" => $this->getUserRole($spbProject->know_supervisor),
                 "know_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
@@ -81,9 +225,9 @@ class SPBprojectCollection extends ResourceCollection
             }
 
             // Jika ada PPH, tambahkan data PPH
-            if ($spbProject->pph) {
+            /* if ($spbProject->pph) {
             $data[$key]['pph'] = $this->getPph($spbProject);
-        }
+            } */
         }
 
         return $data;

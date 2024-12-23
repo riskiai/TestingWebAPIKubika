@@ -2,12 +2,14 @@
 
 namespace App\Http\Resources\Project;
 
+use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Project;
 use App\Models\Purchase;
 use App\Models\SpbProject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\ProductCompanySpbProject;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ProjectCollection extends ResourceCollection
@@ -40,7 +42,7 @@ class ProjectCollection extends ResourceCollection
                             'kode_produk' => $product->kode_produk,
                         ];
                     }), */
-                'tukang' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
+                'tukang' => $project->tenagaKerja() 
                 ->get()
                 ->map(function ($user) {
                     return [
@@ -60,33 +62,27 @@ class ProjectCollection extends ResourceCollection
                     'tukang_borongan' => $this->tukangBoronganSalary($project->manPowers()),
                     'total' => $this->tukangHarianSalary($project->manPowers()) + $this->tukangBoronganSalary($project->manPowers()),
                 ],
-                // Menambahkan data spbProjects yang terkait dengan project
-                'spb_project' => $project->spbProjects->map(function ($spbProject) {
+                // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
+                'spb_projects' => $project->spbProjects->map(function ($spbProject) {
                     return [
                         'doc_no_spb' => $spbProject->doc_no_spb,
                         'doc_type_spb' => $spbProject->doc_type_spb,
-                        "vendors" => $this->getVendorsWithProducts($spbProject),
                         'unit_kerja' => $spbProject->unit_kerja,
                         'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
                         'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
-                        'logs' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
-                            // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
-                            $lastLog = $logsByUser->sortByDesc('created_at')->first();
-
-                            // Ambil reject_note dari spbProject
-                            $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
-
+                        // Menampilkan seluruh produk yang terkait, tanpa filter status PAID
+                        'produk' => $spbProject->productCompanySpbprojects->map(function ($product) use ($spbProject) {
                             return [
-                                'tab' => $lastLog->tab, 
-                                'name' => $lastLog->name, 
-                                'created_at' => $lastLog->created_at, 
-                                'message' => $lastLog->message, 
-                                'reject_note' => $rejectNote, 
+                                'produk_id' => $product->produk_id,
+                                'produk_nama' => $product->product->nama ?? 'Unknown',
+                                'vendor_id' => $product->company->id ?? 'Unknown',
+                                'vendor_name' => $product->company->name ?? 'Unknown',
+                                'total_per_produk' => $product->total_produk, // Total per produk
                             ];
-                        })->values()->all(),
+                        }),
+                        'total_keseluruhanproduk' => $spbProject->total_produk,
                     ];
                 }),
-
                /* 'file_attachment_spb' => [
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
@@ -138,14 +134,8 @@ class ProjectCollection extends ResourceCollection
         // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
         foreach ($spbProjects as $spbProject) {
             // Ambil total dari masing-masing SpbProject
-            $total += $spbProject->getTotalAttribute();  // Menggunakan method getTotalAttribute yang sudah ada
+            $total += $spbProject->getTotalProdukAttribute(); 
         }
-
-        /* // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
-        foreach ($spbProjects as $spbProject) {
-            // Ambil subtotal dari masing-masing SpbProject
-            $total += $spbProject->getSubtotal();  // Menggunakan field 'subtotal' langsung
-        } */
 
         // Cek jika cost_estimate lebih besar dari 0 sebelum melakukan pembagian
         if ($project->cost_estimate > 0) {
@@ -183,7 +173,7 @@ class ProjectCollection extends ResourceCollection
         return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", false)->first()->total;
     }
 
-    private function getVendorsWithProducts(SpbProject $spbProject)
+    /* private function getVendorsWithProducts(SpbProject $spbProject)
     {
         // Ambil data produk yang terkait dengan spb_project_id tertentu
         $produkRelated = DB::table('product_company_spbproject')
@@ -224,12 +214,12 @@ class ProjectCollection extends ResourceCollection
                 })
                 ->values()  // Mengubah array menjadi numerik tanpa key angka
             : [];
-    }
+    } */
 
     /**
      * Fungsi untuk menghapus duplikasi produk berdasarkan produk_id
      */
-    private function removeDuplicatesByProductId(array $produkData)
+   /*  private function removeDuplicatesByProductId(array $produkData)
     {
         $seen = [];
         $result = [];
@@ -242,7 +232,7 @@ class ProjectCollection extends ResourceCollection
         }
 
         return $result;
-    }
+    } */
 
     /**
      * Format percent by removing "%" and rounding the value.
