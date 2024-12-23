@@ -61,7 +61,7 @@ class ProjectCollection extends ResourceCollection
                     'total' => $this->tukangHarianSalary($project->manPowers()) + $this->tukangBoronganSalary($project->manPowers()),
                 ],
                 // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
-                /* 'spb_projects' => $project->spbProjects->map(function ($spbProject) {
+                'spb_projects' => $project->spbProjects->map(function ($spbProject) {
                     return [
                         'doc_no_spb' => $spbProject->doc_no_spb,
                         'doc_type_spb' => $spbProject->doc_type_spb,
@@ -80,7 +80,7 @@ class ProjectCollection extends ResourceCollection
                             }),
                         'total_keseluruhanproduk' => $spbProject->total_produk,
                     ];
-                }), */
+                }),
                /* 'file_attachment_spb' => [
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
