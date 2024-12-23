@@ -8,7 +8,6 @@ use App\Models\Project;
 use App\Models\SpbProject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\ProductCompanySpbProject;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ProjectCollection extends ResourceCollection
@@ -62,7 +61,7 @@ class ProjectCollection extends ResourceCollection
                     'total' => $this->tukangHarianSalary($project->manPowers()) + $this->tukangBoronganSalary($project->manPowers()),
                 ],
                 // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
-                /* 'spb_projects' => $project->spbProjects->map(function ($spbProject) {
+                'spb_projects' => $project->spbProjects->map(function ($spbProject) {
                     return [
                         'doc_no_spb' => $spbProject->doc_no_spb,
                         'doc_type_spb' => $spbProject->doc_type_spb,
@@ -70,18 +69,18 @@ class ProjectCollection extends ResourceCollection
                         'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
                         'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
                         // Menampilkan seluruh produk yang terkait, tanpa filter status PAID
-                        'produk' => $spbProject->productCompanySpbprojects->map(function ($product) {
-                                return [
-                                    'produk_id' => $product->produk_id,
-                                    'produk_nama' => $product->product->nama ?? 'Unknown',
-                                    'vendor_id' => $product->company->id ?? 'Unknown',
-                                    'vendor_name' => $product->company->name ?? 'Unknown',
-                                    'total_per_produk' => $product->total_produk, // Total per produk
-                                ];
-                            }),
+                        'produk' => $spbProject->productCompanySpbprojects->map(function ($product) use ($spbProject) {
+                            return [
+                                'produk_id' => $product->produk_id,
+                                'produk_nama' => $product->product->nama ?? 'Unknown',
+                                'vendor_id' => $product->company->id ?? 'Unknown',
+                                'vendor_name' => $product->company->name ?? 'Unknown',
+                                'total_per_produk' => $product->total_produk, // Total per produk
+                            ];
+                        }),
                         'total_keseluruhanproduk' => $spbProject->total_produk,
                     ];
-                }), */
+                }),
                /* 'file_attachment_spb' => [
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
