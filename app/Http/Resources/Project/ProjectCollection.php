@@ -5,11 +5,9 @@ namespace App\Http\Resources\Project;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Project;
-use App\Models\Purchase;
 use App\Models\SpbProject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\ProductCompanySpbProject;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ProjectCollection extends ResourceCollection
@@ -71,15 +69,15 @@ class ProjectCollection extends ResourceCollection
                         'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
                         'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
                         // Menampilkan seluruh produk yang terkait, tanpa filter status PAID
-                        'produk' => $spbProject->productCompanySpbprojects->map(function ($product) use ($spbProject) {
-                            return [
-                                'produk_id' => $product->produk_id,
-                                'produk_nama' => $product->product->nama ?? 'Unknown',
-                                'vendor_id' => $product->company->id ?? 'Unknown',
-                                'vendor_name' => $product->company->name ?? 'Unknown',
-                                'total_per_produk' => $product->total_produk, // Total per produk
-                            ];
-                        }),
+                        'produk' => $spbProject->productCompanySpbprojects->map(function ($product) {
+                                return [
+                                    'produk_id' => $product->produk_id,
+                                    'produk_nama' => $product->product->nama ?? 'Unknown',
+                                    'vendor_id' => $product->company->id ?? 'Unknown',
+                                    'vendor_name' => $product->company->name ?? 'Unknown',
+                                    'total_per_produk' => $product->total_produk, // Total per produk
+                                ];
+                            }),
                         'total_keseluruhanproduk' => $spbProject->total_produk,
                     ];
                 }),
