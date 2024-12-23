@@ -69,7 +69,7 @@ class ProjectCollection extends ResourceCollection
                         'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
                         'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
                         // Menampilkan seluruh produk yang terkait, tanpa filter status PAID
-                        'produk' => $spbProject->productCompanySpbprojects->map(function ($product) {
+                       /*  'produk' => $spbProject->productCompanySpbprojects->map(function ($product) {
                                 return [
                                     'produk_id' => $product->produk_id,
                                     'produk_nama' => $product->product->nama ?? 'Unknown',
@@ -78,7 +78,7 @@ class ProjectCollection extends ResourceCollection
                                     'total_per_produk' => $product->total_produk, // Total per produk
                                 ];
                             }),
-                        'total_keseluruhanproduk' => $spbProject->total_produk,
+                        'total_keseluruhanproduk' => $spbProject->total_produk, */
                     ];
                 }),
                /* 'file_attachment_spb' => [
