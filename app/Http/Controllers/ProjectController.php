@@ -467,22 +467,28 @@ class ProjectController extends Controller
     
             // Jika ada file baru (attachment_file), hapus file lama dan simpan yang baru
             if ($request->hasFile('attachment_file')) {
-                Storage::delete($project->file); // Hapus file lama
+                if ($project->file) {
+                    Storage::delete($project->file); // Hapus file lama jika ada
+                }
                 $request->merge([
                     'file' => $request->file('attachment_file')->store(Project::ATTACHMENT_FILE),
                 ]);
             }
 
+            // Jika ada file baru (attachment_file_spb), hapus file lama dan simpan yang baru
             if ($request->hasFile('attachment_file_spb')) {
-                Storage::delete($project->file); // Hapus file lama
+                if ($project->spb_file) {
+                    Storage::delete($project->spb_file); // Hapus file lama jika ada
+                }
                 $request->merge([
-                    'file' => $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB),
+                    'spb_file' => $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB),
                 ]);
             }
 
+            // Pastikan harga_type_project default ke 0 jika tidak disediakan
             if ($request->has('harga_type_project')) {
                 $request->merge([
-                    'harga_type_project' => $request->input('harga_type_project') ?? 0, // Ensure it defaults to 0 if not provided
+                    'harga_type_project' => $request->input('harga_type_project') ?? 0,
                 ]);
             }
     

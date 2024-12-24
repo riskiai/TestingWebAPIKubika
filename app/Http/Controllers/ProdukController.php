@@ -101,7 +101,7 @@ class ProdukController extends Controller
                 'deskripsi' => $request->deskripsi,
                 'stok' => $request->stok,
                 'type_pembelian' => $request->type_pembelian,
-                'harga' => $request->harga,
+                // 'harga' => $request->harga,
                 // 'ongkir' => $request->ongkir,
             ]);
 
@@ -134,7 +134,7 @@ class ProdukController extends Controller
                 'deskripsi' => $product->deskripsi,
                 'stok' => $product->stok,
                 'type_pembelian' => $product->type_pembelian,
-                'harga' => $product->harga,
+                // 'harga' => $product->harga,
                 // 'ongkir' => $product->ongkir,
                 'kategori' => [
                     'id' => optional($product->kategori)->id,
@@ -201,7 +201,7 @@ class ProdukController extends Controller
                 'stok' => $request->input('stok', $product->stok),
                 'kode_produk' => $newKodeProduk, // Update kode produk
                 'type_pembelian' => $request->input('type_pembelian', $product->stok),
-                'harga' => $request->input('harga', $product->stok),
+                // 'harga' => $request->input('harga', $product->stok),
                 // 'ongkir' => $request->input('ongkir', $product->ongkir),
             ]);
 
