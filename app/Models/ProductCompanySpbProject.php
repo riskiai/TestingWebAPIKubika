@@ -46,7 +46,7 @@ class ProductCompanySpbProject extends Model
         'date',
         'due_date',
         'note_reject_produk',
-        'type_pembelian_produk',
+        // 'type_pembelian_produk',
     ];
 
     /**
