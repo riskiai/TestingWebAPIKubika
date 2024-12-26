@@ -120,6 +120,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('spbproject/create-spb', [SPBController::class, 'store']);
     Route::put('addspbproject/toproject/{id}', [SPBController::class, 'addspbtoproject']);
     Route::put('spbproject/update-spb/{id}', [SPBController::class, 'update']);
+ 
     Route::get('spbproject/{id}', [SPBController::class, 'show']);
     Route::delete('spbproject/destroy/{id}', [SPBController::class, 'destroy']);
     Route::put('spbproject/accept/{id}', [SPBController::class, 'accept']);
@@ -129,6 +130,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('spbproject/activate-produk/{id}', [SPBController::class, 'activateproduk']);
     Route::put('spbproject/activate/{id}', [SPBController::class, 'activate']);
     Route::delete('spbproject/delete-produk/{id}', [SPBController::class, 'deleteProduk']);
+    Route::put('spbproject/update-produk/{id}', [SPBController::class, 'updateproduk']);
 
     Route::put('spbproject/undo/{id}', [SPBController::class, 'undo']);
     Route::put('spbproject/request/{id}', [SPBController::class, 'request']);

@@ -30,16 +30,15 @@ public function rules(): array
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
             'unit_kerja' => 'required|string|max:255',
-            'produk' => 'required|array',
-            'produk.*.produk_data' => 'required|array',
-            'produk.*.produk_data.*.produk_id' => 'required|exists:products,id', // Produk ID harus ada dan bukan array
-            'produk.*.produk_data.*.vendor_id' => 'required|exists:companies,id',
-            'produk.*.produk_data.*.ongkir' => 'nullable|numeric|min:0',
-            'produk.*.produk_data.*.harga' => 'required|numeric|min:0',
-            'produk.*.produk_data.*.stok' => 'required|integer|min:0',
-            'produk.*.produk_data.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
-            'produk.*.produk_data.*.date' => 'nullable|date',
-            'produk.*.produk_data.*.due_date' => 'nullable|date',
+            'produk_data' => 'required|array',
+            'produk_data.*.produk_id' => 'required|exists:products,id',
+            'produk_data.*.vendor_id' => 'required|exists:companies,id',
+            'produk_data.*.ongkir' => 'nullable|numeric|min:0',
+            'produk_data.*.harga' => 'required|numeric|min:0',
+            'produk_data.*.stok' => 'required|integer|min:0',
+            'produk_data.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
+            'produk_data.*.date' => 'nullable|date',
+            'produk_data.*.due_date' => 'nullable|date',
         ];
     }
 

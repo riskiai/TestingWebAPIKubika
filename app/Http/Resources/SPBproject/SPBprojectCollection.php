@@ -211,6 +211,7 @@ class SPBprojectCollection extends ResourceCollection
                 "know_marketing" => $this->getUserRole($spbProject->know_marketing),
                 "know_supervisor" => $this->getUserRole($spbProject->know_supervisor),
                 "know_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
+                "know_finance" => $this->getUserRole($spbProject->know_finance),
                 "request_owner" => $this->getUserRole($spbProject->request_owner),
                 "created_at" => $spbProject->created_at->format('Y-m-d'),
                 "updated_at" => $spbProject->updated_at->format('Y-m-d'),
@@ -365,11 +366,31 @@ class SPBprojectCollection extends ResourceCollection
     protected function getUserRole($userId)
     {
         if ($userId) {
+            // Ambil data pengguna berdasarkan user_id
             $user = \App\Models\User::find($userId);
+    
             if ($user) {
+                // Ambil approve_date langsung dari tabel spb_projects untuk user terkait
+                $approveDate = DB::table('spb_projects')
+                    ->where(function ($query) use ($userId) {
+                        $query->where('know_marketing', $userId)
+                            ->orWhere('know_supervisor', $userId)
+                            ->orWhere('know_kepalagudang', $userId)
+                            ->orWhere('know_finance', $userId)
+                            ->orWhere('request_owner', $userId);
+                    })
+                    ->orderByDesc('approve_date')
+                    ->value('approve_date'); // Ambil nilai approve_date
+    
+                // Ubah waktu approve_date ke timezone Jakarta
+                $formattedApproveDate = $approveDate 
+                    ? \Carbon\Carbon::parse($approveDate)->setTimezone('Asia/Jakarta')->format('Y-m-d H:i:s')
+                    : 'Not approved yet';
+    
                 return [
                     'user_name' => $user->name,
                     'role_name' => $user->role ? $user->role->role_name : 'Unknown',
+                    'approve_date' => $formattedApproveDate,
                 ];
             }
         }

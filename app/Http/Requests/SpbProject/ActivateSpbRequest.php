@@ -8,31 +8,40 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
-class UpdateRequest extends FormRequest
+class ActivateSpbRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return true;
     }
 
+    protected function prepareForValidation()
+    {
+        // Pastikan produk_id selalu menjadi array, meskipun hanya ada satu nilai
+        $this->merge([
+            'produk_id' => is_array($this->input('produk_id')) ? $this->input('produk_id') : [$this->input('produk_id')],
+        ]);
+    }
+
     public function rules(): array
     {
-        $rules = [
+        return [
             'spbproject_category_id' => 'required|exists:spb_project__categories,id',
             'project_id' => 'required|string|max:255',
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
             'unit_kerja' => 'required|string|max:255',
+           'produk_data' => 'required|array',
+            'produk_data.*.produk_id' => 'required|exists:products,id',
+            'produk_data.*.vendor_id' => 'required|exists:companies,id',
+            'produk_data.*.ongkir' => 'nullable|numeric|min:0',
+            'produk_data.*.harga' => 'required|numeric|min:0',
+            'produk_data.*.stok' => 'required|integer|min:0',
+            'produk_data.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
+            'produk_data.*.date' => 'nullable|date',
+            'produk_data.*.due_date' => 'nullable|date',
         ];
-
-        if ($this->hasFile('attachment_file_spb')) {
-            $rules['attachment_file_spb'] = 'array';
-            $rules['attachment_file_spb.*'] = 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls,heic|max:3072';
-        }
-
-        return $rules;
     }
-
 
     public function attributes(): array
     {

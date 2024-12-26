@@ -23,10 +23,12 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\ProductCompanySpbProject;
 use App\Http\Requests\SpbProject\AcceptRequest;
 use App\Http\Requests\SpbProject\ActivateProdukRequest;
+use App\Http\Requests\SpbProject\ActivateSpbRequest;
 use App\Http\Requests\SpbProject\CreateRequest;
 use App\Http\Requests\SpbProject\UpdateRequest;
 use App\Http\Requests\SpbProject\PaymentRequest;
 use App\Http\Requests\SpbProject\RejectProdukRequest;
+use App\Http\Requests\SpbProject\UpdateProdukRequest;
 use App\Http\Resources\SPBproject\SPBprojectCollection;
 
 class SPBController extends Controller
@@ -477,23 +479,20 @@ class SPBController extends Controller
                 'tanggal_berahir_spb',
             ]));
 
-             // Menyimpan data produk
-            foreach ($request->produk as $productGroup) {
-                foreach ($productGroup['produk_data'] as $item) {
-                    // Menggunakan produk_id tunggal
-                    ProductCompanySpbProject::create([
-                        'spb_project_id' => $spbProject->doc_no_spb,
-                        'produk_id' => $item['produk_id'],  // Produk_id tunggal, bukan array
-                        'company_id' => $item['vendor_id'],
-                        'ongkir' => $item['ongkir'] ?? 0,
-                        'harga' => $item['harga'],
-                        'stok' => $item['stok'],
-                        'ppn' => $item['tax_ppn'] ?? 0,
-                        'date' => $item['date'],
-                        'due_date' => $item['due_date'],
-                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
-                    ]);
-                }
+             // Menyimpan data produk langsung dari produk_data
+            foreach ($request->produk_data as $item) {
+                ProductCompanySpbProject::create([
+                    'spb_project_id' => $spbProject->doc_no_spb,
+                    'produk_id' => $item['produk_id'],
+                    'company_id' => $item['vendor_id'],
+                    'ongkir' => $item['ongkir'] ?? 0,
+                    'harga' => $item['harga'],
+                    'stok' => $item['stok'],
+                    'ppn' => $item['tax_ppn'] ?? 0,
+                    'date' => $item['date'],
+                    'due_date' => $item['due_date'],
+                    'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
+                ]);
             }
 
             DB::commit();
@@ -541,7 +540,7 @@ class SPBController extends Controller
             }
 
             // Mendapatkan SpbProject yang akan diperbarui
-            $spbProject = SpbProject::with('productCompanySpbprojects')->where('doc_no_spb', $docNoSpb)->first();
+            $spbProject = SpbProject::with('documents')->where('doc_no_spb', $docNoSpb)->first();
             if (!$spbProject) {
                 return response()->json([
                     'status' => 'error',
@@ -559,11 +558,83 @@ class SPBController extends Controller
                 'tanggal_berahir_spb',
             ]));
 
-              // Loop untuk memproses produk dari request
-        foreach ($request->produk as $productGroup) {
-            foreach ($productGroup['produk_data'] as $item) {
+            // Menyimpan atau mengganti file attachment jika ada
+            if ($request->hasFile('attachment_file_spb')) {
+                foreach ($request->file('attachment_file_spb') as $key => $file) {
+                    if ($file->isValid()) {
+                        $this->replaceDocument($spbProject, $file, $key + 1);
+                    } else {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'File upload failed',
+                        ], 400);
+                    }
+                }
+            }
+
+            // Commit transaksi jika semua berhasil
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "SPB Project {$spbProject->doc_no_spb} has been updated successfully.",
+            ]);
+        } catch (\Throwable $th) {
+            // Rollback transaksi jika ada error
+            DB::rollBack();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Mengganti dokumen lama dengan dokumen baru.
+     */
+    protected function replaceDocument($spbProject, $file, $iteration)
+    {
+        // Simpan file baru
+        $documentPath = $file->store(SpbProject::ATTACHMENT_FILE_SPB);
+
+        // Hapus file lama jika ada
+        $existingDocument = $spbProject->documents()
+            ->where('file_name', "{$spbProject->doc_no_spb}.{$iteration}")
+            ->first();
+
+        if ($existingDocument) {
+            Storage::delete($existingDocument->file_path);
+            $existingDocument->delete();
+        }
+
+        // Simpan informasi dokumen baru
+        return $spbProject->documents()->create([
+            "doc_no_spb" => $spbProject->doc_no_spb,
+            "file_name" => $spbProject->doc_no_spb . '.' . $iteration,
+            "file_path" => $documentPath,
+        ]);
+    }
+
+
+    public function updateproduk(UpdateProdukRequest $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Cari SPB Project berdasarkan ID
+            $spbProject = SpbProject::with(['productCompanySpbprojects'])->find($id);
+            if (!$spbProject) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'SPB Project not found!',
+                ], 404);
+            }
+
+            // Loop untuk memproses produk langsung dari request
+            foreach ($request->produk as $item) {
                 $vendorId = $item['vendor_id'];
-                $productId = $item['produk_id']; // produk_id adalah nilai tunggal, bukan array
+                $productId = $item['produk_id'];
 
                 // Cek apakah produk dengan vendor_id dan produk_id sudah ada
                 $existingProduct = $spbProject->productCompanySpbprojects()
@@ -580,13 +651,13 @@ class SPBController extends Controller
                         'ongkir' => $item['ongkir'] ?? 0,
                         'date' => $item['date'],
                         'due_date' => $item['due_date'],
-                        'updated_at' => now(),  // Update waktu
+                        'updated_at' => now(), // Update waktu
                     ]);
                 } else {
                     // Jika produk belum ada, tambahkan ke database
                     ProductCompanySpbProject::create([
                         'spb_project_id' => $spbProject->doc_no_spb,
-                        'produk_id' => $productId, // produk_id adalah nilai tunggal
+                        'produk_id' => $productId,
                         'company_id' => $vendorId,
                         'ongkir' => $item['ongkir'] ?? 0,
                         'harga' => $item['harga'],
@@ -594,23 +665,20 @@ class SPBController extends Controller
                         'ppn' => $item['tax_ppn'] ?? 0, // Menambahkan PPN
                         'date' => $item['date'],
                         'due_date' => $item['due_date'],
-                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, // Status produk baru
+                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
                 }
             }
-        }
 
-        // Commit transaksi jika semua berhasil
-        DB::commit();
+            DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => "SPB Project {$spbProject->doc_no_spb} has been updated successfully.",
+                'message' => "SPB Project {$id} has been updated successfully.",
             ]);
         } catch (\Throwable $th) {
-            // Rollback transaksi jika ada error
             DB::rollBack();
 
             return response()->json([
@@ -619,6 +687,8 @@ class SPBController extends Controller
             ], 500);
         }
     }
+
+
 
     public function addspbtoproject(Request $request, $id)
     {
@@ -925,6 +995,7 @@ class SPBController extends Controller
             "know_marketing" => $this->getUserRole($spbProject->know_marketing),
             "know_supervisor" => $this->getUserRole($spbProject->know_supervisor),
             "know_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
+            "know_finance" => $this->getUserRole($spbProject->know_finance),
             "request_owner" => $this->getUserRole($spbProject->request_owner),
             "created_at" => $spbProject->created_at->format('Y-m-d'),
             "updated_at" => $spbProject->updated_at->format('Y-m-d'),
@@ -1072,16 +1143,37 @@ class SPBController extends Controller
     protected function getUserRole($userId)
     {
         if ($userId) {
+            // Ambil data pengguna berdasarkan user_id
             $user = \App\Models\User::find($userId);
+    
             if ($user) {
+                // Ambil approve_date langsung dari tabel spb_projects untuk user terkait
+                $approveDate = DB::table('spb_projects')
+                    ->where(function ($query) use ($userId) {
+                        $query->where('know_marketing', $userId)
+                            ->orWhere('know_supervisor', $userId)
+                            ->orWhere('know_kepalagudang', $userId)
+                            ->orWhere('know_finance', $userId)
+                            ->orWhere('request_owner', $userId);
+                    })
+                    ->orderByDesc('approve_date')
+                    ->value('approve_date'); // Ambil nilai approve_date
+    
+                // Ubah waktu approve_date ke timezone Jakarta
+                $formattedApproveDate = $approveDate 
+                    ? \Carbon\Carbon::parse($approveDate)->setTimezone('Asia/Jakarta')->format('Y-m-d H:i:s')
+                    : 'Not approved yet';
+    
                 return [
                     'user_name' => $user->name,
                     'role_name' => $user->role ? $user->role->role_name : 'Unknown',
+                    'approve_date' => $formattedApproveDate,
                 ];
             }
         }
         return null;
     }
+
 
     /**
      * Get the status of the SPB Project.
@@ -1217,6 +1309,7 @@ class SPBController extends Controller
                     // Update kolom know_marketing jika user adalah Marketing
                     $spbProject->update([
                         'know_marketing' => auth()->user()->id,
+                        'approve_date' => now(),
                     ]);
                     $message = "SPB Project {$spbProject->doc_no_spb} is now acknowledged by Marketing.";
                     break;
@@ -1225,14 +1318,25 @@ class SPBController extends Controller
                     // Update kolom know_kepalagudang jika user adalah Kepala Gudang
                     $spbProject->update([
                         'know_kepalagudang' => auth()->user()->id,
+                        'approve_date' => now(),
                     ]);
                     $message = "SPB Project {$spbProject->doc_no_spb} is now acknowledged by Gudang.";
                     break;
 
-                case Role::SUPERVISOR:
-                    // Update kolom know_supervisor jika user adalah Kepala Gudang
+                case Role::FINANCE:
+                    // Update kolom know_finance jika user adalah Finance
                     $spbProject->update([
-                            'know_supervisor' => auth()->user()->id,
+                        'know_finance' => auth()->user()->id,
+                        'approve_date' => now(),
+                    ]);
+                    $message = "SPB Project {$spbProject->doc_no_spb} is now acknowledged by Finance.";
+                    break;
+
+                case Role::SUPERVISOR:
+                    // Update kolom know_supervisor jika user adalah Supervisor
+                    $spbProject->update([
+                        'know_supervisor' => auth()->user()->id,
+                        'approve_date' => now(),
                     ]);
                     $message = "SPB Project {$spbProject->doc_no_spb} is now acknowledged by Supervisor.";
                     break;
@@ -1241,6 +1345,7 @@ class SPBController extends Controller
                     // Update kolom request_owner jika user adalah Owner
                     $spbProject->update([
                         'request_owner' => auth()->user()->id,
+                        'approve_date' => now(),
                     ]);
                     $message = "SPB Project {$spbProject->doc_no_spb} is now Accepted by Owner.";
                     break;
@@ -1255,23 +1360,31 @@ class SPBController extends Controller
 
             // Dapatkan informasi siapa yang terakhir menyetujui
             $lastApprovedByMarketing = $this->getUserRole($spbProject->know_marketing);
+            $lastApprovedBySupervisor = $this->getUserRole($spbProject->know_supervisor);
             $lastApprovedByGudang = $this->getUserRole($spbProject->know_kepalagudang);
+            $lastApprovedByFinance = $this->getUserRole($spbProject->know_finance);
             $lastApprovedByOwner = $this->getUserRole($spbProject->request_owner);
 
             // Buat pesan tambahan berdasarkan status terakhir
             $logMessage = [
-                "know_marketing" => $lastApprovedByMarketing 
+                "know_marketing" => $lastApprovedByMarketing
                     ? "Last Marketing acknowledgment by {$lastApprovedByMarketing['user_name']} ({$lastApprovedByMarketing['role_name']})"
                     : "Marketing has not acknowledged yet.",
-                "know_supervisor" => $lastApprovedByGudang 
-                    ? "Last Supervisor acknowledgment by {$lastApprovedByGudang['user_name']} ({$lastApprovedByGudang['role_name']})"
-                    : "Gudang has not acknowledged yet.",
-                "know_kepalagudang" => $lastApprovedByGudang 
+                "know_supervisor" => $lastApprovedBySupervisor
+                    ? "Last Supervisor acknowledgment by {$lastApprovedBySupervisor['user_name']} ({$lastApprovedBySupervisor['role_name']})"
+                    : "Supervisor has not acknowledged yet.",
+                "know_kepalagudang" => $lastApprovedByGudang
                     ? "Last Gudang acknowledgment by {$lastApprovedByGudang['user_name']} ({$lastApprovedByGudang['role_name']})"
                     : "Gudang has not acknowledged yet.",
-                "request_owner" => $lastApprovedByOwner 
+                "know_finance" => $lastApprovedByFinance
+                    ? "Last Finance acknowledgment by {$lastApprovedByFinance['user_name']} ({$lastApprovedByFinance['role_name']})"
+                    : "Finance has not acknowledged yet.",
+                "request_owner" => $lastApprovedByOwner
                     ? "Last Owner acceptance by {$lastApprovedByOwner['user_name']} ({$lastApprovedByOwner['role_name']})"
-                    : "Owner has not accepted yet."
+                    : "Owner has not accepted yet.",
+                "approve_date" => $spbProject->approve_date
+                    ? "Last approval date: {$spbProject->approve_date}"
+                    : "Approval date not set yet.",
             ];
 
             // Mengembalikan response sukses dengan pesan tambahan
@@ -1283,6 +1396,7 @@ class SPBController extends Controller
             return MessageActeeve::error('An error occurred: ' . $th->getMessage());
         }
     }
+
 
 
     public function accept(AcceptRequest $request, $id)
@@ -1569,7 +1683,6 @@ class SPBController extends Controller
         }
     }
     
-
     public function activateproduk(ActivateProdukRequest $request, $id) {
         DB::beginTransaction();
     
@@ -1642,7 +1755,7 @@ class SPBController extends Controller
         }
     }
 
-    public function activate(UpdateRequest $request, $docNo)
+    public function activate(ActivateSpbRequest $request, $docNo)
     {
         DB::beginTransaction();
 
@@ -1682,49 +1795,53 @@ class SPBController extends Controller
                 'reject_note' => null, // Menghapus reject note yang sebelumnya
             ]);
 
-            // Menyinkronkan produk yang terkait (jika ada perubahan produk)
-            foreach ($request->produk as $productGroup) {
-                foreach ($productGroup['produk_data'] as $item) {
-                    $vendorId = $item['vendor_id'];
-                    $productId = $item['produk_id']; // produk_id adalah nilai tunggal, bukan array
+            $produkData = $request->input('produk_data', []);
 
-                    // Cek apakah produk dengan vendor_id dan produk_id sudah ada
-                    $existingProduct = $SpbProject->productCompanySpbprojects()
-                        ->where('company_id', $vendorId)
-                        ->where('produk_id', $productId)
-                        ->first();
-
-                    if ($existingProduct) {
-                        // Jika produk sudah ada, update data produk tersebut
-                        $existingProduct->update([
-                            'harga' => $item['harga'],
-                            'stok' => $item['stok'],
-                            'ppn' => $item['tax_ppn'] ?? 0, // Menambahkan PPN
-                            'ongkir' => $item['ongkir'] ?? 0,
-                            'date' => $item['date'],
-                            'due_date' => $item['due_date'],
-                            'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, 
-                            'updated_at' => now(),  // Update waktu
-                        ]);
-                    } else {
-                        // Jika produk belum ada, tambahkan ke database
-                        ProductCompanySpbProject::create([
-                            'spb_project_id' => $SpbProject->doc_no_spb,
-                            'produk_id' => $productId, // produk_id adalah nilai tunggal
-                            'company_id' => $vendorId,
-                            'ongkir' => $item['ongkir'] ?? 0,
-                            'harga' => $item['harga'],
-                            'stok' => $item['stok'],
-                            'ppn' => $item['tax_ppn'] ?? 0, // Menambahkan PPN
-                            'date' => $item['date'],
-                            'due_date' => $item['due_date'],
-                            'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, 
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                    }
+            foreach ($produkData as $item) {
+                $vendorId = $item['vendor_id'];
+                $productId = $item['produk_id'];
+    
+                $existingProduct = $SpbProject->productCompanySpbprojects()
+                    ->where('company_id', $vendorId)
+                    ->where('produk_id', $productId)
+                    ->first();
+    
+                if ($existingProduct) {
+                    $existingProduct->update([
+                        'harga' => $item['harga'],
+                        'stok' => $item['stok'],
+                        'ppn' => $item['tax_ppn'] ?? 0,
+                        'ongkir' => $item['ongkir'] ?? 0,
+                        'date' => $item['date'],
+                        'due_date' => $item['due_date'],
+                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    ProductCompanySpbProject::create([
+                        'spb_project_id' => $SpbProject->doc_no_spb,
+                        'produk_id' => $productId,
+                        'company_id' => $vendorId,
+                        'harga' => $item['harga'],
+                        'stok' => $item['stok'],
+                        'ppn' => $item['tax_ppn'] ?? 0,
+                        'ongkir' => $item['ongkir'] ?? 0,
+                        'date' => $item['date'],
+                        'due_date' => $item['due_date'],
+                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 }
             }
+
+             // Menambahkan log untuk aksi activate
+            $SpbProject->logs()->create([
+                'tab_spb' => SpbProject::TAB_SUBMIT,
+                'name' => auth()->user()->name, // Nama pengguna yang melakukan aktivasi
+                'message' => 'SPB Project has been activated and status is now awaiting.', // Pesan log
+                'created_at' => now(),
+            ]);
 
 
             // Commit transaksi jika semua berhasil
