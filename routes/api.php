@@ -17,6 +17,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\User\UsersController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\ContactTypeController;
+use App\Http\Controllers\LogsKubikaController;
 use App\Http\Controllers\SpbCategoryController;
 use App\Http\Controllers\PurchaseStatusController;
 use App\Http\Controllers\PurchaseCategoryController;
@@ -43,6 +44,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('update-password', [UsersController::class, 'updatepassword']);
         Route::delete('destroy/{id}', [UsersController::class, 'destroy']);
      });
+
+     Route::get('/logs-kubika', [LogsKubikaController::class, 'index']);
 
       // Divisi Tenaga Kerja Di Role Users
     Route::get('divisi', [DivisiController::class, 'index']);
@@ -131,6 +134,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('spbproject/activate/{id}', [SPBController::class, 'activate']);
     Route::delete('spbproject/delete-produk/{id}', [SPBController::class, 'deleteProduk']);
     Route::put('spbproject/update-produk/{id}', [SPBController::class, 'updateproduk']);
+    Route::put('spbproject/payment-produk/{id}', [SPBController::class, 'paymentproduk']);
 
     Route::put('spbproject/undo/{id}', [SPBController::class, 'undo']);
     Route::put('spbproject/request/{id}', [SPBController::class, 'request']);

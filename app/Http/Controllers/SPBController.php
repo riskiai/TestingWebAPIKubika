@@ -25,6 +25,7 @@ use App\Http\Requests\SpbProject\AcceptRequest;
 use App\Http\Requests\SpbProject\ActivateProdukRequest;
 use App\Http\Requests\SpbProject\ActivateSpbRequest;
 use App\Http\Requests\SpbProject\CreateRequest;
+use App\Http\Requests\SpbProject\PaymentProdukRequest;
 use App\Http\Requests\SpbProject\UpdateRequest;
 use App\Http\Requests\SpbProject\PaymentRequest;
 use App\Http\Requests\SpbProject\RejectProdukRequest;
@@ -77,6 +78,15 @@ class SPBController extends Controller
                 });
             }
         }
+
+        if ($request->has('status_produk')) {
+            $status_produk = $request->status_produk;
+        
+            $query->whereHas('products', function ($query) use ($status_produk) {
+                $query->where('status_produk', $status_produk);
+            });
+        }        
+
 
         // Filter berdasarkan tab_spb
         if ($request->has('tab_spb')) {
@@ -173,6 +183,14 @@ class SPBController extends Controller
                 });
             }
         }
+
+        if ($request->has('status_produk')) {
+            $status_produk = $request->status_produk;
+        
+            $query->whereHas('products', function ($query) use ($status_produk) {
+                $query->where('status_produk', $status_produk);
+            });
+        }  
 
          // Filter berdasarkan tab_spb
          if ($request->has('tab_spb')) {
@@ -1443,11 +1461,32 @@ class SPBController extends Controller
                     }
                 }
     
+                 // Tentukan status produk berdasarkan due_date
+                $dueDate = Carbon::parse($product->due_date); // Pastikan due_date dalam format tanggal yang valid
+                $nowDate = Carbon::now();
+
+                $status = $product->status_produk;
+
+                // Logika pembaruan status berdasarkan due_date
+                if ($status !== ProductCompanySpbProject::TEXT_PAID_PRODUCT && $status !== ProductCompanySpbProject::TEXT_REJECTED_PRODUCT) {
+                    if ($nowDate->isSameDay($dueDate)) {
+                        // Jika due_date adalah hari ini
+                        $status = ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT;
+                    } elseif ($nowDate->gt($dueDate)) {
+                        // Jika due_date telah lewat
+                        $status = ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT;
+                    } elseif ($nowDate->lt($dueDate)) {
+                        // Jika due_date di masa depan
+                        $status = ProductCompanySpbProject::TEXT_OPEN_PRODUCT;
+                    }
+                }
+
                 // Perbarui PPH dan status produk
                 $product->update([
-                    'pph' => $pphId,
-                    'status_produk' => ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
+                    'pph' => $pphId, // ID PPH yang diberikan
+                    'status_produk' => $status, // Status produk yang diperbarui
                 ]);
+
             }
     
             // Perbarui status dan tab SPB Project
@@ -1479,6 +1518,83 @@ class SPBController extends Controller
             ], 500);
         }
     }
+
+    public function paymentproduk(PaymentProdukRequest $request, $id)
+    {
+        DB::beginTransaction();
+    
+        try {
+            // Cari SPB Project berdasarkan ID
+            $spbProject = SpbProject::with(['productCompanySpbprojects'])->find($id);
+            if (!$spbProject) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'SPB Project not found!',
+                ], 404);
+            }
+    
+            // Iterasi setiap produk dari request
+            foreach ($request->produk as $produkData) {
+                $vendorId = $produkData['vendor_id'];
+                $produkId = $produkData['produk_id'];
+    
+                // Cari produk terkait di tabel pivot
+                $product = $spbProject->productCompanySpbprojects()
+                    ->where('produk_id', $produkId)
+                    ->where('company_id', $vendorId)
+                    ->first();
+    
+                if (!$product) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Product with ID {$produkId} and Vendor ID {$vendorId} not found!",
+                    ], 404);
+                }
+    
+                // Pastikan produk dalam status yang valid untuk diperbarui menjadi PAID
+                $status = $product->status_produk;
+                if (in_array($status, [
+                    ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
+                    ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
+                    ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT,
+                ])) {
+                    // Perbarui status menjadi PAID
+                    $product->update([
+                        'status_produk' => ProductCompanySpbProject::TEXT_PAID_PRODUCT, // Set status menjadi PAID
+                        // 'note_paid_produk' => "Paid on " . Carbon::now()->format('Y-m-d H:i:s'), // Tambahkan catatan pembayaran
+                    ]);
+                } else {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Product with ID {$produkId} cannot be paid. Current status: {$status}",
+                    ], 400);
+                }
+            }
+    
+           /*  // Tambahkan log
+            LogsSPBProject::create([
+                'spb_project_id' => $spbProject->doc_no_spb,
+                'tab_spb' => SpbProject::TAB_VERIFIED,
+                'name' => auth()->user()->name,
+                'message' => 'Products have been paid successfully.',
+            ]); */
+    
+            DB::commit();
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => "Payment request for products in SPB Project {$id} has been completed.",
+            ]);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+    
+            return response()->json([
+                'status' => 'error',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
+    
     
 
     public function undo($docNoSpb)
