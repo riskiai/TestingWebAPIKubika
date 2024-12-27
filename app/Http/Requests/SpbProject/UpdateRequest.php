@@ -22,7 +22,7 @@ class UpdateRequest extends FormRequest
             'project_id' => 'required|string|max:255',
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
-            'unit_kerja' => 'required|string|max:255',
+            'unit_kerja' => 'nullable|string|max:255',
         ];
 
         if ($this->hasFile('attachment_file_spb')) {

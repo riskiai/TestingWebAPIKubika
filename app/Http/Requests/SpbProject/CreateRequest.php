@@ -29,7 +29,7 @@ public function rules(): array
             'project_id' => 'required|string|max:255',
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
-            'unit_kerja' => 'required|string|max:255',
+            'unit_kerja' => 'nullable|string|max:255',
             'produk_data' => 'required|array',
             'produk_data.*.produk_id' => 'required|exists:products,id',
             'produk_data.*.vendor_id' => 'required|exists:companies,id',
