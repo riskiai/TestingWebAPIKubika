@@ -114,7 +114,7 @@ class ManPowerController extends Controller
         if ($request->has('user_id')) {
             $query->where("user_id", $request->user_id);
         }
-        
+
         // Filter berdasarkan project_id
         if ($request->has('project_id')) {
             $query->where("project_id", $request->project_id);
@@ -146,13 +146,27 @@ class ManPowerController extends Controller
             }
         }
     
-        // Mengambil total salary dengan menjumlahkan current_salary + current_overtime_salary
+        // Menghitung total salary semua tukang
         $totalSalary = $query->sum(DB::raw('current_salary + current_overtime_salary'));
-    
+
+        // Menghitung salary berdasarkan work_type
+        $tukangHarianSalary = $query->clone()->where('work_type', true)
+            ->sum(DB::raw('current_salary + current_overtime_salary'));
+        $tukangBoronganSalary = $query->clone()->where('work_type', false)
+            ->sum(DB::raw('current_salary + current_overtime_salary'));
+
+        // Total dari tukang harian dan borongan
+        $totalSalarySummary = $tukangHarianSalary + $tukangBoronganSalary;
+
         // Response data
         return response()->json([
             'status' => 'success',
-            'total_salary' => round($totalSalary),
+            'total_salary_pertukang' => round($totalSalary), // Total dari semua tukang tanpa memisahkan work_type
+            'summary_salary_manpower' => [
+                'tukang_harian' => round($tukangHarianSalary),
+                'tukang_borongan' => round($tukangBoronganSalary),
+                'total' => round($totalSalarySummary),
+            ],
         ]);
     }
     

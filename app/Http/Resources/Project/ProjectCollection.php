@@ -75,7 +75,7 @@ class ProjectCollection extends ResourceCollection
                                 'produk_nama' => $product->product->nama ?? 'Unknown',
                                 'vendor_id' => $product->company->id ?? 'Unknown',
                                 'vendor_name' => $product->company->name ?? 'Unknown',
-                                'total_per_produk' => $product->total_produk, // Total per produk
+                                'subtotal_produk' => $product->subtotal_produk, 
                             ];
                         }),
                         'total_keseluruhanproduk' => $spbProject->total_produk,
@@ -107,13 +107,15 @@ class ProjectCollection extends ResourceCollection
                 $data[$key]['created_by'] = [
                     "id" => $project->user->id,
                     "name" => $project->user->name,
+                    "created_at" => Carbon::parse($project->created_at)->timezone('Asia/Jakarta')->toDateTimeString(),
                 ];
             }
-
+            
             if ($project->user) {
                 $data[$key]['updated_by'] = [
                     "id" => $project->user->id,
                     "name" => $project->user->name,
+                    "updated_at" => Carbon::parse($project->updated_at)->timezone('Asia/Jakarta')->toDateTimeString(),
                 ];
             }
         }
