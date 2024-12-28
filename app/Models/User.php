@@ -44,12 +44,16 @@ class User extends Authenticatable
         return $this->hasOne(UserSalary::class, 'user_id', 'id');
     }
 
-    // public function projects()
-    // {
-    //     return $this->belongsToMany(Project::class, 'project_user_produk', 'user_id', 'project_id')
-    //                 ->withPivot('produk_id');
-    // }
+    public function hasRole($role)
+    {
+        if (is_string($role)) {
+            return $this->role && $this->role->role_name === $role;
+        } elseif (is_int($role)) {
+            return $this->role_id === $role;
+        }
 
+        return false;
+    }
 
 
 }

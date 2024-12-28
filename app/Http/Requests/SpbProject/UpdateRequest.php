@@ -19,9 +19,10 @@ class UpdateRequest extends FormRequest
     {
         $rules = [
             'spbproject_category_id' => 'required|exists:spb_project__categories,id',
-            'project_id' => 'required|string|max:255',
+            'project_id' => 'nullable|string|max:255',
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
+            'type_project' => 'nullable|in:1,2',
             'unit_kerja' => 'nullable|string|max:255',
         ];
 

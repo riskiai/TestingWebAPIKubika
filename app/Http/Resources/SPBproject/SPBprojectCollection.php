@@ -31,6 +31,14 @@ class SPBprojectCollection extends ResourceCollection
             ];
 
             $tabName = $tabNames[$spbProject->tab_spb] ?? 'Unknown';
+
+            // Menentukan nama berdasarkan type_project
+            $typeSpbProject = [
+                'id' => $spbProject->type_project,
+                'name' => $spbProject->type_project == SpbProject::TYPE_PROJECT_SPB
+                    ? SpbProject::TEXT_PROJECT_SPB
+                    : SpbProject::TEXT_NON_PROJECT_SPB,
+            ];
             
             $data[$key] = [
                 "doc_no_spb" => $spbProject->doc_no_spb,
@@ -52,12 +60,13 @@ class SPBprojectCollection extends ResourceCollection
                         'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
                     ];
                 })->values()->all(),
+                "type_spb_project" => $typeSpbProject,
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
                 ] : [
-                    'id' => 'N/A',
-                    'nama' => 'No Project Available',
+                    'id' => null,
+                    'nama' => null,
                 ],
                 'produk' => $spbProject->productCompanySpbprojects->map(function ($product) use ($spbProject) {
                             $dueDate = Carbon::createFromFormat("Y-m-d", $product->due_date); // Membaca due_date
@@ -73,7 +82,6 @@ class SPBprojectCollection extends ResourceCollection
                                         'produk_id' => $product->produk_id ?? 'Unknown',
                                         'nama' => $product->product->nama ?? 'Unknown',
                                         'id_kategori' => $product->product->id_kategori ?? null,
-                                        'deskripsi' => $product->product->deskripsi ?? '',
                                         'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
                                     ],
                                     'vendor' => [
@@ -86,17 +94,18 @@ class SPBprojectCollection extends ResourceCollection
                                     'note_paid_produk' => $notePaid, // Catatan jika produk sudah dibayar
                                     'date' => $product->date,
                                     'due_date' => $product->due_date,
+                                    'description' => $product->description,
                                     'ppn' => $product->ppn_value,
                                     'ongkir' => $product->ongkir ?? 0,
                                     'harga' => $product->harga ?? 0,
                                     'stok' => $product->stok ?? 0,
                                     'subtotal_item' => $product->subtotal_produk,
-                                    'pph' => [
+                                    /* 'pph' => [
                                         'pph_type' => $product->taxPph->name ?? 'Unknown',
                                         'pph_rate' => $product->taxPph->percent ?? 0,
                                         'pph_hasil' => $product->pph_value,
-                                    ],
-                                    'total_item' => $product->total_produk,
+                                    ], */
+                                    // 'total_item' => $product->total_produk,
                                 ];
                             }
 
@@ -108,7 +117,7 @@ class SPBprojectCollection extends ResourceCollection
                                         'produk_id' => $product->produk_id ?? 'Unknown',
                                         'nama' => $product->product->nama ?? 'Unknown',
                                         'id_kategori' => $product->product->id_kategori ?? null,
-                                        'deskripsi' => $product->product->deskripsi ?? '',
+                                        // 'deskripsi' => $product->product->deskripsi ?? '',
                                         'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
                                     ],
                                     'vendor' => [
@@ -121,17 +130,18 @@ class SPBprojectCollection extends ResourceCollection
                                     'note_reject_produk' => $noteReject, // Catatan ditolak
                                     'date' => $product->date,
                                     'due_date' => $product->due_date,
+                                    'description' => $product->description,
                                     'ppn' => $product->ppn_value,
                                     'ongkir' => $product->ongkir ?? 0,
                                     'harga' => $product->harga ?? 0,
                                     'stok' => $product->stok ?? 0,
                                     'subtotal_item' => $product->subtotal_produk,
-                                    'pph' => [
+                                    /* 'pph' => [
                                         'pph_type' => $product->taxPph->name ?? 'Unknown',
                                         'pph_rate' => $product->taxPph->percent ?? 0,
                                         'pph_hasil' => $product->pph_value,
-                                    ],
-                                    'total_item' => $product->total_produk,
+                                    ], */
+                                    // 'total_item' => $product->total_produk,
                                 ];
                             }
 
@@ -177,7 +187,7 @@ class SPBprojectCollection extends ResourceCollection
                                     'produk_id' => $product->produk_id ?? 'Unknown',
                                     'nama' => $product->product->nama ?? 'Unknown',
                                     'id_kategori' => $product->product->id_kategori ?? null,
-                                    'deskripsi' => $product->product->deskripsi ?? '',
+                                    // 'deskripsi' => $product->product->deskripsi ?? '',
                                     'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
                                 ],
                                 'vendor' => [
@@ -190,17 +200,18 @@ class SPBprojectCollection extends ResourceCollection
                                 'note_reject_produk' => $noteReject,
                             'date' => $product->date,
                             'due_date' => $product->due_date,
+                            'description' => $product->description,
                             'ppn' => $product->ppn_value,
                             'ongkir' => $product->ongkir ?? 0,
                             'harga' => $product->harga ?? 0,
                             'stok' => $product->stok ?? 0,
                             'subtotal_item' => $product->subtotal_produk,
-                            'pph' => [
+                            /* 'pph' => [
                                 'pph_type' => $product->taxPph->name ?? 'Unknown',
                                 'pph_rate' => $product->taxPph->percent ?? 0,
                                 'pph_hasil' => $product->pph_value,
-                            ],
-                            'total_item' => $product->total_produk,
+                            ], */
+                            // 'total_item' => $product->total_produk,
                         ];
                     }),
                 "total" => $spbProject->total_produk,
@@ -233,6 +244,7 @@ class SPBprojectCollection extends ResourceCollection
 
         return $data;
     }
+
 
     protected function getDocument($documents)
     {

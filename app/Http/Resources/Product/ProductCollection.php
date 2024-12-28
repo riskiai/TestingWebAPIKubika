@@ -21,16 +21,16 @@ class ProductCollection extends ResourceCollection
                 'id' => $product->id,
                 'nama' => $product->nama,
                 'kode_produk' => $product->kode_produk,
+                'type_pembelian' => $product->type_pembelian,
+                'kategori' => [
+                    'id' => optional($product->kategori)->id,
+                    'name' => optional($product->kategori)->name,
+                    'kode_kategori' => optional($product->kategori)->kode_kategori,
+                ],
                 'deskripsi' => $product->deskripsi,
                 'stok' => $product->stok,
-                'type_pembelian' => $product->type_pembelian,
                 'harga'=> $product->harga,
                 'ongkir' => $product->ongkir,
-                'kategori' => [
-                        'id' => optional($product->kategori)->id,
-                        'name' => optional($product->kategori)->name,
-                        'kode_kategori' => optional($product->kategori)->kode_kategori,
-                    ],
                 'created_at' => $product->created_at,
                 'updated_at' => $product->updated_at,
             ];

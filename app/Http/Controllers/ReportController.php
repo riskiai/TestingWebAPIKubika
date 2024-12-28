@@ -227,6 +227,36 @@ class ReportController extends Controller
         $query->whereHas('status', function ($query) {
             $query->where('id', SpbProject_Status::PAID);
         });
+         
+        // Filter berdasarkan type_project (1: Project, 2: Non-Project)
+         if ($request->has('type_project')) {
+            $typeProject = $request->type_project;
+            if (in_array($typeProject, [SpbProject::TYPE_PROJECT_SPB, SpbProject::TYPE_NON_PROJECT_SPB])) {
+                $query->where('type_project', $typeProject);
+            }
+        }
+
+        if ($request->has('status_produk')) {
+            $status_produk = $request->status_produk;
+        
+            $query->whereHas('products', function ($query) use ($status_produk) {
+                $query->where('status_produk', $status_produk);
+            });
+        }        
+
+
+        // Filter berdasarkan tab_spb
+        if ($request->has('tab_spb')) {
+            $tab = $request->get('tab_spb');
+            if (in_array($tab, [
+                SpbProject::TAB_SUBMIT,
+                SpbProject::TAB_VERIFIED,
+                SpbProject::TAB_PAYMENT_REQUEST,
+                SpbProject::TAB_PAID
+            ])) {
+                $query->where('tab_spb', $tab);
+            }
+        }
     
         // Filter berdasarkan project ID
         if ($request->has('project')) {

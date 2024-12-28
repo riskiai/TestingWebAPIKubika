@@ -26,7 +26,7 @@ public function rules(): array
     {
         return [
             'spbproject_category_id' => 'required|exists:spb_project__categories,id',
-            'project_id' => 'required|string|max:255',
+            'project_id' => 'nullable|string|max:255',
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
             'unit_kerja' => 'nullable|string|max:255',
@@ -36,6 +36,7 @@ public function rules(): array
             'produk_data.*.ongkir' => 'nullable|numeric|min:0',
             'produk_data.*.harga' => 'required|numeric|min:0',
             'produk_data.*.stok' => 'required|integer|min:0',
+            'produk_data.*.description' => 'nullable|string|max:255',
             'produk_data.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
             'produk_data.*.date' => 'nullable|date',
             'produk_data.*.due_date' => 'nullable|date',

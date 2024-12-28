@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Models\Role;
 use App\Models\User;
 use App\Mail\RegisterMail;
 use Illuminate\Support\Str;
@@ -112,11 +113,12 @@ class UsersController extends Controller
                 "hourly_overtime_salary" => $request->hourly_overtime_salary,
             ]);
 
-            // Simpan password acak dalam atribut sementara untuk email
-            $user->passwordRecovery = $randomPassword;
+            $user->passwordRecovery = $randomPassword; // Simpan password acak sementara
 
-            // Kirim email ke pengguna dengan kata sandi acak
-            Mail::to($user->email)->send(new RegisterMail($user));
+            // Kirim email hanya jika bukan TENAGA_KERJA
+            if ($request->role != Role::TENAGA_KERJA) {
+                Mail::to($user->email)->send(new RegisterMail($user));
+            }
 
             DB::commit();
 
@@ -127,6 +129,7 @@ class UsersController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
+
 
 
     public function update(UpdateRequest $request, $id)

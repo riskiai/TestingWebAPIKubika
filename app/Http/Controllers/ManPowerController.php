@@ -107,6 +107,55 @@ class ManPowerController extends Controller
         return new ManPowerCollection($manPowers);
     }
 
+    public function counting(Request $request)
+    {
+        $query = ManPower::query();
+    
+        if ($request->has('user_id')) {
+            $query->where("user_id", $request->user_id);
+        }
+        
+        // Filter berdasarkan project_id
+        if ($request->has('project_id')) {
+            $query->where("project_id", $request->project_id);
+        }
+    
+        // Filter berdasarkan work_type
+        if ($request->has('work_type')) {
+            $query->where('work_type', $request->work_type);
+        }
+    
+        // Filter berdasarkan project_type
+        if ($request->has('project_type')) {
+            $query->where('project_type', $request->project_type);
+        }
+    
+        // Filter berdasarkan rentang tanggal entry_at
+        if ($request->has('entry_at')) {
+            $dates = explode(',', $request->entry_at);
+            if (count($dates) == 2) {
+                $start_date = trim($dates[0]);
+                $end_date = trim($dates[1]);
+    
+                $query->whereBetween('entry_at', [
+                    date('Y-m-d 00:00:00', strtotime($start_date)),
+                    date('Y-m-d 23:59:59', strtotime($end_date)),
+                ]);
+            } else {
+                return response()->json(['error' => 'Invalid date range format. Format should be: YYYY-MM-DD,YYYY-MM-DD'], 400);
+            }
+        }
+    
+        // Mengambil total salary dengan menjumlahkan current_salary + current_overtime_salary
+        $totalSalary = $query->sum(DB::raw('current_salary + current_overtime_salary'));
+    
+        // Response data
+        return response()->json([
+            'status' => 'success',
+            'total_salary' => round($totalSalary),
+        ]);
+    }
+    
 
     public function store(StoreRequest $request)
     {

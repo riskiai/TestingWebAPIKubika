@@ -25,7 +25,7 @@
             <p><strong>Akun Anda telah berhasil didaftarkan.</strong></p>
             <p><strong>Email : {{ $user->email }}</strong></p>
             <p><strong>Password : {{ $user->passwordRecovery }}</strong></p>
-            <p><strong>Link Website : </strong> <a href="https://kubikawebsite.com/login" style="text-decoration: none; font-size:13px; font-weight:bold; color:blue;">kubikawebsite.com</a></p>
+            <p><strong>Link Website : </strong> <a href="https://kubikawebsite.com/login" style="text-decoration: none; font-size:13px; font-weight:bold; color:blue;">kubikaexpo.id</a></p>
             <p>Terima kasih telah menggunakan layanan kami.</p>
 
             <h3>Salam hormat, <br> PT KUBIKA</h3>

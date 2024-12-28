@@ -132,6 +132,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::put('spbproject/activate-produk/{id}', [SPBController::class, 'activateproduk']);
     Route::put('spbproject/activate/{id}', [SPBController::class, 'activate']);
+    Route::put('spbproject/accept-produk/{id}', [SPBController::class, 'acceptproduk']);
     Route::delete('spbproject/delete-produk/{id}', [SPBController::class, 'deleteProduk']);
     Route::put('spbproject/update-produk/{id}', [SPBController::class, 'updateproduk']);
     Route::put('spbproject/payment-produk/{id}', [SPBController::class, 'paymentproduk']);
@@ -156,6 +157,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     /* Man Power */
     Route::prefix('man-power')->group(function () {
         Route::get('/', [ManPowerController::class, 'index']);
+        Route::get('/counting', [ManPowerController::class, 'counting']);
         Route::post('/', [ManPowerController::class, 'store']);
         Route::get('/{id}', [ManPowerController::class, 'show']);
         Route::put('/{id}', [ManPowerController::class, 'update']);

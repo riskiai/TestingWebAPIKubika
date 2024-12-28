@@ -27,9 +27,16 @@ class SpbProject extends Model
     const TAB_PAYMENT_REQUEST = 3;
     const TAB_PAID = 4;
 
+    const TEXT_PROJECT_SPB = "Project";
+    const TEXT_NON_PROJECT_SPB = "Non-Project";
+
+    const TYPE_PROJECT_SPB = 1;
+    const TYPE_NON_PROJECT_SPB = 2;
+
     protected $fillable = [
         'doc_no_spb',
         'doc_type_spb',
+        'type_project',
         'spbproject_category_id',
         'spbproject_status_id',
         'tab_spb',
@@ -49,9 +56,6 @@ class SpbProject extends Model
         'request_owner',
         'approve_date',
         'file_pembayaran',
-       /*  'subtotal',
-        'ppn',
-        'pph', */
         'updated_at',
     ];
 
@@ -89,6 +93,15 @@ class SpbProject extends Model
         return round($subtotal);  // Mengembalikan subtotal keseluruhan yang sudah dibulatkan
     } */
 
+    public function getTypeProjectNameAttribute()
+    {
+        return match ($this->type_project) {
+            self::TYPE_PROJECT_SPB => 'Project',
+            self::TYPE_NON_PROJECT_SPB => 'Non Project',
+            default => 'Unknown',
+        };
+    }
+    
     public function getTotalProdukAttribute()
     {
         // Ambil semua produk terkait dengan SPB Project ini
@@ -96,11 +109,12 @@ class SpbProject extends Model
 
         // Hitung total dari semua produk
         $grandTotal = $products->sum(function ($product) {
-            return $product->total_produk; // Menggunakan atribut total_produk dari ProductCompanySpbProject
+            return $product->subtotal_produk; // Menggunakan atribut subtotal_produk dari ProductCompanySpbProject
         });
 
-        return round($grandTotal); // Pembulatan ke bilangan bulat
+        return round($grandTotal); // Membulatkan hasil total ke bilangan bulat
     }
+
 
     public function category(): BelongsTo
     {
@@ -122,13 +136,13 @@ class SpbProject extends Model
     public function vendors()
     {
         return $this->belongsToMany(Company::class, 'product_company_spbproject', 'spb_project_id', 'company_id')
-                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk']);
+                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description']);
     }
 
     public function products()
     {
         return $this->belongsToMany(Product::class, 'product_company_spbproject', 'spb_project_id', 'produk_id')
-                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk']);
+                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description']);
     }
 
     public function taxPpn(): HasOne
