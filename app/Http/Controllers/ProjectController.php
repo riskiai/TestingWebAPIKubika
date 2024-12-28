@@ -656,6 +656,7 @@ class ProjectController extends Controller
             $data['created_by'] = [
                 "id" => $project->user->id,
                 "name" => $project->user->name,
+                "created_at" => Carbon::parse($project->created_at)->timezone('Asia/Jakarta')->toDateTimeString(),
             ];
         }
 

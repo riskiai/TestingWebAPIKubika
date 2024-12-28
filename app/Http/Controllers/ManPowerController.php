@@ -288,7 +288,10 @@ class ManPowerController extends Controller
                         'kode_divisi' => $manPower->user->divisi->kode_divisi ?? null,
                     ],
                 ],
-                "created_by" => $manPower->created_by,
+                "created_by" => [
+                    "name" => $manPower->creator->name ?? $manPower->created_by,
+                    "created_at" => Carbon::parse($manPower->created_at)->timezone('Asia/Jakarta')->toDateTimeString(),
+                ],
                 "created_at" => $manPower->created_at,
                 "updated_at" => $manPower->updated_at,
             ]

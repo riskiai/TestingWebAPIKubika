@@ -923,6 +923,7 @@ class SPBController extends Controller
             $data['created_by'] = [
                 "id" => $spbProject->user->id,
                 "name" => $spbProject->user->name,
+                "created_at" => Carbon::parse($spbProject->created_at)->timezone('Asia/Jakarta')->toDateTimeString(),
             ];
         }    
 
