@@ -1880,6 +1880,7 @@ class SPBController extends Controller
                 'spbproject_status_id' => SpbProject_Status::AWAITING, // Status diubah menjadi AWAITING
                 'tab_spb' => SpbProject::TAB_SUBMIT, // Tab tetap di SUBMIT
                 'reject_note' => null, // Menghapus reject note yang sebelumnya
+                'type_project' => $request->type_project,
             ]);
 
             $produkData = $request->input('produk_data', []);
