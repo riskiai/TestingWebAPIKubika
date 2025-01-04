@@ -40,7 +40,7 @@ class LogsKubikaController extends Controller
         $logsProjects = DB::table('projects')
             ->join('users', 'projects.user_id', '=', 'users.id')
             ->select(
-                DB::raw('NULL as id'), // Tidak memiliki ID log khusus, gunakan NULL
+                DB::raw('NULL as id'),
                 'projects.id as reference_id',
                 'users.name as created_by',
                 DB::raw("'Created project' as message"),
@@ -50,10 +50,25 @@ class LogsKubikaController extends Controller
             ->addSelect(DB::raw("'project' as type"))
             ->get();
 
-        // Gabungkan ketiga data
+        // Tambahkan log khusus untuk created SPB dan man power
+        $createdSpbs = DB::table('spb_projects')
+            ->join('users', 'spb_projects.user_id', '=', 'users.id')
+            ->select(
+                DB::raw('NULL as id'),
+                'spb_projects.doc_no_spb as reference_id',
+                'users.name as created_by',
+                DB::raw("'Created SPB' as message"),
+                'spb_projects.created_at',
+                'spb_projects.updated_at'
+            )
+            ->addSelect(DB::raw("'spb_project' as type"))
+            ->get();
+
+        // Gabungkan semua data
         $combinedLogs = $logManPowers
             ->concat($logsSpbProjects)
-            ->concat($logsProjects);
+            ->concat($logsProjects)
+            ->concat($createdSpbs);
 
         // Urutkan berdasarkan created_at secara descending
         $sortedLogs = $combinedLogs->sortByDesc('created_at');
