@@ -38,9 +38,11 @@ class SPBController extends Controller
     {
         $query = SpbProject::query();
         
-        // Filter berdasarkan role pengguna
         if (auth()->user()->role_id == Role::MARKETING) {
-            $query->where('user_id', auth()->user()->id);
+            // Tampilkan hanya SPB yang terkait dengan proyek yang dibuat oleh user
+            $query->whereHas('project', function ($q) {
+                $q->where('user_id', auth()->user()->id); // Filter proyek berdasarkan user_id pembuatnya
+            });
         }
 
         $query->with(['user', 'products', 'project', 'status', 'vendors']);
@@ -911,11 +913,11 @@ class SPBController extends Controller
             "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
             "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
             // "nama_toko" => $spbProject->nama_toko,
-            "know_marketing" => $this->getUserRole($spbProject->know_marketing),
-            "know_supervisor" => $this->getUserRole($spbProject->know_supervisor),
-            "know_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
-            "know_finance" => $this->getUserRole($spbProject->know_finance),
-            "request_owner" => $this->getUserRole($spbProject->request_owner),
+            "know_spb_marketing" => $this->getUserRole($spbProject->know_marketing),
+                "know_spb_supervisor" => $this->getUserRole($spbProject->know_supervisor),
+                "know_spb_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
+                "accept_spb_finance" => $this->getUserRole($spbProject->know_finance), 
+                "payment_request_owner" => auth()->user()->hasRole(Role::OWNER) || $spbProject->request_owner ? $this->getUserRole($spbProject->request_owner) : null,
             "created_at" => $spbProject->created_at->format('Y-m-d'),
             "updated_at" => $spbProject->updated_at->format('Y-m-d'),
         ];
@@ -1071,10 +1073,10 @@ class SPBController extends Controller
                 $approveDate = DB::table('spb_projects')
                     ->where(function ($query) use ($userId) {
                         $query->where('know_marketing', $userId)
-                            ->orWhere('know_supervisor', $userId)
-                            ->orWhere('know_kepalagudang', $userId)
-                            ->orWhere('know_finance', $userId)
-                            ->orWhere('request_owner', $userId);
+                              ->orWhere('know_supervisor', $userId)
+                              ->orWhere('know_kepalagudang', $userId)
+                              ->orWhere('know_finance', $userId)
+                              ->orWhere('request_owner', $userId);
                     })
                     ->orderByDesc('approve_date')
                     ->value('approve_date'); // Ambil nilai approve_date
@@ -2079,6 +2081,9 @@ class SPBController extends Controller
                 return MessageActeeve::notFound('Data not found!');
             }
 
+             // Tentukan siapa yang melakukan aksi pembayaran
+            $actorField = auth()->user()->hasRole(Role::FINANCE) ? 'know_finance' : 'request_owner';
+
             // Menyimpan atau memperbarui log untuk aksi pembayaran dengan tab yang sesuai
             $existingLog = $spbProject->logs()->where('tab_spb', SpbProject::TAB_PAID)
                                                 ->where('name', auth()->user()->name)
@@ -2106,11 +2111,16 @@ class SPBController extends Controller
             SpbProject::where('doc_no_spb', $docNo)->update([  // Perbaiki di sini
                 'spbproject_status_id' => SpbProject_Status::PAID,
                 'tab_spb' => SpbProject::TAB_PAID,
-                'know_finance' => auth()->user()->id, 
-                'request_owner' => auth()->user()->id, 
+                 $actorField => auth()->user()->id, 
                 'approve_date' => now(), // Waktu persetujuan
                 'updated_at' => $request->updated_at,  
             ]);
+
+            if (auth()->user()->hasRole(Role::FINANCE)) {
+                $updateFields['know_finance'] = auth()->user()->id;
+            } elseif (auth()->user()->hasRole(Role::OWNER)) {
+                $updateFields['request_owner'] = auth()->user()->id;
+            }
 
             $spbProject->productCompanySpbprojects()->update([
                 'status_produk' => ProductCompanySpbProject::TEXT_PAID_PRODUCT, // Update status produk ke PAID

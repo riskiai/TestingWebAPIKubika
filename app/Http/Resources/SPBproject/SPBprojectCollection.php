@@ -3,6 +3,7 @@
 namespace App\Http\Resources\SPBproject;
 
 use Carbon\Carbon;
+use App\Models\Role;
 use App\Models\SpbProject;
 use Illuminate\Http\Request;
 use App\Models\SpbProject_Status;
@@ -219,11 +220,11 @@ class SPBprojectCollection extends ResourceCollection
                 "unit_kerja" => $spbProject->unit_kerja,
                 "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
                 "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
-                "know_marketing" => $this->getUserRole($spbProject->know_marketing),
-                "know_supervisor" => $this->getUserRole($spbProject->know_supervisor),
-                "know_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
-                "know_finance" => $this->getUserRole($spbProject->know_finance),
-                "request_owner" => $this->getUserRole($spbProject->request_owner),
+                "know_spb_marketing" => $this->getUserRole($spbProject->know_marketing),
+                "know_spb_supervisor" => $this->getUserRole($spbProject->know_supervisor),
+                "know_spb_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
+                "accept_spb_finance" => $this->getUserRole($spbProject->know_finance), 
+                "payment_request_owner" => auth()->user()->hasRole(Role::OWNER) || $spbProject->request_owner ? $this->getUserRole($spbProject->request_owner) : null,
                 "created_at" => $spbProject->created_at->format('Y-m-d'),
                 "updated_at" => $spbProject->updated_at->format('Y-m-d'),
             ];
@@ -387,10 +388,10 @@ class SPBprojectCollection extends ResourceCollection
                 $approveDate = DB::table('spb_projects')
                     ->where(function ($query) use ($userId) {
                         $query->where('know_marketing', $userId)
-                            ->orWhere('know_supervisor', $userId)
-                            ->orWhere('know_kepalagudang', $userId)
-                            ->orWhere('know_finance', $userId)
-                            ->orWhere('request_owner', $userId);
+                              ->orWhere('know_supervisor', $userId)
+                              ->orWhere('know_kepalagudang', $userId)
+                              ->orWhere('know_finance', $userId)
+                              ->orWhere('request_owner', $userId);
                     })
                     ->orderByDesc('approve_date')
                     ->value('approve_date'); // Ambil nilai approve_date
@@ -409,6 +410,7 @@ class SPBprojectCollection extends ResourceCollection
         }
         return null;
     }
+    
 
     /**
      * Get the status of the SPB Project.
