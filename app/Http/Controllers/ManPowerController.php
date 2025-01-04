@@ -146,16 +146,28 @@ class ManPowerController extends Controller
             }
         }
     
-        // Menghitung total salary semua tukang
-        $totalSalary = $query->sum(DB::raw('current_salary + current_overtime_salary'));
+         // Pagination sesuai dengan jumlah data yang ingin ditampilkan
+        $perPage = $request->has('per_page') ? (int) $request->per_page : 10;  // default value = 10
+        $manpowerData = $query->paginate($perPage);
 
-        // Menghitung salary berdasarkan work_type
-        $tukangHarianSalary = $query->clone()->where('work_type', true)
-            ->sum(DB::raw('current_salary + current_overtime_salary'));
-        $tukangBoronganSalary = $query->clone()->where('work_type', false)
-            ->sum(DB::raw('current_salary + current_overtime_salary'));
+        // Mengambil koleksi dari data yang dipaginasi menggunakan method 'items()'
+        $collection = $manpowerData->items();
 
-        // Total dari tukang harian dan borongan
+        // Menghitung total salary tukang tanpa memisahkan work_type
+        $totalSalary = collect($collection)->sum(function ($item) {
+            return $item->current_salary + $item->current_overtime_salary;
+        });
+
+        // Menghitung salary berdasarkan work_type untuk data yang dipaginasi
+        $tukangHarianSalary = collect($collection)->where('work_type', true)->sum(function ($item) {
+            return $item->current_salary + $item->current_overtime_salary;
+        });
+
+        $tukangBoronganSalary = collect($collection)->where('work_type', false)->sum(function ($item) {
+            return $item->current_salary + $item->current_overtime_salary;
+        });
+
+        // Total dari tukang harian dan borongan sesuai halaman yang dipilih
         $totalSalarySummary = $tukangHarianSalary + $tukangBoronganSalary;
 
         // Response data

@@ -236,72 +236,74 @@ class SPBController extends Controller
             $query->whereBetween('tanggal_berahir_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
         }
 
-        // Inisialisasi variabel untuk menghitung masing-masing status
-        $submit = 0;
-        $verified = 0;
-        $over_due = 0;
-        $open = 0;
-        $due_date = 0;  // Pastikan variabel ini diinisialisasi dengan 0
-        $payment_request = 0;
-        $paid = 0;
-
-        // Ambil semua data SPB yang sudah difilter
-        $spbProjects = $query->get();
-
-        // Mengambil jumlah total SPB yang dibeli
-        $received = $spbProjects->count();
-
-        foreach ($spbProjects as $spbProject) {
-            $total = $spbProject->getTotalProdukAttribute(); // Mengambil nilai total dari setiap objek SPB
-            Log::debug('SPB Total: ' . $total . ' for SPB: ' . $spbProject->doc_no_spb);
-
-            // Tambahkan logika untuk status due_date
-            $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
-            $nowDate = Carbon::now();
-
-            switch ($spbProject->tab_spb) {
-                case SpbProject::TAB_VERIFIED:
-                    $verified += $total;
-                    if ($spbProject->tanggal_berahir_spb > now()) {
-                        $open += $total;
-                    } elseif ($spbProject->tanggal_berahir_spb == today()) {
-                        $due_date += $total;  // Menambahkan ke due_date jika tanggal berahir_spb adalah hari ini
-                    }
-                    if ($spbProject->tanggal_berahir_spb < Carbon::now()) {
-                        $over_due += $total;
-                    }
-                    break;
-                case SpbProject::TAB_PAYMENT_REQUEST:
-                    $payment_request += $total;
-                    if ($spbProject->tanggal_berahir_spb < Carbon::now()) {
-                        $over_due += $total;
-                    }
-                    break;
-                case SpbProject::TAB_PAID:
-                    $paid += $total;
-                    break;
-                case SpbProject::TAB_SUBMIT:
-                    $submit += $total;
-                    break;
+           // Periksa apakah parameter page dan per_page diberikan
+            if ($request->has('page') || $request->has('per_page')) {
+                $perPage = (int) $request->per_page ?: 10; // Jumlah data per halaman, default 10
+                $spbProjects = $query->paginate($perPage); // Gunakan pagination
+                $collection = collect($spbProjects->items()); // Data hanya pada halaman aktif
+            } else {
+                $collection = $query->get(); // Ambil semua data jika tidak ada pagination
             }
 
-            // Pastikan jika status due_date dihitung pada kondisi status yang sesuai
-            if ($nowDate->toDateString() == $spbProject->tanggal_berahir_spb) {
-                // Jika tanggal akhir adalah hari ini, tambahkan ke due_date
-                $due_date += $total;
-            }
-        }
+            // Inisialisasi variabel untuk menghitung masing-masing status
+            $submit = 0;
+            $verified = 0;
+            $over_due = 0;
+            $open = 0;
+            $due_date = 0;
+            $payment_request = 0;
+            $paid = 0;
 
-        return response()->json([
-            'received' => $received,
-            'submit' => $submit,
-            'verified' => $verified,
-            'over_due' => $over_due,
-            'open' => $open,
-            'due_date' => $due_date,  // Pastikan due_date mengembalikan jumlah yang benar
-            'payment_request' => $payment_request,
-            'paid' => $paid
-        ]);
+            // Menghitung jumlah data SPB yang sesuai
+            $received = $collection->count();
+
+            foreach ($collection as $spbProject) {
+                $total = $spbProject->getTotalProdukAttribute(); // Mengambil nilai total dari setiap objek SPB
+
+                $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
+                $nowDate = Carbon::now();
+
+                switch ($spbProject->tab_spb) {
+                    case SpbProject::TAB_VERIFIED:
+                        $verified += $total;
+                        if ($dueDate->gt($nowDate)) {
+                            $open += $total;
+                        } elseif ($dueDate->eq($nowDate)) {
+                            $due_date += $total;
+                        } elseif ($dueDate->lt($nowDate)) {
+                            $over_due += $total;
+                        }
+                        break;
+                    case SpbProject::TAB_PAYMENT_REQUEST:
+                        $payment_request += $total;
+                        if ($dueDate->lt($nowDate)) {
+                            $over_due += $total;
+                        }
+                        break;
+                    case SpbProject::TAB_PAID:
+                        $paid += $total;
+                        break;
+                    case SpbProject::TAB_SUBMIT:
+                        $submit += $total;
+                        break;
+                }
+
+                if ($dueDate->eq($nowDate)) {
+                    $due_date += $total;
+                }
+            }
+
+            // Respons JSON
+            return response()->json([
+                'received' => $received, // Jumlah data (per halaman atau semua)
+                'submit' => $submit,
+                'verified' => $verified,
+                'over_due' => $over_due,
+                'open' => $open,
+                'due_date' => $due_date,
+                'payment_request' => $payment_request,
+                'paid' => $paid,
+            ]);
 
     }
 
@@ -834,7 +836,7 @@ class SPBController extends Controller
                     ];
                 }
 
-                // Periksa apakah status produk bukan open, overdue, atau duedate
+                /* // Periksa apakah status produk bukan open, overdue, atau duedate
                 if (!in_array($status, [
                     ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
                     ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
@@ -862,7 +864,7 @@ class SPBController extends Controller
                             }
                         }
                     }
-                }
+                } */
 
                 // Menangani status "Rejected" jika tidak ditemukan sebelumnya
                 if ($status === ProductCompanySpbProject::TEXT_REJECTED_PRODUCT) {

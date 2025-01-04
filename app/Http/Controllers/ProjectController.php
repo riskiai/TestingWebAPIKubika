@@ -223,20 +223,7 @@ class ProjectController extends Controller
     public function counting(Request $request)
     {
         $query = Project::query();
-        $query->select(
-            DB::raw('SUM(billing) as billing'),
-            DB::raw('SUM(cost_estimate) as cost_estimate'),
-            DB::raw('SUM(margin) as margin')
-        );
-
-        /* if (auth()->user()->role_id == Role::MARKETING) {
-            $query->where(function ($query) {
-                $query->whereHas('purchases', function ($query) {
-                    $query->where('user_id', auth()->user()->id);
-                });
-            });
-        } */
-
+    
         if ($request->has('search')) {
             $query->where(function ($query) use ($request) {
                 $query->where('id', 'like', '%' . $request->search . '%');
@@ -246,56 +233,50 @@ class ProjectController extends Controller
                 });
             });
         }
-
+    
         // Lakukan filter berdasarkan project jika ada
         if ($request->has('project')) {
             $query->where('id', $request->project);
         }
-
+    
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-
+    
         if ($request->has('vendor')) {
             $query->where('company_id', $request->vendor);
         }
-
+    
         if ($request->has('date')) {
             $date = str_replace(['[', ']'], '', $request->date);
             $date = explode(", ", $date);
-
             $query->whereBetween('created_at', $date);
         }
-        $projectStats = $query->first();
+    
+         // Pagination sesuai dengan jumlah data yang ingin ditampilkan
+        $perPage = $request->has('per_page') ? (int) $request->per_page : 10;  // default value = 10
+        $projectData = $query->paginate($perPage);
 
-        if (!$projectStats->billing || !$projectStats->margin || !$projectStats->cost_estimate) {
-            return [
-                "billing" => 0,
-                "cost_estimate" => 0,
-                "margin" => 0,
-                "percent" => '0%',
-            ];
-        }
+        // Mengambil koleksi dari data yang dipaginasi menggunakan method 'items()'
+        $collection = $projectData->items();
 
-        $percent = ($projectStats->margin / $projectStats->billing) * 100;
+        // Menghitung total billing, cost_estimate, dan margin untuk halaman aktif
+        $totalBilling = collect($collection)->sum('billing');
+        $totalCostEstimate = collect($collection)->sum('cost_estimate');
+        $totalMargin = collect($collection)->sum('margin');
 
-        // Membatasi persentase agar tidak lebih dari 100%
-        if ($percent > 100) {
-            $percent = 100;
-        }
+        // Menghitung persentase margin terhadap billing
+        $percent = ($totalBilling > 0) ? ($totalMargin / $totalBilling) * 100 : 0;
+        $percent = round($percent, 2) . '%'; // Membulatkan hingga dua angka desimal
 
-        // Membulatkan persentase hingga dua angka desimal dan menambah tanda persen
-        $percent = round($percent, 2) . "%";
-
-        // Mengembalikan hasil perhitungan
-        return [
-            "billing" => $projectStats->billing,
-            "cost_estimate" => $projectStats->cost_estimate,
-            "margin" => $projectStats->margin,
+        // Response data
+        return response()->json([
+            "billing" => $totalBilling,
+            "cost_estimate" => $totalCostEstimate,
+            "margin" => $totalMargin,
             "percent" => $percent,
-        ];
-
-    }
+        ]);
+    } 
 
     public function createInformasi(StoreRequest $request)
     {

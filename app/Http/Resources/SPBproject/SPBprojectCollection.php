@@ -146,7 +146,7 @@ class SPBprojectCollection extends ResourceCollection
                             }
 
                             // Periksa apakah status produk bukan open, overdue, atau duedate
-                            if (!in_array($status, [
+                           /*  if (!in_array($status, [
                                 ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
                                 ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
                                 ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT
@@ -173,7 +173,7 @@ class SPBprojectCollection extends ResourceCollection
                                         }
                                     }
                                 }
-                            }
+                            } */
 
                             // Menangani status "Rejected" jika tidak ditemukan sebelumnya
                             if ($status === ProductCompanySpbProject::TEXT_REJECTED_PRODUCT) {
@@ -196,8 +196,8 @@ class SPBprojectCollection extends ResourceCollection
                                     'bank_name' => $product->company->bank_name ?? 'Unknown',
                                     'account_name' => $product->company->account_name ?? 'Unknown',
                                 ],
-                                'status_produk' => $status,
-                                'note_reject_produk' => $noteReject,
+                            'status_produk' => $product->status_produk,
+                            'note_reject_produk' => $noteReject,
                             'date' => $product->date,
                             'due_date' => $product->due_date,
                             'description' => $product->description,
