@@ -41,6 +41,8 @@ class UpdateRequest extends FormRequest
 
             'user_id' => 'nullable|array',
             'user_id.*' => 'exists:users,id|numeric|min:1',
+
+            'reset_status_to_pending' => 'nullable|boolean',
         ];
     }
 

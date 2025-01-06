@@ -435,6 +435,8 @@ class ProjectController extends Controller
                 'company_id' => $company->id,
             ]);
 
+            $currentStatus = $project->request_status_owner;
+
              // Ambil tahun dari tanggal baru dan tanggal lama
             $newYear = date('y', strtotime($request->date));  // Tahun dari tanggal baru
             $currentYear = date('y', strtotime($project->date)); // Tahun dari tanggal lama
@@ -445,6 +447,14 @@ class ProjectController extends Controller
                 $newId = 'PRO-' . $newYear . '-' . Project::generateSequenceNumber($newYear); // Static call
                 $project->id = $newId; // Update ID proyek dengan ID baru
             }
+
+            // Logika perubahan status otomatis
+            if ($project->request_status_owner == Project::ACTIVE) {
+                $project->request_status_owner = Project::PENDING; // Set status ke pending
+            }
+
+            // Simpan perubahan status
+            $project->save();
     
             // Jika ada file baru (attachment_file), hapus file lama dan simpan yang baru
             if ($request->hasFile('attachment_file')) {
@@ -575,18 +585,21 @@ class ProjectController extends Controller
                         'kode_produk' => $product->kode_produk,
                     ];
                 }), */
-            'tukang' => $project->tenagaKerja() // Gunakan tenagaKerja() untuk mendapatkan user dengan role_id = 7
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'divisi' => [
-                        'id' => optional($user->divisi)->id,
-                        'name' => optional($user->divisi)->name,
-                    ],
-                ];
-            }),
+            'tukang' => $project->tenagaKerja() 
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'daily_salary' => $user->salary ? $user->salary->daily_salary : 0,
+                        'hourly_salary' => $user->salary ? $user->salary->hourly_salary : 0,
+                        'hourly_overtime_salary' => $user->salary ? $user->salary->hourly_overtime_salary : 0,
+                        'divisi' => [
+                            'id' => optional($user->divisi)->id,
+                            'name' => optional($user->divisi)->name,
+                        ],
+                    ];
+                }),
              // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
              'spb_projects' => $project->spbProjects->map(function ($spbProject) {
                     return [
@@ -638,6 +651,14 @@ class ProjectController extends Controller
                 "id" => $project->user->id,
                 "name" => $project->user->name,
                 "created_at" => Carbon::parse($project->created_at)->timezone('Asia/Jakarta')->toDateTimeString(),
+            ];
+        }
+
+        if ($project->user) {
+            $data['updated_by'] = [
+                "id" => $project->user->id,
+                "name" => $project->user->name,
+                "updated_at" => Carbon::parse($project->updated_at)->timezone('Asia/Jakarta')->toDateTimeString(),
             ];
         }
 
