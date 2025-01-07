@@ -810,6 +810,13 @@ class ProjectController extends Controller
     {
         DB::beginTransaction();
 
+        // Pastikan user yang login memiliki role OWNER
+        if (!auth()->user()->hasRole(Role::OWNER)) {
+            return response()->json([
+                'message' => 'Access denied! Only owners can accept projects.'
+            ], 403);
+        }
+
         $project = Project::find($id);
         if (!$project) {
             return MessageActeeve::notFound('data not found!');
