@@ -59,10 +59,35 @@ class ProjectController extends Controller
         // Eager load untuk mengurangi query N+1
         $query->with(['company', 'user', 'product', 'tenagaKerja']);
 
-         // Terapkan filter berdasarkan peran pengguna (role MARKETING)
+         // Terapkan filter berdasarkan peran pengguna
         if (auth()->user()->role_id == Role::MARKETING) {
-            // Jika yang login adalah MARKETING, tampilkan hanya project yang dibuat oleh user tersebut
+            // Jika yang login adalah MARKETING, tampilkan hanya proyek yang dibuat oleh user tersebut
             $query->where('user_id', auth()->user()->id);
+        } elseif (auth()->user()->role_id == Role::SUPERVISOR) {
+            // Jika yang login adalah SUPERVISOR, tampilkan proyek di mana mereka terlibat
+            $query->whereHas('tenagaKerja', function ($q) {
+                $q->where('user_id', auth()->user()->id);
+            });
+        }
+
+        // Terapkan filter berdasarkan peran pengguna
+        if ($request->has('role_id')) {
+            // Ambil array role_id dari request, pastikan dalam bentuk array
+            $roleIds = is_array($request->role_id) ? $request->role_id : explode(',', $request->role_id);
+
+            // Terapkan filter untuk role_id
+            $query->whereHas('tenagaKerja', function ($q) use ($roleIds) {
+                $q->whereIn('role_id', $roleIds); // Pastikan menggunakan role_id
+            });
+        }
+
+         // Filter berdasarkan divisi (name)
+        if ($request->has('divisi_name')) {
+            $divisiNames = is_array($request->divisi_name) ? $request->divisi_name : explode(',', $request->divisi_name);
+
+            $query->whereHas('tenagaKerja.divisi', function ($q) use ($divisiNames) {
+                $q->whereIn('name', $divisiNames); // Filter berdasarkan name divisi
+            });
         }
 
         // Filter pencarian
