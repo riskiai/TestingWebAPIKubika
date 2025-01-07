@@ -115,19 +115,20 @@ class ContactController extends Controller
 
         try {
              // Memeriksa apakah file attachment_npwp ada
-            $npwpPath = null;
-            if ($request->hasFile('attachment_npwp')) {
-                $npwpPath = $request->file('attachment_npwp')->store(Company::ATTACHMENT_NPWP);
-            }
-
-            $filePath = $request->hasFile('attachment_file') ? $request->file('attachment_file')->store(Company::ATTACHMENT_FILE) : null;
-
-            $requestData = $request->all();
-            $requestData['contact_type_id'] = $contactType->id;
-            $requestData['npwp'] = $npwpPath;
-            $requestData['file'] = $filePath;
-
-            $contact = Company::create($requestData);
+             $npwpPath = null;
+             if ($request->hasFile('attachment_npwp')) {
+                 // Simpan file di disk 'public'
+                 $npwpPath = $request->file('attachment_npwp')->store(Company::ATTACHMENT_NPWP, 'public');
+             }
+     
+             $filePath = $request->hasFile('attachment_file') ? $request->file('attachment_file')->store(Company::ATTACHMENT_FILE, 'public') : null;
+     
+             $requestData = $request->all();
+             $requestData['contact_type_id'] = $contactType->id;
+             $requestData['npwp'] = $npwpPath;
+             $requestData['file'] = $filePath;
+     
+             $contact = Company::create($requestData);
 
             DB::commit();
             return MessageActeeve::success("contact $contact->name has been created");
