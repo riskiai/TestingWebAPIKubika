@@ -114,8 +114,12 @@ class ContactController extends Controller
         $contactType = ContactType::find($request->contact_type);
 
         try {
-            // fungsi ini digunakan untuk menggabungkan key:value baru kedalam request yang sudah ada
-            $npwpPath = $request->file('attachment_npwp')->store(Company::ATTACHMENT_NPWP);
+             // Memeriksa apakah file attachment_npwp ada
+            $npwpPath = null;
+            if ($request->hasFile('attachment_npwp')) {
+                $npwpPath = $request->file('attachment_npwp')->store(Company::ATTACHMENT_NPWP);
+            }
+
             $filePath = $request->hasFile('attachment_file') ? $request->file('attachment_file')->store(Company::ATTACHMENT_FILE) : null;
 
             $requestData = $request->all();
