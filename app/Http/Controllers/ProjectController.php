@@ -309,6 +309,7 @@ class ProjectController extends Controller
             $project->company_id = $company->id;
             $project->user_id = auth()->user()->id;
             $project->request_status_owner = Project::DEFAULT_STATUS;
+            $project->status_bonus_project = Project::DEFAULT_STATUS_NO_BONUS;
 
             // Set harga_type_project to 0 if it's not provided
             $project->harga_type_project = $request->has('harga_type_project') ? $request->harga_type_project : 0;
@@ -641,6 +642,7 @@ class ProjectController extends Controller
             'harga_type_project' => $project->harga_type_project ?? 0,
             // 'status_step_project' => $this->getStepStatus($project->status_step_project),
             'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
+            'status_bonus_project' => $this->getRequestStatusBonus($project->status_bonus_project),
             'created_at' => $project->created_at,
             'updated_at' => $project->updated_at,
         ];
@@ -791,12 +793,26 @@ class ProjectController extends Controller
         ];
     }
 
+    protected function getRequestStatusBonus($status) {
+        $statuses = [
+
+            Project::BELUM_DIKASIH_BONUS => "Belum Dikasih Bonus",
+            Project::SUDAH_DIKASIH_BONUS => "Sudah Dikasih Bonus",
+         ];
+
+        return [
+            "id" => $status,
+            "name" => $statuses[$status] ?? "Unknown",
+        ];
+    }
+
     protected function getRequestStatus($status)
     {
         $statuses = [
             Project::PENDING => "Pending",
             Project::ACTIVE => "Active",
             Project::REJECTED => "Rejected",
+            Project::CLOSED => "Closed",
         ];
 
         return [
@@ -805,6 +821,75 @@ class ProjectController extends Controller
         ];
     }
 
+    public function bonus($id) {
+        DB::beginTransaction();
+
+        // Pastikan user yang login memiliki role OWNER
+        if (!auth()->user()->hasRole(Role::OWNER)) {
+            return response()->json([
+                'message' => 'Access denied! Only owners can add bonus projects.'
+            ], 403);
+        }
+
+        $project = Project::find($id);
+        if (!$project) {
+            return MessageActeeve::notFound('data not found!');
+        }
+
+        // Validasi bahwa status owner adalah ACTIVE
+        if ($project->request_status_owner != Project::CLOSED) {
+            return response()->json([
+                'message' => 'Project cannot be closed because the owner status is Closed.'
+            ], 400);
+        }
+
+        try {
+            $project->update([
+                "status_bonus_project" => Project::SUDAH_DIKASIH_BONUS
+            ]);
+
+            DB::commit();
+            return MessageActeeve::success("project $project->name has been updated");
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    }
+
+    public function closed($id) {
+        DB::beginTransaction();
+
+        // Pastikan user yang login memiliki role OWNER
+        if (!auth()->user()->hasRole(Role::OWNER)) {
+            return response()->json([
+                'message' => 'Access denied! Only owners can closed projects.'
+            ], 403);
+        }
+
+        $project = Project::find($id);
+        if (!$project) {
+            return MessageActeeve::notFound('data not found!');
+        }
+
+        // Validasi bahwa status owner adalah ACTIVE
+        if ($project->request_status_owner != Project::ACTIVE) {
+            return response()->json([
+                'message' => 'Project cannot be closed because the owner status is not ACTIVE.'
+            ], 400);
+        }
+
+        try {
+            $project->update([
+                "request_status_owner" => Project::CLOSED
+            ]);
+
+            DB::commit();
+            return MessageActeeve::success("project $project->name has been updated");
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    } 
 
     public function accept($id)
     {

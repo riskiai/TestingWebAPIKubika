@@ -26,12 +26,17 @@ class Project extends Model
     const PENDING = 1;
     const ACTIVE = 2;
     const REJECTED = 3;
+    const CLOSED = 4;
+
+    const BELUM_DIKASIH_BONUS = 1;
+    const SUDAH_DIKASIH_BONUS = 2;
 
     // Step Status Project
     const INFORMASI_PROYEK = 1;
     const PENGGUNA_MUATAN = 2;
     const PRATINJAU = 3;
 
+    const DEFAULT_STATUS_NO_BONUS = self::BELUM_DIKASIH_BONUS;
     const DEFAULT_STATUS = self::PENDING;
     const DEFAULT_STATUS_PROJECT = self::INFORMASI_PROYEK;
 
@@ -56,7 +61,8 @@ class Project extends Model
         'spb_file',
         'date',
         'request_status_owner',
-        'status_step_project',
+        'status_bonus_project',
+        // 'status_step_project',
         'harga_type_project',
     ];
 

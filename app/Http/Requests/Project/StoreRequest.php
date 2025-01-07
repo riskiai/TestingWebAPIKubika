@@ -39,6 +39,7 @@ public function rules(): array
         'attachment_file_spb' => 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls|max:3072',
         'date' => 'nullable|date',
         'request_status_owner' => 'nullable|string',
+        'status_bonus_project' => 'nullable|string',
         'status_step_project' => 'nullable|string|max:100',
         'harga_type_project' => 'nullable|numeric',
             

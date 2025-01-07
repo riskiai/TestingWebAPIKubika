@@ -99,6 +99,7 @@ class ProjectCollection extends ResourceCollection
                 ],
                 // 'status_step_project' => $this->getStepStatus($project->status_step_project),
                 'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
+                'status_bonus_project' => $this->getRequestStatusBonus($project->status_bonus_project),
                 'created_at' => $project->created_at,
                 'updated_at' => $project->updated_at,
             ];
@@ -243,15 +244,26 @@ class ProjectCollection extends ResourceCollection
         return round(floatval(str_replace('%', '', $percent)), 2);
     }
 
-    /**
-     * Get the status of the project.
-     */
+    protected function getRequestStatusBonus($status) {
+        $statuses = [
+
+            Project::BELUM_DIKASIH_BONUS => "Belum Dikasih Bonus",
+            Project::SUDAH_DIKASIH_BONUS => "Sudah Dikasih Bonus",
+         ];
+
+        return [
+            "id" => $status,
+            "name" => $statuses[$status] ?? "Unknown",
+        ];
+    }
+
     protected function getRequestStatus($status)
     {
         $statuses = [
             Project::PENDING => "Pending",
             Project::ACTIVE => "Active",
             Project::REJECTED => "Rejected",
+            Project::CLOSED => "Closed",
         ];
 
         return [

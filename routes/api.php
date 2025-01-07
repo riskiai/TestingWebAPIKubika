@@ -99,6 +99,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::get('project/invoice/{id}', [ProjectController::class, 'invoice']);
      Route::post('project/create-informasi', [ProjectController::class, 'createInformasi']);
      Route::put('project/accept/{id}', [ProjectController::class, 'accept']);
+     Route::put('project/closed/{id}', [ProjectController::class, 'closed']);
+     Route::put('project/bonus/{id}', [ProjectController::class, 'bonus']);
      Route::put('project/reject/{id}', [ProjectController::class, 'reject']);
      Route::put('projects/update-pengguna-muatan/{id}', [ProjectController::class, 'UpdatePenggunaMuatan']);
      Route::put('projects/update_lengkap/{id}', [ProjectController::class, 'UpdateLengkap']);

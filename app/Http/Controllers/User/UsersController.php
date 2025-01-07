@@ -95,6 +95,17 @@ class UsersController extends Controller
         DB::beginTransaction();
 
         try {
+            $currentUser = auth()->user();
+
+            // Cek apakah role yang ditambahkan adalah OWNER
+            if ($request->role == Role::OWNER) {
+                // Hanya OWNER yang boleh menambahkan role OWNER
+                if (!$currentUser->hasRole(Role::OWNER)) {
+                    return MessageActeeve::error('Only an OWNER can assign the OWNER role.');
+                }
+            }
+    
+
             // Generate password acak 6 karakter
             $randomPassword = $this->generateRandomPassword();
 
@@ -142,6 +153,7 @@ class UsersController extends Controller
         }
 
         try {
+            $currentUser = auth()->user();
             $userData = [];
 
             // Update bidang-bidang yang disertakan dalam permintaan
@@ -152,6 +164,12 @@ class UsersController extends Controller
                 $userData['email'] = $request->email;
             }
             if ($request->has('role')) {
+                // Validasi untuk role OWNER
+                if ($request->role == Role::OWNER) {
+                    if (!$currentUser->hasRole(Role::OWNER)) {
+                        return MessageActeeve::error('Only an OWNER can assign the OWNER role.');
+                    }
+                }
                 $userData['role_id'] = $request->role;
             }
             if ($request->has('divisi')) { // Tambahkan pengecekan untuk update divisi
