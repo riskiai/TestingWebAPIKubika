@@ -463,22 +463,27 @@ class ProjectController extends Controller
                 ]);
             }
 
-            // Jika ada file baru (attachment_file_spb), hapus file lama dan simpan yang baru
-            if ($request->hasFile('attachment_file_spb')) {
-                if ($project->spb_file) {
-                    Storage::delete($project->spb_file); // Hapus file lama jika ada
-                }
-                $request->merge([
-                    'spb_file' => $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB),
-                ]);
-            }
-
-            // Pastikan harga_type_project default ke 0 jika tidak disediakan
-            if ($request->has('harga_type_project')) {
-                $request->merge([
-                    'harga_type_project' => $request->input('harga_type_project') ?? 0,
-                ]);
-            }
+             // Simpan file attachment_file
+             $filePath = $project->file; // Gunakan path lama jika file tidak di-upload
+             if ($request->hasFile('attachment_file')) {
+                 // Hapus file lama jika ada
+                 if ($filePath && Storage::disk('public')->exists($filePath)) {
+                     Storage::disk('public')->delete($filePath);
+                 }
+                 // Simpan file baru
+                 $filePath = $request->file('attachment_file')->store(Project::ATTACHMENT_FILE, 'public');
+             }
+ 
+             // Simpan file attachment_file_spb
+             $spbFilePath = $project->spb_file; // Gunakan path lama jika file tidak di-upload
+             if ($request->hasFile('attachment_file_spb')) {
+                 // Hapus file lama jika ada
+                 if ($spbFilePath && Storage::disk('public')->exists($spbFilePath)) {
+                     Storage::disk('public')->delete($spbFilePath);
+                 }
+                 // Simpan file baru
+                 $spbFilePath = $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB, 'public');
+             }
     
              // Update proyek dengan data baru
              $project->update($request->except(['produk_id', 'user_id'])); // Update proyek tanpa produk_id dan user_id
