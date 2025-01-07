@@ -314,21 +314,17 @@ class ProjectController extends Controller
             // Set harga_type_project to 0 if it's not provided
             $project->harga_type_project = $request->has('harga_type_project') ? $request->harga_type_project : 0;
 
-            // Periksa apakah file dilampirkan sebelum menyimpannya
-            if ($request->hasFile('attachment_file')) {
-                $project->file = $request->file('attachment_file')->store(Project::ATTACHMENT_FILE);
-            } else {
-                $project->file = null; 
-            }
+             // Simpan file ke disk public
+                $project->file = $request->hasFile('attachment_file') 
+                ? $request->file('attachment_file')->store(Project::ATTACHMENT_FILE, 'public') 
+                : null;
 
-            if ($request->hasFile('attachment_file_spb')) {
-                $project->spb_file = $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB);
-            } else {
-                $project->spb_file = null; // Tidak ada file, set null
-            }
+            $project->spb_file = $request->hasFile('attachment_file_spb') 
+                ? $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB, 'public') 
+                : null;
 
-            // Simpan proyek ke database, ID proyek akan ter-set setelah ini
-            $project->save();  // Pastikan proyek disimpan terlebih dahulu untuk mendapatkan ID
+            // Simpan proyek ke database
+            $project->save();
 
              // Ambil produk_id dan user_id dari request
             $produkIds = array_filter($request->input('produk_id', []));  // Hapus nilai kosong
