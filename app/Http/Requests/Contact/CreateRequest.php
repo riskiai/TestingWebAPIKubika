@@ -27,18 +27,18 @@ class CreateRequest extends FormRequest
     {
         return [
             'contact_type' => 'required|exists:contact_type,id',
-            'name' => 'required|max:255',
-            'address' => 'required|max:255',
+            'name' => 'nullable|max:255',
+            'address' => 'nullable|max:255',
             'bank_name' => 'nullable|max:255',
             'branch' => 'nullable|max:255',
             'account_name' => 'nullable|max:255',
             'currency' => 'nullable|max:255',
             'account_number' => 'nullable|numeric',
             'swift_code' => 'nullable|max:255',
-            'attachment_npwp' => 'required|mimes:pdf,png,jpg,jpeg,xlsx,xls,heic|max:3072',
-            'pic_name' => 'required|max:255',
-            'phone' => 'required|numeric',
-            'email' => 'required|email|max:255',
+            'attachment_npwp' => 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls,heic|max:3072',
+            'pic_name' => 'nullable|max:255',
+            'phone' => 'nullable|numeric',
+            'email' => 'nullable|email|max:255',
             'attachment_file' => 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls,heic|max:3072',
         ];
     }
