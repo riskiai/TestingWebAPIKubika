@@ -153,25 +153,35 @@ class ContactController extends Controller
         }
 
         try {
-            // karena attachment npwp tidak wajib diisi maka diperlukan pengecekan
-            // guna untuk tahu apakah perlu di update atau tidak
-            if ($request->hasFile('attachment_npwp')) {
-                // hapus storage sebelumnya
-                Storage::delete($contact->npwp);
-                // lalu ganti dengan yang baru
-                $request->merge([
-                    'npwp' => $request->file('attachment_npwp')->store(Company::ATTACHMENT_NPWP),
-                ]);
+              // Memeriksa apakah file attachment_npwp ada dan menyimpannya
+        $npwpPath = $contact->npwp; // Gunakan path lama jika file tidak di-upload
+        if ($request->hasFile('attachment_npwp')) {
+            // Hapus file lama jika ada
+            if ($npwpPath && Storage::disk('public')->exists($npwpPath)) {
+                Storage::disk('public')->delete($npwpPath);
             }
+            // Simpan file baru
+            $npwpPath = $request->file('attachment_npwp')->store(Company::ATTACHMENT_NPWP, 'public');
+        }
 
-            if ($request->hasFile('attachment_file')) {
-                Storage::delete($contact->file);
-                $request->merge([
-                    'file' => $request->file('attachment_file')->store(Company::ATTACHMENT_FILE),
-                ]);
+        // Memeriksa apakah file attachment_file ada dan menyimpannya
+        $filePath = $contact->file; // Gunakan path lama jika file tidak di-upload
+        if ($request->hasFile('attachment_file')) {
+            // Hapus file lama jika ada
+            if ($filePath && Storage::disk('public')->exists($filePath)) {
+                Storage::disk('public')->delete($filePath);
             }
+            // Simpan file baru
+            $filePath = $request->file('attachment_file')->store(Company::ATTACHMENT_FILE, 'public');
+        }
 
-            $contact->update($request->all());
+        // Update data lainnya
+        $requestData = $request->all();
+        $requestData['contact_type_id'] = $contactType->id;
+        $requestData['npwp'] = $npwpPath;
+        $requestData['file'] = $filePath;
+
+        $contact->update($requestData);
 
             DB::commit();
             return MessageActeeve::success("contact $contact->name has been updated");
