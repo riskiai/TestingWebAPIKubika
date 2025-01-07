@@ -506,7 +506,7 @@ class SPBController extends Controller
     protected function replaceDocument($spbProject, $file, $iteration)
     {
         // Simpan file baru
-        $documentPath = $file->store(SpbProject::ATTACHMENT_FILE_SPB);
+        $documentPath = $file->store(SpbProject::ATTACHMENT_FILE_SPB, 'public');
 
         // Hapus file lama jika ada
         $existingDocument = $spbProject->documents()
@@ -2151,7 +2151,7 @@ class SPBController extends Controller
     protected function saveDocument($spbProject, $file, $iteration)
     {
         // Menyimpan file dan mencatatkan path-nya
-        $document = $file->store(SpbProject::ATTACHMENT_FILE_SPB);
+        $document = $file->store(SpbProject::ATTACHMENT_FILE_SPB, 'public');
 
         // Cek apakah file berhasil disimpan
         Log::info('Document file saved', [
