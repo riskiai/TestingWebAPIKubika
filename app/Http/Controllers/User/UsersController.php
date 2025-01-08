@@ -126,7 +126,7 @@ class UsersController extends Controller
             DB::commit();
 
             // Pesan sukses tanpa pengiriman email
-            return MessageActeeve::success("User {$user->name} has been successfully created with role {$user->role->role_name}. Default password is: {$defaultPassword}");
+            return MessageActeeve::success("User {$user->name} has been successfully");
         } catch (\Throwable $th) {
             DB::rollBack();
             return MessageActeeve::error($th->getMessage());
