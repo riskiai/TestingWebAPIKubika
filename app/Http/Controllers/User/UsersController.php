@@ -104,41 +104,35 @@ class UsersController extends Controller
         DB::beginTransaction();
 
         try {
-
-            // Generate password acak 6 karakter
-            $randomPassword = $this->generateRandomPassword();
+            // Password default
+            $defaultPassword = 'P4sw0rdK8Bik@';
 
             // Buat user baru dengan nama, email, password, role, dan divisi
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => bcrypt($randomPassword), // Enkripsi password acak
+                'password' => bcrypt($defaultPassword), // Enkripsi password default
                 'role_id' => $request->role,
                 'divisi_id' => $request->divisi,
             ]);
 
+            // Buat data salary untuk user
             $user->salary()->create([
                 "daily_salary" => $request->daily_salary,
                 "hourly_salary" => $request->hourly_salary,
                 "hourly_overtime_salary" => $request->hourly_overtime_salary,
             ]);
 
-            $user->passwordRecovery = $randomPassword; // Simpan password acak sementara
-
-            // Kirim email hanya jika bukan TENAGA_KERJA
-            if ($request->role != Role::TENAGA_KERJA) {
-                Mail::to($user->email)->send(new RegisterMail($user));
-            }
-
             DB::commit();
 
-            // Tambahkan info password acak ke pesan sukses
-            return MessageActeeve::success("User {$user->name} has been successfully created with role {$user->role->role_name}");
+            // Pesan sukses tanpa pengiriman email
+            return MessageActeeve::success("User {$user->name} has been successfully created with role {$user->role->role_name}. Default password is: {$defaultPassword}");
         } catch (\Throwable $th) {
             DB::rollBack();
             return MessageActeeve::error($th->getMessage());
         }
     }
+
     
 
     public function store(CreateRequest $request)
