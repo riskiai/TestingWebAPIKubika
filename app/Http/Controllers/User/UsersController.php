@@ -45,6 +45,14 @@ class UsersController extends Controller
             });
         }
 
+        if ($request->has('role_id')) {
+            // Ambil array role_id dari request, pastikan dalam bentuk array
+            $roleIds = is_array($request->role_id) ? $request->role_id : explode(',', $request->role_id);
+    
+            // Terapkan filter berdasarkan role_id
+            $query->whereIn('role_id', $roleIds);
+        }
+
         // Filter berdasarkan rentang tanggal (parameter 'date')
         if ($request->has('date')) {
             $date = str_replace(['[', ']'], '', $request->date);
@@ -140,8 +148,6 @@ class UsersController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
-
-
 
     public function update(UpdateRequest $request, $id)
     {
