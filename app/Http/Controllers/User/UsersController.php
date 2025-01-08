@@ -11,6 +11,7 @@ use App\Facades\MessageActeeve;
 use App\Mail\ResetPasswordMail;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\CreateNotLoginRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\User\CreateRequest;
@@ -97,6 +98,48 @@ class UsersController extends Controller
             ]
         ]);
     }
+
+    public function storeNotLogin(CreateNotLoginRequest $request)
+    {
+        DB::beginTransaction();
+
+        try {
+
+            // Generate password acak 6 karakter
+            $randomPassword = $this->generateRandomPassword();
+
+            // Buat user baru dengan nama, email, password, role, dan divisi
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => bcrypt($randomPassword), // Enkripsi password acak
+                'role_id' => $request->role,
+                'divisi_id' => $request->divisi,
+            ]);
+
+            $user->salary()->create([
+                "daily_salary" => $request->daily_salary,
+                "hourly_salary" => $request->hourly_salary,
+                "hourly_overtime_salary" => $request->hourly_overtime_salary,
+            ]);
+
+            $user->passwordRecovery = $randomPassword; // Simpan password acak sementara
+
+            // Kirim email hanya jika bukan TENAGA_KERJA
+            if ($request->role != Role::TENAGA_KERJA) {
+                Mail::to($user->email)->send(new RegisterMail($user));
+            }
+
+            DB::commit();
+
+            // Tambahkan info password acak ke pesan sukses
+            return MessageActeeve::success("User {$user->name} has been successfully created with role {$user->role->role_name}");
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    }
+    
 
     public function store(CreateRequest $request)
     {

@@ -29,6 +29,8 @@ Route::prefix('auth')->group(function () {
         ->middleware('auth:sanctum');
 });
 
+Route::post('store-notlogin', [UsersController::class, 'storeNotLogin']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
      // Users
      Route::prefix('user')->group(function () {
@@ -45,7 +47,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('destroy/{id}', [UsersController::class, 'destroy']);
      });
 
-     Route::get('/logs-kubika', [LogsKubikaController::class, 'index']);
+
+    Route::get('/logs-kubika', [LogsKubikaController::class, 'index']);
 
       // Divisi Tenaga Kerja Di Role Users
     Route::get('divisi', [DivisiController::class, 'index']);
