@@ -122,15 +122,21 @@ class ProjectController extends Controller
         $query->with(['company', 'user', 'product', 'tenagaKerja']);
 
          // Terapkan filter berdasarkan peran pengguna
-        if (auth()->user()->role_id == Role::MARKETING) {
-            // Jika yang login adalah MARKETING, tampilkan hanya proyek yang dibuat oleh user tersebut
-            $query->where('user_id', auth()->user()->id);
-        } elseif (auth()->user()->role_id == Role::SUPERVISOR) {
-            // Jika yang login adalah SUPERVISOR, tampilkan proyek di mana mereka terlibat
-            $query->whereHas('tenagaKerja', function ($q) {
-                $q->where('user_id', auth()->user()->id);
+         if (auth()->user()->role_id == Role::MARKETING) {
+            $query->where(function ($q) {
+                $q->where('user_id', auth()->user()->id) // Proyek yang dibuat oleh Marketing
+                  ->orWhereHas('tenagaKerja', function ($q) {
+                      $q->where('user_id', auth()->user()->id); // Proyek di mana Marketing menjadi tenaga kerja
+                  });
             });
         }
+    
+        // Filter untuk Supervisor
+        if (auth()->user()->role_id == Role::SUPERVISOR) {
+            $query->whereHas('tenagaKerja', function ($q) {
+                $q->where('user_id', auth()->user()->id); // Proyek di mana Supervisor menjadi tenaga kerja
+            });
+        }      
 
         // Terapkan filter berdasarkan peran pengguna
         if ($request->has('role_id')) {
@@ -397,6 +403,7 @@ class ProjectController extends Controller
             $project->user_id = auth()->user()->id;
             $project->request_status_owner = Project::DEFAULT_STATUS;
             $project->status_bonus_project = Project::DEFAULT_STATUS_NO_BONUS;
+            $project->type_projects = $request->type_projects;
 
             // Set harga_type_project to 0 if it's not provided
             $project->harga_type_project = $request->has('harga_type_project') ? $request->harga_type_project : 0;
@@ -417,6 +424,8 @@ class ProjectController extends Controller
             $produkIds = array_filter($request->input('produk_id', []));  // Hapus nilai kosong
             $userIds = array_filter($request->input('user_id', []));  // Hapus nilai kosong
 
+            $userIds[] = auth()->user()->id;
+
             // Sinkronisasi produk_id di pivot table hanya jika ada produk_id yang valid
             if (!empty($produkIds)) {
                 $project->product()->syncWithoutDetaching($produkIds); // Sinkronkan produk ke pivot table
@@ -424,8 +433,10 @@ class ProjectController extends Controller
 
             // Sinkronisasi user_id di pivot table hanya jika ada user_id yang valid
             if (!empty($userIds)) {
-                $project->tenagaKerja()->syncWithoutDetaching($userIds); // Sinkronkan user ke pivot table
+                $project->tenagaKerja()->syncWithoutDetaching($userIds); 
             }
+
+            $project->tenagaKerja()->syncWithoutDetaching($userIds);
 
             // Commit transaksi
             DB::commit(); // Commit transaksi
@@ -572,6 +583,8 @@ class ProjectController extends Controller
                  $spbFilePath = $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB, 'public');
              }
     
+             $project->type_projects = $request->type_projects;
+
              // Update proyek dengan data baru
              $project->update($request->except(['produk_id', 'user_id'])); // Update proyek tanpa produk_id dan user_id
     
@@ -731,6 +744,7 @@ class ProjectController extends Controller
             // 'status_step_project' => $this->getStepStatus($project->status_step_project),
             'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
             'status_bonus_project' => $this->getRequestStatusBonus($project->status_bonus_project),
+            'type_projects' => $this->getDataTypeProject($project->type_projects),
             'created_at' => $project->created_at,
             'updated_at' => $project->updated_at,
         ];
@@ -878,6 +892,19 @@ class ProjectController extends Controller
         return [
             "id" => $step,
             "name" => $steps[$step] ?? "Unknown", // Tetap tampilkan "Unknown" jika step tidak dikenal
+        ];
+    }
+
+    protected function getDataTypeProject($status) {
+        $statuses = [
+
+            Project::HIK => "HIK PROJECT",
+            Project::DWI => "DWI PROJECT",
+         ];
+
+        return [
+            "id" => $status,
+            "name" => $statuses[$status] ?? "Unknown",
         ];
     }
 

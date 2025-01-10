@@ -100,6 +100,7 @@ class ProjectCollection extends ResourceCollection
                 // 'status_step_project' => $this->getStepStatus($project->status_step_project),
                 'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
                 'status_bonus_project' => $this->getRequestStatusBonus($project->status_bonus_project),
+                'type_projects' => $this->getDataTypeProject($project->type_projects),
                 'created_at' => $project->created_at,
                 'updated_at' => $project->updated_at,
             ];
@@ -242,6 +243,19 @@ class ProjectCollection extends ResourceCollection
     {
         // Remove "%" if present and convert to float before rounding
         return round(floatval(str_replace('%', '', $percent)), 2);
+    }
+
+    protected function getDataTypeProject($status) {
+        $statuses = [
+
+            Project::HIK => "HIK PROJECT",
+            Project::DWI => "DWI PROJECT",
+         ];
+
+        return [
+            "id" => $status,
+            "name" => $statuses[$status] ?? "Unknown",
+        ];
     }
 
     protected function getRequestStatusBonus($status) {

@@ -2,10 +2,11 @@
 
 namespace App\Http\Requests\Project;
 
+use App\Models\Project;
 use App\Facades\MessageActeeve;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Validation\ValidationException;
 
 class StoreRequest extends FormRequest
@@ -42,6 +43,7 @@ public function rules(): array
         'status_bonus_project' => 'nullable|string',
         'status_step_project' => 'nullable|string|max:100',
         'harga_type_project' => 'nullable|numeric',
+        'type_projects' => 'nullable|in:' . implode(',', [Project::HIK, Project::DWI]),
             
         // Produk dan User ID harus berupa array
         'produk_id' => 'nullable|array',

@@ -36,6 +36,10 @@ class Project extends Model
     const PENGGUNA_MUATAN = 2;
     const PRATINJAU = 3;
 
+    // type project
+    const HIK = 1;
+    const DWI = 2;
+
     const DEFAULT_STATUS_NO_BONUS = self::BELUM_DIKASIH_BONUS;
     const DEFAULT_STATUS = self::PENDING;
     const DEFAULT_STATUS_PROJECT = self::INFORMASI_PROYEK;
@@ -64,7 +68,16 @@ class Project extends Model
         'status_bonus_project',
         // 'status_step_project',
         'harga_type_project',
+        'type_projects',
     ];
+
+    public static function getTypeProjectsOptions()
+    {
+        return [
+            self::HIK => 'HIK',
+            self::DWI => 'DWI',
+        ];
+    }
 
     // Project.php (Model)
     protected static function boot()
