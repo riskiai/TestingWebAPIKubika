@@ -60,6 +60,14 @@ class ProjectController extends Controller
             $query->where('status_cost_progres', $request->status_cost_progres);
         }
 
+        if ($request->has('type_projects')) {
+            $typeProjects = is_array($request->type_projects) 
+                ? $request->type_projects 
+                : explode(',', $request->type_projects);
+    
+            $query->whereIn('type_projects', $typeProjects); // Filter proyek berdasarkan type_projects
+        }
+
         // Filter berdasarkan ID proyek
         if ($request->has('project')) {
             $query->where('id', $request->project);
@@ -177,6 +185,15 @@ class ProjectController extends Controller
         // Filter berdasarkan status cost progress
         if ($request->has('status_cost_progres')) {
             $query->where('status_cost_progres', $request->status_cost_progres);
+        }
+        
+
+        if ($request->has('type_projects')) {
+            $typeProjects = is_array($request->type_projects) 
+                ? $request->type_projects 
+                : explode(',', $request->type_projects);
+    
+            $query->whereIn('type_projects', $typeProjects); // Filter proyek berdasarkan type_projects
         }
 
         // Filter berdasarkan ID proyek
@@ -424,7 +441,10 @@ class ProjectController extends Controller
             $produkIds = array_filter($request->input('produk_id', []));  // Hapus nilai kosong
             $userIds = array_filter($request->input('user_id', []));  // Hapus nilai kosong
 
-            $userIds[] = auth()->user()->id;
+            // $userIds[] = auth()->user()->id;
+            if (auth()->user()->role_id == Role::MARKETING) {
+                $userIds[] = auth()->user()->id; // Tambahkan pembuat proyek ke daftar tenaga kerja
+            }
 
             // Sinkronisasi produk_id di pivot table hanya jika ada produk_id yang valid
             if (!empty($produkIds)) {
@@ -436,7 +456,7 @@ class ProjectController extends Controller
                 $project->tenagaKerja()->syncWithoutDetaching($userIds); 
             }
 
-            $project->tenagaKerja()->syncWithoutDetaching($userIds);
+            // $project->tenagaKerja()->syncWithoutDetaching($userIds);
 
             // Commit transaksi
             DB::commit(); // Commit transaksi
