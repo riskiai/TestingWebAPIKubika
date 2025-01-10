@@ -35,6 +35,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
      // Users
      Route::prefix('user')->group(function () {
         Route::get('/', [UsersController::class, 'index']);
+        Route::get('all', [UsersController::class, 'usersAll']);
         Route::get('me', function (Request $request) {
             // dd($request->user());
             return $request->user();
