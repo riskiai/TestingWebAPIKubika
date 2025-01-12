@@ -24,6 +24,7 @@ use App\Models\ProductCompanySpbProject;
 use App\Http\Requests\SpbProject\AcceptRequest;
 use App\Http\Requests\SpbProject\ActivateProdukRequest;
 use App\Http\Requests\SpbProject\ActivateSpbRequest;
+use App\Http\Requests\SpbProject\AddProdukRequest;
 use App\Http\Requests\SpbProject\CreateRequest;
 use App\Http\Requests\SpbProject\PaymentProdukRequest;
 use App\Http\Requests\SpbProject\UpdateRequest;
@@ -414,6 +415,77 @@ class SPBController extends Controller
             ], 500);
         }
     }
+
+    public function storeProduk(AddProdukRequest $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Cari SPB Project berdasarkan ID
+            $spbProject = SpbProject::find($id);
+            if (!$spbProject) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'SPB Project not found!',
+                ], 404);
+            }
+
+            // Proses setiap produk yang dikirim dalam request
+            foreach ($request->produk as $produkData) {
+                $vendorId = $produkData['vendor_id'];
+                $produkId = $produkData['produk_id'];
+
+                // Cari apakah produk sudah ada di tabel pivot
+                $product = $spbProject->productCompanySpbprojects()
+                    ->where('produk_id', $produkId)
+                    ->where('company_id', $vendorId)
+                    ->first();
+
+                if ($product) {
+                    // Jika produk sudah ada, update datanya
+                    $product->update([
+                        'harga' => $produkData['harga'],
+                        'stok' => $produkData['stok'],
+                        'tax_ppn' => $produkData['tax_ppn'] ?? 0,
+                        'ongkir' => $produkData['ongkir'] ?? 0,
+                        'date' => $produkData['date'],
+                        'due_date' => $produkData['due_date'],
+                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, // Set status ke Awaiting
+                    ]);
+                } else {
+                    // Jika produk belum ada, tambahkan sebagai entri baru
+                    ProductCompanySpbProject::create([
+                        'spb_project_id' => $spbProject->doc_no_spb,
+                        'produk_id' => $produkId,
+                        'company_id' => $vendorId,
+                        'ongkir' => $produkData['ongkir'] ?? 0,
+                        'harga' => $produkData['harga'],
+                        'stok' => $produkData['stok'],
+                        'description' => $produkData['description'] ?? null,
+                        'ppn' => $produkData['tax_ppn'] ?? 0,
+                        'date' => $produkData['date'],
+                        'due_date' => $produkData['due_date'],
+                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, // Set status ke Awaiting
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Produk berhasil ditambahkan atau diperbarui ke SPB Project {$spbProject->doc_no_spb}.",
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 
     protected function generateDocNo($maxNumericPart, $spbCategory)
     {
@@ -1887,18 +1959,36 @@ class SPBController extends Controller
                 'type_project' => $request->type_project,
             ]);
 
+            // Ambil produk yang baru dari request
             $produkData = $request->input('produk_data', []);
 
+            // Ambil semua produk yang saat ini terkait dengan SPB Project
+            $existingProducts = $SpbProject->productCompanySpbprojects()->pluck('produk_id')->toArray();
+
+            // Ambil ID produk dari request
+            $newProductIds = collect($produkData)->pluck('produk_id')->toArray();
+
+            // Hapus produk lama yang tidak ada di request baru
+            $productsToDelete = array_diff($existingProducts, $newProductIds);
+            if (!empty($productsToDelete)) {
+                $SpbProject->productCompanySpbprojects()
+                    ->whereIn('produk_id', $productsToDelete)
+                    ->delete();
+            }
+
+            // Proses produk dari request
             foreach ($produkData as $item) {
                 $vendorId = $item['vendor_id'];
                 $productId = $item['produk_id'];
-    
+
+                // Periksa apakah produk sudah ada
                 $existingProduct = $SpbProject->productCompanySpbprojects()
                     ->where('company_id', $vendorId)
                     ->where('produk_id', $productId)
                     ->first();
-    
+
                 if ($existingProduct) {
+                    // Update produk yang ada
                     $existingProduct->update([
                         'harga' => $item['harga'],
                         'stok' => $item['stok'],
@@ -1907,9 +1997,9 @@ class SPBController extends Controller
                         'date' => $item['date'],
                         'due_date' => $item['due_date'],
                         'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
-                        'updated_at' => now(),
                     ]);
                 } else {
+                    // Tambahkan produk baru
                     ProductCompanySpbProject::create([
                         'spb_project_id' => $SpbProject->doc_no_spb,
                         'produk_id' => $productId,
@@ -1921,8 +2011,6 @@ class SPBController extends Controller
                         'date' => $item['date'],
                         'due_date' => $item['due_date'],
                         'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
-                        'created_at' => now(),
-                        'updated_at' => now(),
                     ]);
                 }
             }
