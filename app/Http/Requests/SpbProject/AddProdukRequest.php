@@ -30,6 +30,7 @@ class AddProdukRequest extends FormRequest
             'produk.*.harga' => 'required|numeric|min:0',
             'produk.*.stok' => 'required|integer|min:0',
             'produk.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
+            'produk.*.description' => 'nullable|string|max:255',
             'produk.*.date' => 'nullable|date',
             'produk.*.due_date' => 'nullable|date',
         ];

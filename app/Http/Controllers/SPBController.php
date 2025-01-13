@@ -613,38 +613,58 @@ class SPBController extends Controller
                 ], 404);
             }
 
-            // Loop untuk memproses produk langsung dari request
-            foreach ($request->produk as $item) {
+             // Ambil produk baru dari request
+            $produkData = $request->input('produk', []);
+
+            // Ambil semua produk yang saat ini terkait dengan SPB Project
+            $existingProducts = $spbProject->productCompanySpbprojects()->pluck('produk_id')->toArray();
+
+            // Ambil ID produk dari request
+            $newProductIds = collect($produkData)->pluck('produk_id')->toArray();
+
+            // Hapus produk lama yang tidak ada di request baru
+            $productsToDelete = array_diff($existingProducts, $newProductIds);
+            if (!empty($productsToDelete)) {
+                $spbProject->productCompanySpbprojects()
+                    ->whereIn('produk_id', $productsToDelete)
+                    ->delete();
+            }
+
+            // Proses produk baru dari request
+            foreach ($produkData as $item) {
                 $vendorId = $item['vendor_id'];
                 $productId = $item['produk_id'];
 
-                // Cek apakah produk dengan vendor_id dan produk_id sudah ada
+                // Periksa apakah produk sudah ada
                 $existingProduct = $spbProject->productCompanySpbprojects()
                     ->where('company_id', $vendorId)
                     ->where('produk_id', $productId)
                     ->first();
 
                 if ($existingProduct) {
-                    // Jika produk sudah ada, update data produk tersebut
+                    // Update produk yang ada
                     $existingProduct->update([
                         'harga' => $item['harga'],
                         'stok' => $item['stok'],
-                        'ppn' => $item['tax_ppn'] ?? 0, // Menambahkan PPN
+                        'ppn' => $item['tax_ppn'] ?? 0,
+                        'description' => $item['description'], 
                         'ongkir' => $item['ongkir'] ?? 0,
                         'date' => $item['date'],
                         'due_date' => $item['due_date'],
-                        'updated_at' => now(), // Update waktu
+                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
+                        'updated_at' => now(),
                     ]);
                 } else {
-                    // Jika produk belum ada, tambahkan ke database
+                    // Tambahkan produk baru
                     ProductCompanySpbProject::create([
                         'spb_project_id' => $spbProject->doc_no_spb,
                         'produk_id' => $productId,
                         'company_id' => $vendorId,
-                        'ongkir' => $item['ongkir'] ?? 0,
                         'harga' => $item['harga'],
                         'stok' => $item['stok'],
-                        'ppn' => $item['tax_ppn'] ?? 0, // Menambahkan PPN
+                        'ppn' => $item['tax_ppn'] ?? 0,
+                        'description' => $item['description'], 
+                        'ongkir' => $item['ongkir'] ?? 0,
                         'date' => $item['date'],
                         'due_date' => $item['due_date'],
                         'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
@@ -1881,7 +1901,8 @@ class SPBController extends Controller
                 $product->update([
                     'harga' => $produkData['harga'],       // Update harga
                     'stok' => $produkData['stok'],         // Update stok
-                    'tax_ppn' => $produkData['tax_ppn'],   // Update PPN
+                    'tax_ppn' => $produkData['tax_ppn'], 
+                    'description' => $produkData['description'],   
                     'ongkir' => $produkData['ongkir'],     // Update ongkir
                     'date' => $produkData['date'],         // Update date
                     'due_date' => $produkData['due_date'], // Update due_date
@@ -1993,6 +2014,7 @@ class SPBController extends Controller
                         'harga' => $item['harga'],
                         'stok' => $item['stok'],
                         'ppn' => $item['tax_ppn'] ?? 0,
+                        'description' => $item['description'], 
                         'ongkir' => $item['ongkir'] ?? 0,
                         'date' => $item['date'],
                         'due_date' => $item['due_date'],
@@ -2007,6 +2029,7 @@ class SPBController extends Controller
                         'harga' => $item['harga'],
                         'stok' => $item['stok'],
                         'ppn' => $item['tax_ppn'] ?? 0,
+                        'description' => $item['description'], 
                         'ongkir' => $item['ongkir'] ?? 0,
                         'date' => $item['date'],
                         'due_date' => $item['due_date'],
