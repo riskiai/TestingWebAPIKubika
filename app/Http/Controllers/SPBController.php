@@ -609,7 +609,7 @@ class SPBController extends Controller
             if (!$spbProject) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'SPB Project not found!!',
+                    'message' => 'SPB Project not found!',
                 ], 404);
             }
 
