@@ -56,19 +56,24 @@ class ProductCompanySpbProject extends Model
     /**
      * Perhitungan nilai PPN
      */
-    public function getPpnValueAttribute()
+    public function getPpnDetailAttribute()
     {
         $harga = floatval($this->harga);
         $stok = intval($this->stok);
         $ppn = floatval($this->ppn);
-    
+        
         // Subtotal sebelum PPN: hanya (harga * stok)
         $subtotalSebelumPpn = $harga * $stok;
-    
-        // Kalkulasi PPN
-        return $ppn > 0 ? round(($subtotalSebelumPpn * $ppn) / 100) : 0;
+        
+        // Kalkulasi nilai PPN
+        $ppnValue = $ppn > 0 ? round(($subtotalSebelumPpn * $ppn) / 100) : 0;
+        
+        return [
+            'ppn_percentage' => $ppn, // Persentase PPN
+            'ppn_value' => $ppnValue, // Nilai PPN
+        ];
     }
-    
+
     
     /**
      * Perhitungan subtotal produk (harga * stok + ongkir + PPN)
@@ -78,9 +83,12 @@ class ProductCompanySpbProject extends Model
         $harga = floatval($this->harga);
         $stok = intval($this->stok);
         $ongkir = floatval($this->ongkir);
-        $ppnValue = $this->ppn_value;
-    
-        return round(($harga * $stok) + $ongkir + $ppnValue); 
+        
+        // Menggunakan ppn_value dari accessor getPpnDetailAttribute
+        $ppnValue = $this->ppn_detail['ppn_value'];
+        
+        // Perhitungan subtotal
+        return round(($harga * $stok) + $ongkir + $ppnValue);
     }
 
     /**
