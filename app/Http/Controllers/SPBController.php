@@ -39,12 +39,22 @@ class SPBController extends Controller
     {
         $query = SpbProject::query();
         
-        if (auth()->user()->role_id == Role::MARKETING) {
+        /* if (auth()->user()->role_id == Role::MARKETING) {
             // Tampilkan hanya SPB yang terkait dengan proyek yang dibuat oleh user
             $query->whereHas('project', function ($q) {
-                $q->where('user_id', auth()->user()->id); // Filter proyek berdasarkan user_id pembuatnya
+                $q->where('user_id', auth()->user()->id); 
             });
-        }
+        } */
+
+        if (auth()->user()->role_id == Role::MARKETING) {
+            // Tampilkan SPB yang terkait dengan proyek yang dibuat oleh Marketing
+            $query->whereHas('project', function ($q) {
+                $q->where('user_id', auth()->user()->id) // Proyek yang dibuat oleh Marketing
+                  ->orWhereHas('tenagaKerja', function ($q) {
+                      $q->where('user_id', auth()->user()->id); // Proyek di mana Marketing tercantum sebagai tenaga kerja
+                  });
+            });
+        }        
 
         $query->with(['user', 'products', 'project', 'status', 'vendors']);
 
@@ -1663,7 +1673,6 @@ class SPBController extends Controller
     }
     
     
-
     public function undo($docNoSpb)
     {
         DB::beginTransaction();
