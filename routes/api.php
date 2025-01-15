@@ -29,6 +29,8 @@ Route::prefix('auth')->group(function () {
         ->middleware('auth:sanctum');
 });
 
+
+Route::get('show/{id}', [SPBController::class, 'showNotLogin']);
 Route::post('store-notlogin', [UsersController::class, 'storeNotLogin']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
