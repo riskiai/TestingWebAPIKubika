@@ -1829,7 +1829,7 @@ class SPBController extends Controller
             $spbProject->update([
                 'spbproject_status_id' => SpbProject_Status::VERIFIED,
                 'tab_spb' => SpbProject::TAB_VERIFIED,
-                'know_finance' => auth()->user()->id, // Tandai bahwa Finance telah menerima SPB
+                'know_finance' => auth()->user()->hasRole(Role::FINANCE) ? auth()->user()->id : null, // Tandai bahwa Finance telah menerima SPB
                 'approve_date' => now(), // Waktu persetujuan
             ]);
 
@@ -2242,6 +2242,8 @@ class SPBController extends Controller
                 'nama_toko',
                 'tanggal_dibuat_spb',
                 'tanggal_berahir_spb',
+                'harga_total_pembayaran_borongan_spb',
+                'type_termin_spb',
             ]));
 
             // Menghapus produk lama yang terkait dengan SPB Project sebelum mengaktifkannya
@@ -2467,8 +2469,12 @@ class SPBController extends Controller
                 return MessageActeeve::notFound('Data not found!');
             }
 
-             // Tentukan siapa yang melakukan aksi pembayaran
-            $actorField = auth()->user()->hasRole(Role::FINANCE) ? 'know_finance' : 'request_owner';
+            $actorField = null;
+            if (auth()->user()->hasRole(Role::FINANCE)) {
+                $actorField = 'know_finance';
+            } elseif (auth()->user()->hasRole(Role::OWNER)) {
+                $actorField = 'request_owner';
+            }
 
             // Logika untuk Borongan
             if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
@@ -2496,7 +2502,6 @@ class SPBController extends Controller
                         $updateFields['tab_spb'] = SpbProject::TAB_PAID;
                     } else {
                         // Tetap di Tab Payment Request jika belum lunas
-                        $updateFields['spbproject_status_id'] = SpbProject_Status::PAYMENT_REQUEST;
                         $updateFields['tab_spb'] = SpbProject::TAB_PAYMENT_REQUEST;
                     }
                 }
@@ -2556,7 +2561,7 @@ class SPBController extends Controller
                 $spbProject->update([
                     'spbproject_status_id' => SpbProject_Status::PAID,
                     'tab_spb' => SpbProject::TAB_PAID,
-                    $actorField => auth()->user()->id,
+                    $actorField => $actorField ? auth()->user()->id : null,
                     'approve_date' => now(),
                     'updated_at' => $request->updated_at,
                 ]);
