@@ -26,7 +26,11 @@ class PaymentRequest extends FormRequest
     public function rules(): array
     {
         // Validasi file attachment jika ada
-        $rules = [];
+        $rules = [
+            'harga_termin_spb' => 'nullable|numeric|min:0',
+            'deskripsi_termin_spb' => 'nullable|string|max:255',
+            'type_termin_spb' => 'nullable|in:1,2', // 1 = Belum Lunas, 2 = Lunas
+        ];
 
         // Validasi jika ada file yang diupload
         if ($this->hasFile('attachment_file_spb')) {

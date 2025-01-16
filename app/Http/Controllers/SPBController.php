@@ -357,6 +357,10 @@ class SPBController extends Controller
                 ->first();
             $maxNumericPart = $maxDocNo ? (int) substr($maxDocNo->doc_no_spb, strpos($maxDocNo->doc_no_spb, '-') + 1) : 0;
 
+            $typeTerminSpb = $spbCategory->id == SpbProject_Category::BORONGAN 
+            ? SpbProject::TYPE_TERMIN_BELUM_LUNAS 
+            : null;
+
             // Merge data untuk SPB Project
             $request->merge([
                 'doc_no_spb' => $this->generateDocNo($maxNumericPart, $spbCategory),
@@ -366,6 +370,7 @@ class SPBController extends Controller
                     ? SpbProject::TAB_PAYMENT_REQUEST
                     : SpbProject::TAB_SUBMIT,
                 'user_id' => auth()->user()->id,
+                'type_termin_spb' => $typeTerminSpb,
             ]);
 
             // Buat SPB Project baru
@@ -381,33 +386,37 @@ class SPBController extends Controller
                 'unit_kerja',
                 'tanggal_dibuat_spb',
                 'tanggal_berahir_spb',
+                'harga_total_pembayaran_borongan_spb',
+                'type_termin_spb',
             ]));
 
              // Proses produk_data
-            foreach ($request->produk_data as $item) {
-                $dueDate = Carbon::parse($item['due_date']);
-                $status = match (true) {
-                    $spbCategory->id == SpbProject_Category::INVOICE => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, // Produk Invoice selalu Awaiting
-                    $nowDate->isSameDay($dueDate) => ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT,
-                    $nowDate->gt($dueDate) => ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
-                    $nowDate->lt($dueDate) => ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
-                    default => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
-                };  
+             if ($spbCategory->id != SpbProject_Category::BORONGAN && $request->has('produk_data') && is_array($request->produk_data)) {
+                foreach ($request->produk_data as $item) {
+                    $dueDate = Carbon::parse($item['due_date']);
+                    $status = match (true) {
+                        $spbCategory->id == SpbProject_Category::INVOICE => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
+                        $nowDate->isSameDay($dueDate) => ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT,
+                        $nowDate->gt($dueDate) => ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
+                        $nowDate->lt($dueDate) => ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
+                        default => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
+                    }; 
 
                 // Simpan data produk
                 ProductCompanySpbProject::create([
-                    'spb_project_id' => $spbProject->doc_no_spb,
-                    'produk_id' => $item['produk_id'],
-                    'company_id' => $item['vendor_id'],
-                    'ongkir' => $item['ongkir'] ?? 0,
-                    'harga' => $item['harga'],
-                    'stok' => $item['stok'],
-                    'description' => $item['description'],
-                    'ppn' => $item['tax_ppn'] ?? 0,
-                    'date' => $item['date'],
-                    'due_date' => $item['due_date'],
-                    'status_produk' => $status,
-                ]);
+                        'spb_project_id' => $spbProject->doc_no_spb,
+                        'produk_id' => $item['produk_id'],
+                        'company_id' => $item['vendor_id'],
+                        'ongkir' => $item['ongkir'] ?? 0,
+                        'harga' => $item['harga'],
+                        'stok' => $item['stok'],
+                        'description' => $item['description'],
+                        'ppn' => $item['tax_ppn'] ?? 0,
+                        'date' => $item['date'],
+                        'due_date' => $item['due_date'],
+                        'status_produk' => $status,
+                    ]);
+                }
             }
 
             DB::commit();
@@ -867,10 +876,11 @@ class SPBController extends Controller
                         $notePaid = $product->note_paid_produk; // Ambil note_paid_produk jika statusnya "Paid"
                         return [
                             'produk_data' => [
-                                'produk_id' => $product->produk_id ?? 'Unknown',
-                                'nama' => $product->product->nama ?? 'Unknown',
+                                'produk_id' => $product->produk_id ?? null,
+                                'nama' => $product->product->nama ?? null,
                                 'id_kategori' => $product->product->id_kategori ?? null,
-                                'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                                'type_pembelian' => $product->product->type_pembelian ?? null,
+                                'harga_product' => $product->product->harga_product ?? null,
                             ],
                             'vendor' => [
                                 'id' => $product->company->id ?? 'Unknown',
@@ -902,11 +912,11 @@ class SPBController extends Controller
                         $noteReject = $product->note_reject_produk; // Ambil note_reject_produk jika statusnya "Rejected"
                         return [
                             'produk_data' => [
-                                'produk_id' => $product->produk_id ?? 'Unknown',
-                                'nama' => $product->product->nama ?? 'Unknown',
+                                'produk_id' => $product->produk_id ?? null,
+                                'nama' => $product->product->nama ?? null,
                                 'id_kategori' => $product->product->id_kategori ?? null,
-                                // 'deskripsi' => $product->product->deskripsi ?? '',
-                                'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                                'type_pembelian' => $product->product->type_pembelian ?? null,
+                                'harga_product' => $product->product->harga_product ?? null,
                             ],
                             'vendor' => [
                                 'id' => $product->company->id ?? 'Unknown',
@@ -972,11 +982,11 @@ class SPBController extends Controller
 
                     return [
                         'produk_data' => [
-                            'produk_id' => $product->produk_id ?? 'Unknown',
-                            'nama' => $product->product->nama ?? 'Unknown',
+                            'produk_id' => $product->produk_id ?? null,
+                            'nama' => $product->product->nama ?? null,
                             'id_kategori' => $product->product->id_kategori ?? null,
-                            // 'deskripsi' => $product->product->deskripsi ?? '',
-                            'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                            'type_pembelian' => $product->product->type_pembelian ?? null,
+                            'harga_product' => $product->product->harga_product ?? null,
                         ],
                         'vendor' => [
                             'id' => $product->company->id ?? 'Unknown',
@@ -1006,6 +1016,10 @@ class SPBController extends Controller
             'unit_kerja' => $spbProject->unit_kerja,
             'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
             'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
+            "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
+            "harga_termin_spb" => $spbProject->harga_termin_spb ?? null,
+            "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
+            "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
             "know_spb_marketing" => $this->getUserRole($spbProject->know_marketing),
             "know_spb_supervisor" => $this->getUserRole($spbProject->know_supervisor),
             "know_spb_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
@@ -1092,10 +1106,11 @@ class SPBController extends Controller
                     $notePaid = $product->note_paid_produk; // Ambil note_paid_produk jika statusnya "Paid"
                     return [
                         'produk_data' => [
-                            'produk_id' => $product->produk_id ?? 'Unknown',
-                            'nama' => $product->product->nama ?? 'Unknown',
+                            'produk_id' => $product->produk_id ?? null,
+                            'nama' => $product->product->nama ?? null,
                             'id_kategori' => $product->product->id_kategori ?? null,
-                            'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                            'type_pembelian' => $product->product->type_pembelian ?? null,
+                            'harga_product' => $product->product->harga_product ?? null,
                         ],
                         'vendor' => [
                             'id' => $product->company->id ?? 'Unknown',
@@ -1127,11 +1142,11 @@ class SPBController extends Controller
                     $noteReject = $product->note_reject_produk; // Ambil note_reject_produk jika statusnya "Rejected"
                     return [
                         'produk_data' => [
-                            'produk_id' => $product->produk_id ?? 'Unknown',
-                            'nama' => $product->product->nama ?? 'Unknown',
+                            'produk_id' => $product->produk_id ?? null,
+                            'nama' => $product->product->nama ?? null,
                             'id_kategori' => $product->product->id_kategori ?? null,
-                            // 'deskripsi' => $product->product->deskripsi ?? '',
-                            'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                            'type_pembelian' => $product->product->type_pembelian ?? null,
+                            'harga_product' => $product->product->harga_product ?? null,
                         ],
                         'vendor' => [
                             'id' => $product->company->id ?? 'Unknown',
@@ -1197,11 +1212,11 @@ class SPBController extends Controller
 
                 return [
                     'produk_data' => [
-                        'produk_id' => $product->produk_id ?? 'Unknown',
-                        'nama' => $product->product->nama ?? 'Unknown',
+                        'produk_id' => $product->produk_id ?? null,
+                        'nama' => $product->product->nama ?? null,
                         'id_kategori' => $product->product->id_kategori ?? null,
-                        // 'deskripsi' => $product->product->deskripsi ?? '',
-                        'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                        'type_pembelian' => $product->product->type_pembelian ?? null,
+                        'harga_product' => $product->product->harga_product ?? null,
                     ],
                     'vendor' => [
                         'id' => $product->company->id ?? 'Unknown',
@@ -1232,6 +1247,10 @@ class SPBController extends Controller
             "unit_kerja" => $spbProject->unit_kerja,
             "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
             "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
+            "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
+                "harga_termin_spb" => $spbProject->harga_termin_spb ?? null,
+                "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
+                "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
             // "nama_toko" => $spbProject->nama_toko,
             "know_spb_marketing" => $this->getUserRole($spbProject->know_marketing),
                 "know_spb_supervisor" => $this->getUserRole($spbProject->know_supervisor),
@@ -1253,6 +1272,19 @@ class SPBController extends Controller
 
         // Kembalikan data dalam format yang sudah ditentukan
         return MessageActeeve::render($data);
+    }
+
+    protected function getDataTypetermin($status) {
+        $statuses = [
+
+            SpbProject::TYPE_TERMIN_BELUM_LUNAS => "Belum Lunas",
+            SpbProject::TYPE_TERMIN_LUNAS => "Lunas",
+         ];
+
+        return [
+            "id" => $status,
+            "name" => $statuses[$status] ?? "Unknown",
+        ];
     }
 
     protected function getDocument($documents)
@@ -1654,10 +1686,17 @@ class SPBController extends Controller
             }
 
             // Validasi apakah user memiliki peran Finance
-            if (!auth()->user()->hasRole(Role::FINANCE)) {
+            /* if (!auth()->user()->hasRole(Role::FINANCE)) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Only users with the Finance role can accept products.',
+                ], 403);
+            } */
+
+            if (!auth()->user()->hasRole(Role::FINANCE) && !auth()->user()->hasRole(Role::OWNER) && !auth()->user()->hasRole(Role::ADMIN)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only users with the Finance, Owner, or Admin role can accept this SPB.',
                 ], 403);
             }
 
@@ -1747,10 +1786,18 @@ class SPBController extends Controller
             }
 
             // Validasi apakah user memiliki peran Finance
-            if (!auth()->user()->hasRole(Role::FINANCE)) {
+            /* if (!auth()->user()->hasRole(Role::FINANCE)) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Only users with the Finance role can accept this SPB.',
+                ], 403);
+            } */
+
+             // Validasi apakah user memiliki peran Finance, Owner, atau Admin
+            if (!auth()->user()->hasRole(Role::FINANCE) && !auth()->user()->hasRole(Role::OWNER) && !auth()->user()->hasRole(Role::ADMIN)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only users with the Finance, Owner, or Admin role can accept this SPB.',
                 ], 403);
             }
 
@@ -1791,15 +1838,16 @@ class SPBController extends Controller
                 'spb_project_id' => $spbProject->doc_no_spb,
                 'tab_spb' => SpbProject::TAB_VERIFIED,
                 'name' => auth()->user()->name,
-                'message' => "SPB Project {$spbProject->doc_no_spb} is now acknowledged by Finance.",
+                'message' => "SPB Project {$spbProject->doc_no_spb} is now acknowledged by " . auth()->user()->name,
             ]);
-
+            
             DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => "SPB Project {$id} has been accepted by Finance.",
+                'message' => "SPB Project {$id} has been accepted by " . auth()->user()->name,
             ]);
+            
         } catch (\Throwable $th) {
             DB::rollBack();
 
@@ -2409,8 +2457,8 @@ class SPBController extends Controller
 
         try {
             // Validasi apakah user memiliki peran Finance atau Owner
-            if (!auth()->user()->hasRole(Role::FINANCE) && !auth()->user()->hasRole(Role::OWNER)) {
-                return MessageActeeve::forbidden('Only users with the Finance or Owner role can update payments.');
+            if (!auth()->user()->hasRole(Role::FINANCE) && !auth()->user()->hasRole(Role::OWNER) && !auth()->user()->hasRole(Role::ADMIN)) {
+                return MessageActeeve::forbidden('Only users with the Finance, Owner, or Admin role can update payments.');
             }
 
             // Cari SpbProject berdasarkan doc_no_spb
@@ -2422,52 +2470,106 @@ class SPBController extends Controller
              // Tentukan siapa yang melakukan aksi pembayaran
             $actorField = auth()->user()->hasRole(Role::FINANCE) ? 'know_finance' : 'request_owner';
 
-            // Menyimpan atau memperbarui log untuk aksi pembayaran dengan tab yang sesuai
-            $existingLog = $spbProject->logs()->where('tab_spb', SpbProject::TAB_PAID)
-                                                ->where('name', auth()->user()->name)
-                                                ->first();
+            // Logika untuk Borongan
+            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
+                $updateFields = [
+                    $actorField => auth()->user()->id,
+                    'approve_date' => now(),
+                    'updated_at' => $request->updated_at,
+                ];
 
-            if ($existingLog) {
-                // Jika log sudah ada, update pesan log yang sesuai
-                $existingLog->update([
-                    'message' => 'SPB Project payment paid',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                // Tambahkan data termin jika ada
+                if ($request->has('harga_termin_spb')) {
+                    $updateFields['harga_termin_spb'] = $request->harga_termin_spb;
+                }
+
+                if ($request->has('deskripsi_termin_spb')) {
+                    $updateFields['deskripsi_termin_spb'] = $request->deskripsi_termin_spb;
+                }
+
+                if ($request->has('type_termin_spb')) {
+                    $updateFields['type_termin_spb'] = $request->type_termin_spb;
+
+                    // Pindahkan ke Tab Paid jika type_termin_spb = 2 (Lunas)
+                    if ($request->type_termin_spb == SpbProject::TYPE_TERMIN_LUNAS) {
+                        $updateFields['spbproject_status_id'] = SpbProject_Status::PAID;
+                        $updateFields['tab_spb'] = SpbProject::TAB_PAID;
+                    } else {
+                        // Tetap di Tab Payment Request jika belum lunas
+                        $updateFields['spbproject_status_id'] = SpbProject_Status::PAYMENT_REQUEST;
+                        $updateFields['tab_spb'] = SpbProject::TAB_PAYMENT_REQUEST;
+                    }
+                }
+
+                // Menambahkan atau memperbarui log untuk Borongan
+                $existingLog = $spbProject->logs()
+                    ->where('tab_spb', $updateFields['tab_spb'])
+                    ->where('name', auth()->user()->name)
+                    ->first();
+
+                if ($existingLog) {
+                    // Jika log sudah ada, update pesan log yang sesuai
+                    $existingLog->update([
+                        'message' => 'SPB Project Borongan payment paid',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    // Menyimpan log untuk aksi pembayaran jika belum ada
+                    $spbProject->logs()->create([
+                        'tab_spb' => $updateFields['tab_spb'],
+                        'name' => auth()->user()->name,
+                        'message' => 'SPB Project Borongan payment paid',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // Update SPB Project
+                $spbProject->update($updateFields);
             } else {
-                // Menyimpan log untuk aksi pembayaran jika belum ada
-                $spbProject->logs()->create([
+                // Logika untuk Non-Borongan
+                $existingLog = $spbProject->logs()
+                    ->where('tab_spb', SpbProject::TAB_PAID)
+                    ->where('name', auth()->user()->name)
+                    ->first();
+
+                if ($existingLog) {
+                    // Jika log sudah ada, update pesan log yang sesuai
+                    $existingLog->update([
+                        'message' => 'SPB Project payment paid',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    // Menyimpan log untuk aksi pembayaran jika belum ada
+                    $spbProject->logs()->create([
+                        'tab_spb' => SpbProject::TAB_PAID,
+                        'name' => auth()->user()->name,
+                        'message' => 'SPB Project payment paid',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // Update SPB Project
+                $spbProject->update([
+                    'spbproject_status_id' => SpbProject_Status::PAID,
                     'tab_spb' => SpbProject::TAB_PAID,
-                    'name' => auth()->user()->name,
-                    'message' => 'SPB Project payment paid',
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    $actorField => auth()->user()->id,
+                    'approve_date' => now(),
+                    'updated_at' => $request->updated_at,
+                ]);
+
+                // Update status produk
+                $spbProject->productCompanySpbprojects()->update([
+                    'status_produk' => ProductCompanySpbProject::TEXT_PAID_PRODUCT,
                 ]);
             }
-
-            // Update SpbProject status dan tab
-            SpbProject::where('doc_no_spb', $docNo)->update([  // Perbaiki di sini
-                'spbproject_status_id' => SpbProject_Status::PAID,
-                'tab_spb' => SpbProject::TAB_PAID,
-                 $actorField => auth()->user()->id, 
-                'approve_date' => now(), // Waktu persetujuan
-                'updated_at' => $request->updated_at,  
-            ]);
-
-            if (auth()->user()->hasRole(Role::FINANCE)) {
-                $updateFields['know_finance'] = auth()->user()->id;
-            } elseif (auth()->user()->hasRole(Role::OWNER)) {
-                $updateFields['request_owner'] = auth()->user()->id;
-            }
-
-            $spbProject->productCompanySpbprojects()->update([
-                'status_produk' => ProductCompanySpbProject::TEXT_PAID_PRODUCT, // Update status produk ke PAID
-            ]);
 
             // Menyimpan file attachment jika ada
             if ($request->hasFile('attachment_file_spb')) {
                 foreach ($request->file('attachment_file_spb') as $key => $file) {
-                    // Periksa apakah file terdeteksi dan valid
                     if ($file->isValid()) {
                         $this->saveDocument($spbProject, $file, $key + 1);
                     } else {

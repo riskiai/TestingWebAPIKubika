@@ -12,6 +12,7 @@ class SpbProject_Category extends Model
     // Constants untuk kategori SPB
     const FLASH_CASH = 1;
     const INVOICE = 2;
+    const BORONGAN = 3;
 
     protected $table = 'spb_project__categories';
 
@@ -28,6 +29,7 @@ class SpbProject_Category extends Model
         $categories = [
             self::FLASH_CASH => 'Flash Cash',
             self::INVOICE => 'Invoice',
+            self::BORONGAN => 'Borongan',
         ];
 
         return $categories[$id] ?? 'Unknown';

@@ -121,7 +121,6 @@ class ProjectController extends Controller
         return new ProjectCollection($projects);
     }
 
-
     public function index(Request $request)
     {
         $query = Project::query();
@@ -240,6 +239,13 @@ class ProjectController extends Controller
             }
         }
 
+        if ($request->has('marketing_id')) {
+            $query->where('user_id', $request->marketing_id)
+                  ->whereHas('user', function ($q) {
+                      $q->where('role_id', Role::MARKETING); // Pastikan pembuat proyek adalah Marketing
+                  });
+        }        
+
         // Urutkan berdasarkan tahun dan increment ID proyek
         $projects = $query->selectRaw('*, CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(id, "-", -2), "-", 1) AS UNSIGNED) as year')
         ->selectRaw('CAST(SUBSTRING_INDEX(id, "-", -1) AS UNSIGNED) as increment')
@@ -355,6 +361,10 @@ class ProjectController extends Controller
     
         if ($request->has('vendor')) {
             $query->where('company_id', $request->vendor);
+        }
+
+        if ($request->has('marketing_id')) {
+            $query->where('user_id', $request->marketing_id); // Filter proyek berdasarkan marketing_id
         }
     
         if ($request->has('date')) {

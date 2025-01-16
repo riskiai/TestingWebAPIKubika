@@ -32,7 +32,7 @@ class CreateRequest extends FormRequest
             'deskripsi' => 'nullable|string',
             'type_pembelian' => 'nullable|string|max:255',
             // 'stok' => 'nullable|integer|min:0',
-            // 'harga' => 'nullable|numeric|min:0', 
+            'harga_product' => 'nullable|numeric|min:0', 
             // 'ongkir' => 'required|numeric|min:0'
         ];
     }

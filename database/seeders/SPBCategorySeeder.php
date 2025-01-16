@@ -13,13 +13,17 @@ class SPBCategorySeeder extends Seeder
     public function run(): void
     {
         // Seed data untuk kategori SPB
-        SpbProject_Category::create([
+       /*  SpbProject_Category::create([
             'name' => 'Flash Cash',
             'short' => 'FCASPB',
         ]);
         SpbProject_Category::create([
             'name' => 'Invoice',
             'short' => 'INVSPB',
+        ]); */
+        SpbProject_Category::create([
+            'name' => 'Borongan',
+            'short' => 'BRGSPB',
         ]);
         // SpbProject_Category::create([
         //     'name' => 'Man Power',

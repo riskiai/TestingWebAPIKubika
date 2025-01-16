@@ -20,7 +20,7 @@ class Product extends Model
         'deskripsi',
         'kode_produk',
         'type_pembelian',
-        'harga',
+        'harga_product',
         'stok',
         'ongkir',
     ];

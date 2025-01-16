@@ -80,10 +80,11 @@ class SPBprojectCollection extends ResourceCollection
                                 $notePaid = $product->note_paid_produk; // Ambil note_paid_produk jika statusnya "Paid"
                                 return [
                                     'produk_data' => [
-                                        'produk_id' => $product->produk_id ?? 'Unknown',
-                                        'nama' => $product->product->nama ?? 'Unknown',
+                                        'produk_id' => $product->produk_id ?? null,
+                                        'nama' => $product->product->nama ?? null,
                                         'id_kategori' => $product->product->id_kategori ?? null,
-                                        'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                                        'type_pembelian' => $product->product->type_pembelian ?? null,
+                                        'harga_product' => $product->product->harga_product ?? null,
                                     ],
                                     'vendor' => [
                                         'id' => $product->company->id ?? 'Unknown',
@@ -115,11 +116,12 @@ class SPBprojectCollection extends ResourceCollection
                                 $noteReject = $product->note_reject_produk; // Ambil note_reject_produk jika statusnya "Rejected"
                                 return [
                                     'produk_data' => [
-                                        'produk_id' => $product->produk_id ?? 'Unknown',
-                                        'nama' => $product->product->nama ?? 'Unknown',
+                                        'produk_id' => $product->produk_id ?? null,
+                                        'nama' => $product->product->nama ?? null,
                                         'id_kategori' => $product->product->id_kategori ?? null,
                                         // 'deskripsi' => $product->product->deskripsi ?? '',
-                                        'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                                        'type_pembelian' => $product->product->type_pembelian ?? null,
+                                        'harga_product' => $product->product->harga_product ?? null,
                                     ],
                                     'vendor' => [
                                         'id' => $product->company->id ?? 'Unknown',
@@ -185,11 +187,12 @@ class SPBprojectCollection extends ResourceCollection
 
                             return [
                                 'produk_data' => [
-                                    'produk_id' => $product->produk_id ?? 'Unknown',
-                                    'nama' => $product->product->nama ?? 'Unknown',
+                                    'produk_id' => $product->produk_id ?? null,
+                                    'nama' => $product->product->nama ?? null,
                                     'id_kategori' => $product->product->id_kategori ?? null,
                                     // 'deskripsi' => $product->product->deskripsi ?? '',
-                                    'type_pembelian' => $product->product->type_pembelian ?? 'Unknown',
+                                    'type_pembelian' => $product->product->type_pembelian ?? null,
+                                    'harga_product' => $product->product->harga_product ?? null,
                                 ],
                                 'vendor' => [
                                     'id' => $product->company->id ?? 'Unknown',
@@ -218,6 +221,10 @@ class SPBprojectCollection extends ResourceCollection
                 "total" => $spbProject->total_produk,
                 'file_attachement' => $this->getDocument($spbProject),
                 "unit_kerja" => $spbProject->unit_kerja,
+                "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
+                "harga_termin_spb" => $spbProject->harga_termin_spb ?? null,
+                "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
+                "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
                 "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
                 "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
                 "know_spb_marketing" => $this->getUserRole($spbProject->know_marketing),
@@ -245,6 +252,19 @@ class SPBprojectCollection extends ResourceCollection
         }
 
         return $data;
+    }
+
+    protected function getDataTypetermin($status) {
+        $statuses = [
+
+            SpbProject::TYPE_TERMIN_BELUM_LUNAS => "Belum Lunas",
+            SpbProject::TYPE_TERMIN_LUNAS => "Lunas",
+         ];
+
+        return [
+            "id" => $status,
+            "name" => $statuses[$status] ?? "Unknown",
+        ];
     }
 
 

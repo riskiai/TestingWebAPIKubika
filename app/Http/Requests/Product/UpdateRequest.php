@@ -31,7 +31,7 @@ class UpdateRequest extends FormRequest
             'deskripsi' => 'nullable|string',
             'stok' => 'sometimes|nullable|integer|min:0',
             'type_pembelian' => 'nullable|string|max:255',
-            // 'harga' => 'sometimes|nullable|numeric|min:0', 
+            'harga_product' => 'sometimes|nullable|numeric|min:0', 
             // 'ongkir' => 'required|numeric|min:0'
             // kode_produk di-generate otomatis, jadi tidak perlu di-update
         ];

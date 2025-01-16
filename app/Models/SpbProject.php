@@ -32,6 +32,9 @@ class SpbProject extends Model
 
     const TYPE_PROJECT_SPB = 1;
     const TYPE_NON_PROJECT_SPB = 2;
+    
+    const TYPE_TERMIN_BELUM_LUNAS = 1;
+    const TYPE_TERMIN_LUNAS = 2;
 
     protected $fillable = [
         'doc_no_spb',
@@ -56,6 +59,10 @@ class SpbProject extends Model
         'request_owner',
         'approve_date',
         'file_pembayaran',
+        'harga_total_pembayaran_borongan_spb',
+        'harga_termin_spb',
+        'deskripsi_termin_spb',
+        'type_termin_spb',
         'updated_at',
     ];
 

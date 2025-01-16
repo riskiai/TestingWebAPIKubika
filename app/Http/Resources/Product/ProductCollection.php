@@ -22,6 +22,7 @@ class ProductCollection extends ResourceCollection
                 'nama' => $product->nama,
                 'kode_produk' => $product->kode_produk,
                 'type_pembelian' => $product->type_pembelian,
+                'harga_product'=> $product->harga_product,
                 'kategori' => [
                     'id' => optional($product->kategori)->id,
                     'name' => optional($product->kategori)->name,
@@ -29,7 +30,6 @@ class ProductCollection extends ResourceCollection
                 ],
                 'deskripsi' => $product->deskripsi,
                 'stok' => $product->stok,
-                'harga'=> $product->harga,
                 'ongkir' => $product->ongkir,
                 'created_at' => $product->created_at,
                 'updated_at' => $product->updated_at,

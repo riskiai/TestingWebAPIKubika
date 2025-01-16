@@ -50,13 +50,8 @@ class ProductCompanySpbProject extends Model
         // 'type_pembelian_produk',
     ];
 
-    /**
-     * Perhitungan nilai PPN
-     */
-    /**
-     * Perhitungan nilai PPN
-     */
-    public function getPpnDetailAttribute()
+   
+    /* public function getPpnDetailAttribute()
     {
         $harga = floatval($this->harga);
         $stok = intval($this->stok);
@@ -72,13 +67,9 @@ class ProductCompanySpbProject extends Model
             'ppn_percentage' => $ppn, // Persentase PPN
             'ppn_value' => $ppnValue, // Nilai PPN
         ];
-    }
-
+    } */
     
-    /**
-     * Perhitungan subtotal produk (harga * stok + ongkir + PPN)
-     */
-    public function getSubtotalProdukAttribute()
+    /* public function getSubtotalProdukAttribute()
     {
         $harga = floatval($this->harga);
         $stok = intval($this->stok);
@@ -89,32 +80,50 @@ class ProductCompanySpbProject extends Model
         
         // Perhitungan subtotal
         return round(($harga * $stok) + $ongkir + $ppnValue);
+    } */
+
+    public function getPpnDetailAttribute()
+    {
+        $harga = floatval($this->harga);
+
+        // Jika harga kosong, gunakan harga dari produk terkait
+        if ($harga == 0) {
+            $harga = $this->product->harga_product ? floatval($this->product->harga_product) : 0;
+        }
+
+        $stok = intval($this->stok);
+        $ppn = floatval($this->ppn);
+
+        // Subtotal sebelum PPN: hanya (harga * stok)
+        $subtotalSebelumPpn = $harga * $stok;
+
+        // Kalkulasi nilai PPN
+        $ppnValue = $ppn > 0 ? round(($subtotalSebelumPpn * $ppn) / 100) : 0;
+
+        return [
+            'ppn_percentage' => $ppn, // Persentase PPN
+            'ppn_value' => $ppnValue, // Nilai PPN
+        ];
     }
 
-    /**
-     * Perhitungan total produk (subtotal - PPH)
-     */
-   /*  public function getTotalProdukAttribute()
+    public function getSubtotalProdukAttribute()
     {
-        $subtotal = $this->subtotal_produk;
-        $pphValue = $this->pph_value;
-
-        return round($subtotal - $pphValue); 
-    } */
-
-     /**
-     * Perhitungan nilai PPH
-     */
-    /* public function getPphValueAttribute()
-    {
-        $subtotal = $this->subtotal_produk;
-        $pphPercent = $this->taxPph ? $this->taxPph->percent : 0;
-
-        return $pphPercent > 0 ? round(($subtotal * $pphPercent) / 100) : 0; // Pembulatan ke bilangan bulat
-    } */
-
+        $harga = floatval($this->harga); 
+        $stok = intval($this->stok);
+        $ongkir = floatval($this->ongkir);
     
-    // Tentukan relasi dengan SPBProject (many-to-one)
+        // Jika harga kosong, gunakan harga dari produk terkait
+        if ($harga == 0) {
+            $harga = $this->product->harga_product ? floatval($this->product->harga_product) : 0;
+        }
+    
+        // Menggunakan ppn_value dari accessor getPpnDetailAttribute
+        $ppnValue = $this->ppn_detail['ppn_value'];
+    
+        // Perhitungan subtotal
+        return round(($harga * $stok) + $ongkir + $ppnValue);
+    }
+
     // Model ProductCompanySpbproject
     public function spbProject()
     {
