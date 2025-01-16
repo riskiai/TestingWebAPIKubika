@@ -180,10 +180,15 @@ class SPBController extends Controller
         return new SPBprojectCollection($spbProjects);
     }
 
-    public function countingspb()
+    public function countingspb(Request $request)
     {
         // Ambil data kategori Borongan saja
         $query = SpbProject::where('spbproject_category_id', SpbProject_Category::BORONGAN);
+
+
+        if ($request->has('doc_no_spb')) {
+            $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
+        }
 
         // Subtotal untuk Borongan
         $subtotalHargaTotalBorongan = $query->sum('harga_total_pembayaran_borongan_spb');
