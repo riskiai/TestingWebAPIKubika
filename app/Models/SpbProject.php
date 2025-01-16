@@ -108,6 +108,19 @@ class SpbProject extends Model
             default => 'Unknown',
         };
     }
+
+    public function getSubtotalHargaTotalPembayaranBoronganSpbAttribute(): float
+    {
+        return (float) $this->where('spbproject_category_id', SpbProject_Category::BORONGAN)
+            ->sum('harga_total_pembayaran_borongan_spb');
+    }
+
+    public function getSubtotalHargaTerminSpbAttribute(): float
+    {
+        return (float) $this->where('spbproject_category_id', SpbProject_Category::BORONGAN)
+            ->where('type_termin_spb', self::TYPE_TERMIN_LUNAS)
+            ->sum('harga_termin_spb');
+    }
     
     public function getTotalProdukAttribute()
     {

@@ -30,7 +30,7 @@ public function rules(): array
         'company_id' => 'nullable|exists:companies,id', // Foreign key
         'user_id' => 'nullable|exists:users,id',       // Foreign key
         'produk_id' => 'nullable|exists:products,id',  // Foreign key
-        'name' => 'nullable|string|unique:projects,name',
+        'name' => 'nullable|string',
         'billing' => 'nullable|numeric',
         'cost_estimate' => 'nullable|numeric',
         'margin' => 'nullable|numeric',
@@ -44,6 +44,7 @@ public function rules(): array
         'status_step_project' => 'nullable|string|max:100',
         'harga_type_project' => 'nullable|numeric',
         'type_projects' => 'nullable|in:' . implode(',', [Project::HIK, Project::DWI]),
+        'no_dokumen_project' => 'nullable|string',
             
         // Produk dan User ID harus berupa array
         'produk_id' => 'nullable|array',
@@ -106,27 +107,3 @@ protected function failedValidation(Validator $validator)
     throw new ValidationException($validator, $response);
 }
 }
-
-
-/* 
-   // Pastikan ID proyek telah terisi
-        if (!$project->id || $project->id === '0') {
-            Log::error("Failed to generate valid project ID: " . $project->id);
-            throw new \Exception("Failed to generate valid project ID.");
-        }
-
-        // Log ID proyek setelah berhasil disimpan
-        Log::info("Project created successfully with ID: " . $project->id);
-
-        // Jika produk_id atau user_id dikirimkan
-        $produkIds = $request->input('produk_id', []); // Gunakan array kosong sebagai default jika tidak ada produk_id
-        $userIds = $request->input('user_id', []); // Gunakan array kosong sebagai default jika tidak ada user_id
-
-        // Hapus duplikat jika ada
-        $produkIds = array_unique($produkIds);
-        $userIds = array_unique($userIds);
-
-        // Sinkronkan produk dan user data ke tabel pivot jika ada
-        $project->product()->syncWithoutDetaching($produkIds);  // Sinkronkan produk tanpa menghapus data lain
-        $project->tenagaKerja()->syncWithoutDetaching($userIds); // Sinkronkan tenaga kerja tanpa menghapus data lain 
-    */

@@ -35,6 +35,7 @@ class UpdateRequest extends FormRequest
             'attachment_file' => 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls|max:3072',
             'attachment_file_spb' => 'nullable|mimes:pdf,png,jpg,jpeg,xlsx,xls|max:3072',
             'type_projects' => 'nullable|in:' . implode(',', [\App\Models\Project::HIK, \App\Models\Project::DWI]),
+            'no_dokumen_project' => 'nullable|string',
 
             // Produk dan User ID harus berupa array
             'produk_id' => 'nullable|array',

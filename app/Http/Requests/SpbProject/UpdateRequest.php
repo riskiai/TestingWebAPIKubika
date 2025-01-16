@@ -7,6 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use App\Models\SpbProject_Category;
 
 class UpdateRequest extends FormRequest
 {
@@ -24,7 +25,16 @@ class UpdateRequest extends FormRequest
             'tanggal_berahir_spb' => 'required|date',
             'type_project' => 'nullable|in:1,2',
             'unit_kerja' => 'nullable|string|max:255',
+           
         ];
+
+        if ($this->spbproject_category_id == SpbProject_Category::BORONGAN) {
+            $rules['harga_total_pembayaran_borongan_spb'] = 'nullable|numeric|min:0';
+            $rules['harga_termin_spb'] = 'nullable|numeric|min:0';
+            $rules['deskripsi_termin_spb'] = 'nullable|string|max:255';
+            $rules['type_termin_spb'] = 'nullable|in:1,2';
+        }
+        
 
         if ($this->hasFile('attachment_file_spb')) {
             $rules['attachment_file_spb'] = 'array';

@@ -170,11 +170,13 @@ class ProjectController extends Controller
             $query->where(function ($query) use ($request) {
                 $query->where('id', 'like', '%' . $request->search . '%')
                       ->orWhere('name', 'like', '%' . $request->search . '%')
+                      ->orWhere('no_dokumen_project', 'like', '%' . $request->search . '%') // Tambahkan ini
                       ->orWhereHas('company', function ($query) use ($request) {
                           $query->where('name', 'like', '%' . $request->search . '%');
                       });
             });
         }
+        
 
         // Filter berdasarkan status request_status_owner
         if ($request->has('request_status_owner')) {
@@ -185,6 +187,10 @@ class ProjectController extends Controller
         if ($request->has('status_cost_progres')) {
             $query->where('status_cost_progres', $request->status_cost_progres);
         }
+
+        if ($request->has('no_dokumen_project')) {
+            $query->where('no_dokumen_project', 'like', '%' . $request->no_dokumen_project . '%');
+        }        
         
 
         if ($request->has('type_projects')) {
@@ -431,6 +437,7 @@ class ProjectController extends Controller
             $project->request_status_owner = Project::DEFAULT_STATUS;
             $project->status_bonus_project = Project::DEFAULT_STATUS_NO_BONUS;
             $project->type_projects = $request->type_projects;
+            $project->no_dokumen_project = $request->no_dokumen_project;
 
             // Set harga_type_project to 0 if it's not provided
             $project->harga_type_project = $request->has('harga_type_project') ? $request->harga_type_project : 0;
@@ -701,6 +708,7 @@ class ProjectController extends Controller
         // Siapkan data proyek untuk dikembalikan
         $data = [
             'id' => $project->id,
+            'no_dokumen_project' => $project->no_dokumen_project,
             'client' => [
                 'id' => optional($project->company)->id,
                 'name' => optional($project->company)->name,

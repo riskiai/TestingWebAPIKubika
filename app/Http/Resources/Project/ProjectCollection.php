@@ -24,6 +24,7 @@ class ProjectCollection extends ResourceCollection
         foreach ($this as $key => $project) {
             $data[] = [
                 'id' => $project->id,
+                'no_dokumen_project' => $project->no_dokumen_project,
                 'client' => [
                     'id' => optional($project->company)->id,
                     'name' => optional($project->company)->name,

@@ -69,6 +69,7 @@ class Project extends Model
         // 'status_step_project',
         'harga_type_project',
         'type_projects',
+        'no_dokumen_project',
     ];
 
     public static function getTypeProjectsOptions()

@@ -130,6 +130,14 @@ class SPBController extends Controller
             });
         }
 
+         // Filter termin Borongan (1: Belum Lunas, 2: Lunas)
+         if ($request->has('type_termin_spb')) {
+            $typeTerminSpb = $request->type_termin_spb;
+            if (in_array($typeTerminSpb, [SpbProject::TYPE_TERMIN_BELUM_LUNAS, SpbProject::TYPE_TERMIN_LUNAS])) {
+                $query->where('type_termin_spb', $typeTerminSpb);
+            }
+        }
+
         // Filter berdasarkan range date (tanggal_dibuat_spb atau tanggal tertentu dari SPB Project)
         if ($request->has('tanggal_dibuat_spb')) {
             $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb)); // Parsing tanggal range
@@ -171,6 +179,97 @@ class SPBController extends Controller
         // Return data dalam bentuk koleksi
         return new SPBprojectCollection($spbProjects);
     }
+
+    public function countingspb()
+    {
+        // Ambil data kategori Borongan saja
+        $query = SpbProject::where('spbproject_category_id', SpbProject_Category::BORONGAN);
+
+        // Subtotal untuk Borongan
+        $subtotalHargaTotalBorongan = $query->sum('harga_total_pembayaran_borongan_spb');
+        $subtotalHargaTerminBorongan = $query->where('type_termin_spb', SpbProject::TYPE_TERMIN_LUNAS)
+            ->sum('harga_termin_spb');
+
+        // Inisialisasi variabel untuk menghitung masing-masing status
+        $submit = 0;
+        $verified = 0;
+        $over_due = 0;
+        $open = 0;
+        $due_date = 0;
+        $payment_request = 0;
+        $paid = 0;
+
+        $nowDate = Carbon::now();
+
+        // Iterasi data Borongan untuk menghitung jumlah per status
+        $query->each(function ($spbProject) use (
+            &$submit,
+            &$verified,
+            &$over_due,
+            &$open,
+            &$due_date,
+            &$payment_request,
+            &$paid,
+            $nowDate
+        ) {
+            $hargaTotal = $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
+
+            try {
+                $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
+            } catch (\Exception $e) {
+                // Jika format tanggal tidak valid, gunakan tanggal saat ini
+                $dueDate = $nowDate->copy();
+            }
+
+            switch ($spbProject->tab_spb) {
+                case SpbProject::TAB_SUBMIT:
+                    $submit += $hargaTotal;
+                    break;
+
+                case SpbProject::TAB_VERIFIED:
+                    $verified += $hargaTotal;
+                    if ($dueDate->isFuture()) {
+                        $open += $hargaTotal;
+                    } elseif ($dueDate->isToday()) {
+                        $due_date += $hargaTotal;
+                    } elseif ($dueDate->isPast()) {
+                        $over_due += $hargaTotal;
+                    }
+                    break;
+
+                case SpbProject::TAB_PAYMENT_REQUEST:
+                    $terminLunas = $spbProject->harga_termin_spb ?? 0;
+                    $payment_request += $terminLunas;
+                    if ($dueDate->isPast()) {
+                        $over_due += $hargaTotal - $terminLunas;
+                    }
+                    break;
+
+                case SpbProject::TAB_PAID:
+                    $terminLunas = $spbProject->harga_termin_spb ?? 0;
+                    $paid += $terminLunas;
+                    break;
+
+                default:
+                    // Jika tab_spb tidak dikenali, tambahkan log atau abaikan
+                    break;
+            }
+        });
+
+        // Respons JSON
+        return response()->json([
+            "subtotal_harga_total_pembayaran_borongan_spb" => $subtotalHargaTotalBorongan,
+            "subtotal_harga_termin_spb" => $subtotalHargaTerminBorongan,
+            "submit" => $submit,
+            "verified" => $verified,
+            "over_due" => $over_due,
+            "open" => $open,
+            "due_date" => $due_date,
+            "payment_request" => $payment_request,
+            "paid" => $paid,
+        ]);
+    }
+
 
     public function counting(Request $request)
     {
@@ -306,9 +405,15 @@ class SPBController extends Controller
                 }
             }
 
+            $unknownSpb = SpbProject::whereNull('know_supervisor')
+            ->orWhereNull('know_kepalagudang')
+            ->orWhereNull('request_owner')
+            ->count();
+
             // Respons JSON
             return response()->json([
                 'received' => $received, // Jumlah data (per halaman atau semua)
+                'total_spb_yang_belum_diapprove' => $unknownSpb,
                 'submit' => $submit,
                 'verified' => $verified,
                 'over_due' => $over_due,
@@ -557,6 +662,10 @@ class SPBController extends Controller
                 'type_project',
                 'tanggal_dibuat_spb',
                 'tanggal_berahir_spb',
+                'harga_total_pembayaran_borongan_spb',
+                'harga_termin_spb',
+                'deskripsi_termin_spb',
+                'type_termin_spb',
             ]));
 
             // Menyimpan atau mengganti file attachment jika ada
@@ -2506,29 +2615,32 @@ class SPBController extends Controller
                     }
                 }
 
-                // Menambahkan atau memperbarui log untuk Borongan
+               // Menambahkan atau memperbarui log untuk Borongan
+                $logMessage = $request->type_termin_spb == SpbProject::TYPE_TERMIN_LUNAS
+                ? 'SPB Project Borongan payment fully paid.'
+                : 'SPB Project Borongan payment in progress (termin not yet fully paid).';
+
                 $existingLog = $spbProject->logs()
-                    ->where('tab_spb', $updateFields['tab_spb'])
-                    ->where('name', auth()->user()->name)
-                    ->first();
+                ->where('tab_spb', $updateFields['tab_spb'])
+                ->where('name', auth()->user()->name)
+                ->first();
 
                 if ($existingLog) {
-                    // Jika log sudah ada, update pesan log yang sesuai
-                    $existingLog->update([
-                        'message' => 'SPB Project Borongan payment paid',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                $existingLog->update([
+                    'message' => $logMessage,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
                 } else {
-                    // Menyimpan log untuk aksi pembayaran jika belum ada
                     $spbProject->logs()->create([
                         'tab_spb' => $updateFields['tab_spb'],
                         'name' => auth()->user()->name,
-                        'message' => 'SPB Project Borongan payment paid',
+                        'message' => $logMessage,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
                 }
+
 
                 // Update SPB Project
                 $spbProject->update($updateFields);
