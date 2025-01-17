@@ -110,7 +110,8 @@ class ManPowerController extends Controller
     public function counting(Request $request)
     {
         $query = ManPower::query();
-    
+
+        // Filter berdasarkan user_id
         if ($request->has('user_id')) {
             $query->where("user_id", $request->user_id);
         }
@@ -119,24 +120,24 @@ class ManPowerController extends Controller
         if ($request->has('project_id')) {
             $query->where("project_id", $request->project_id);
         }
-    
+
         // Filter berdasarkan work_type
         if ($request->has('work_type')) {
             $query->where('work_type', $request->work_type);
         }
-    
+
         // Filter berdasarkan project_type
         if ($request->has('project_type')) {
             $query->where('project_type', $request->project_type);
         }
-    
+
         // Filter berdasarkan rentang tanggal entry_at
         if ($request->has('entry_at')) {
             $dates = explode(',', $request->entry_at);
             if (count($dates) == 2) {
                 $start_date = trim($dates[0]);
                 $end_date = trim($dates[1]);
-    
+
                 $query->whereBetween('entry_at', [
                     date('Y-m-d 00:00:00', strtotime($start_date)),
                     date('Y-m-d 23:59:59', strtotime($end_date)),
@@ -145,29 +146,25 @@ class ManPowerController extends Controller
                 return response()->json(['error' => 'Invalid date range format. Format should be: YYYY-MM-DD,YYYY-MM-DD'], 400);
             }
         }
-    
-         // Pagination sesuai dengan jumlah data yang ingin ditampilkan
-        $perPage = $request->has('per_page') ? (int) $request->per_page : 10;  // default value = 10
-        $manpowerData = $query->paginate($perPage);
 
-        // Mengambil koleksi dari data yang dipaginasi menggunakan method 'items()'
-        $collection = $manpowerData->items();
+        // Ambil semua data tanpa pagination
+        $manpowerData = $query->get();
 
         // Menghitung total salary tukang tanpa memisahkan work_type
-        $totalSalary = collect($collection)->sum(function ($item) {
+        $totalSalary = $manpowerData->sum(function ($item) {
             return $item->current_salary + $item->current_overtime_salary;
         });
 
-        // Menghitung salary berdasarkan work_type untuk data yang dipaginasi
-        $tukangHarianSalary = collect($collection)->where('work_type', true)->sum(function ($item) {
+        // Menghitung salary berdasarkan work_type
+        $tukangHarianSalary = $manpowerData->where('work_type', true)->sum(function ($item) {
             return $item->current_salary + $item->current_overtime_salary;
         });
 
-        $tukangBoronganSalary = collect($collection)->where('work_type', false)->sum(function ($item) {
+        $tukangBoronganSalary = $manpowerData->where('work_type', false)->sum(function ($item) {
             return $item->current_salary + $item->current_overtime_salary;
         });
 
-        // Total dari tukang harian dan borongan sesuai halaman yang dipilih
+        // Total dari tukang harian dan borongan
         $totalSalarySummary = $tukangHarianSalary + $tukangBoronganSalary;
 
         // Response data
@@ -181,6 +178,7 @@ class ManPowerController extends Controller
             ],
         ]);
     }
+
     
 
     public function store(StoreRequest $request)
