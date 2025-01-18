@@ -597,6 +597,10 @@ class ProjectController extends Controller
                 $project->id = $newId; // Update ID proyek dengan ID baru
             }
 
+            if ($currentStatus == Project::REJECTED) {
+                $project->request_status_owner = Project::PENDING;
+            }
+
             // Logika perubahan status otomatis
             if ($project->request_status_owner == Project::ACTIVE) {
                 $project->request_status_owner = Project::PENDING; // Set status ke pending
