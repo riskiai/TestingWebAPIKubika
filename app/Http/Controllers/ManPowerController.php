@@ -179,8 +179,6 @@ class ManPowerController extends Controller
         ]);
     }
 
-    
-
     public function store(StoreRequest $request)
     {
         DB::beginTransaction();

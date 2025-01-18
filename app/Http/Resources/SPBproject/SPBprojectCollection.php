@@ -222,9 +222,10 @@ class SPBprojectCollection extends ResourceCollection
                 'file_attachement' => $this->getDocument($spbProject),
                 "unit_kerja" => $spbProject->unit_kerja,
                 "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
-                "harga_termin_spb" => $spbProject->harga_termin_spb ?? null,
-                "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
+                "harga_total_termin_spb" => $this->getHargaTerminSpb($spbProject),
+                "deskripsi_termin_spb" => $this->getDeskripsiTerminSpb($spbProject),
                 "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
+                "riwayat_termin" => $this->getRiwayatTermin($spbProject),
                 "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
                 "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
                 "know_spb_marketing" => $this->getUserRole($spbProject->know_marketing),
@@ -254,6 +255,34 @@ class SPBprojectCollection extends ResourceCollection
         return $data;
     }
 
+    protected function getHargaTerminSpb($spbProject)
+    {
+        return $spbProject->harga_termin_spb ?? null;
+    }
+
+    protected function getDeskripsiTerminSpb($spbProject)
+    {
+        return $spbProject->deskripsi_termin_spb ?? null;
+    }
+
+    protected function getRiwayatTermin($spbProject)
+    {
+        return $spbProject->termins->map(function ($termin) use ($spbProject) {
+            return [
+                'harga_termin' => $termin->harga_termin,
+                'deskripsi_termin' => $termin->deskripsi_termin,
+                'type_termin_spb' => $this->getDataTypetermin($termin->type_termin_spb),
+                'tanggal' => $termin->tanggal,
+                'file_attachment' => $termin->fileAttachment ? [
+                    'id' => $termin->fileAttachment->id,
+                    'name' => $termin->fileAttachment->spbProject->doc_type_spb . "/{$termin->fileAttachment->doc_no_spb}.{$termin->fileAttachment->id}/" . date('Y', strtotime($termin->fileAttachment->created_at)) . "." . pathinfo($termin->fileAttachment->file_path, PATHINFO_EXTENSION),
+                    'link' => asset("storage/{$termin->fileAttachment->file_path}"),
+                ] : null,
+            ];
+        });
+    }
+
+   
     protected function getDataTypetermin($status) {
         $statuses = [
 

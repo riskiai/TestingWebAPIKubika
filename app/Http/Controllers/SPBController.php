@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\LogsSPBProject;
 use App\Facades\MessageActeeve;
+use App\Models\SpbProjectTermin;
 use App\Models\SpbProject_Status;
 use Illuminate\Support\Facades\DB;
 use App\Models\SpbProject_Category;
@@ -22,15 +23,15 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ProductCompanySpbProject;
 use App\Http\Requests\SpbProject\AcceptRequest;
-use App\Http\Requests\SpbProject\ActivateProdukRequest;
-use App\Http\Requests\SpbProject\ActivateSpbRequest;
-use App\Http\Requests\SpbProject\AddProdukRequest;
 use App\Http\Requests\SpbProject\CreateRequest;
-use App\Http\Requests\SpbProject\PaymentProdukRequest;
 use App\Http\Requests\SpbProject\UpdateRequest;
 use App\Http\Requests\SpbProject\PaymentRequest;
+use App\Http\Requests\SpbProject\AddProdukRequest;
+use App\Http\Requests\SpbProject\ActivateSpbRequest;
 use App\Http\Requests\SpbProject\RejectProdukRequest;
 use App\Http\Requests\SpbProject\UpdateProdukRequest;
+use App\Http\Requests\SpbProject\PaymentProdukRequest;
+use App\Http\Requests\SpbProject\ActivateProdukRequest;
 use App\Http\Resources\SPBproject\SPBprojectCollection;
 
 class SPBController extends Controller
@@ -185,15 +186,13 @@ class SPBController extends Controller
         // Ambil data kategori Borongan saja
         $query = SpbProject::where('spbproject_category_id', SpbProject_Category::BORONGAN);
 
-
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
 
         // Subtotal untuk Borongan
         $subtotalHargaTotalBorongan = $query->sum('harga_total_pembayaran_borongan_spb');
-        $subtotalHargaTerminBorongan = $query->where('type_termin_spb', SpbProject::TYPE_TERMIN_LUNAS)
-            ->sum('harga_termin_spb');
+        $subtotalHargaTerminBorongan = $query->sum('harga_termin_spb');
 
         // Inisialisasi variabel untuk menghitung masing-masing status
         $submit = 0;
@@ -201,6 +200,8 @@ class SPBController extends Controller
         $over_due = 0;
         $open = 0;
         $due_date = 0;
+        $payment_request_hargatotalborongaspb = 0;
+        $paid_request_hargatotalborongaspb = 0;
         $payment_request = 0;
         $paid = 0;
 
@@ -213,6 +214,8 @@ class SPBController extends Controller
             &$over_due,
             &$open,
             &$due_date,
+            &$payment_request_hargatotalborongaspb,
+            &$paid_request_hargatotalborongaspb,
             &$payment_request,
             &$paid,
             $nowDate
@@ -222,10 +225,10 @@ class SPBController extends Controller
             try {
                 $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
             } catch (\Exception $e) {
-                // Jika format tanggal tidak valid, gunakan tanggal saat ini
                 $dueDate = $nowDate->copy();
             }
 
+            // Hitung berdasarkan status tab
             switch ($spbProject->tab_spb) {
                 case SpbProject::TAB_SUBMIT:
                     $submit += $hargaTotal;
@@ -233,45 +236,58 @@ class SPBController extends Controller
 
                 case SpbProject::TAB_VERIFIED:
                     $verified += $hargaTotal;
-                    if ($dueDate->isFuture()) {
-                        $open += $hargaTotal;
-                    } elseif ($dueDate->isToday()) {
-                        $due_date += $hargaTotal;
-                    } elseif ($dueDate->isPast()) {
-                        $over_due += $hargaTotal;
-                    }
                     break;
 
                 case SpbProject::TAB_PAYMENT_REQUEST:
-                    $terminLunas = $spbProject->harga_termin_spb ?? 0;
-                    $payment_request += $terminLunas;
-                    if ($dueDate->isPast()) {
-                        $over_due += $hargaTotal - $terminLunas;
-                    }
+                    $payment_request_hargatotalborongaspb += $hargaTotal;
+                    $payment_request += $spbProject->harga_termin_spb ?? 0;
                     break;
 
                 case SpbProject::TAB_PAID:
-                    $terminLunas = $spbProject->harga_termin_spb ?? 0;
-                    $paid += $terminLunas;
+                    $paid_request_hargatotalborongaspb += $hargaTotal;
+                    $paid += $spbProject->harga_termin_spb ?? 0;
                     break;
 
                 default:
-                    // Jika tab_spb tidak dikenali, tambahkan log atau abaikan
+                    // Jika tab_spb tidak dikenali, abaikan
                     break;
+            }
+
+            // Tambahkan logika tambahan berdasarkan status SPB
+            if ($spbProject->status) {
+                switch ($spbProject->status->id) {
+                    case SpbProject_Status::TEXT_OPEN:
+                        $open += $hargaTotal;
+                        break;
+
+                    case SpbProject_Status::TEXT_OVERDUE:
+                        $over_due += $hargaTotal;
+                        break;
+
+                    case SpbProject_Status::TEXT_DUEDATE:
+                        $due_date += $hargaTotal;
+                        break;
+
+                    default:
+                        // Abaikan status lainnya
+                        break;
+                }
             }
         });
 
         // Respons JSON
         return response()->json([
-            "subtotal_harga_total_pembayaran_borongan_spb" => $subtotalHargaTotalBorongan,
+            "subtotal_harga_pembayaran_borongan_spb" => $subtotalHargaTotalBorongan,
             "subtotal_harga_termin_spb" => $subtotalHargaTerminBorongan,
-            "submit" => $submit,
-            "verified" => $verified,
-            "over_due" => $over_due,
-            "open" => $open,
-            "due_date" => $due_date,
-            "payment_request" => $payment_request,
-            "paid" => $paid,
+            "submit_harga_total_pembayaran_borongan_spb" => $submit,
+            "verified_harga_total_pembayaran_borongan_spb" => $verified,
+            "over_due_harga_total_pembayaran_borongan_spb" => $over_due,
+            "open_harga_total_pembayaran_borongan_spb" => $open,
+            "due_date_harga_total_pembayaran_borongan_spb" => $due_date,
+            "payment_request_harga_total_pembayaran_borongan_spb" => $payment_request_hargatotalborongaspb,
+            "paid_harga_total_pembayaran_borongan_spb" => $paid_request_hargatotalborongaspb,
+            "payment_request_subtotal_harga_termin_spb" => $payment_request,
+            "paid_subtotal_harga_termin_spb" => $paid,
         ]);
     }
 
@@ -454,6 +470,7 @@ class SPBController extends Controller
             $nowDate = Carbon::now();
 
             $spbStatus = match (true) {
+                $spbCategory->id == SpbProject_Category::BORONGAN => SpbProject_Status::AWAITING,
                 $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $nowDate->isSameDay($tanggalBerahirSpb) => SpbProject_Status::DUEDATE,
                 $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $nowDate->gt($tanggalBerahirSpb) => SpbProject_Status::OVERDUE,
                 $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $nowDate->lt($tanggalBerahirSpb) => SpbProject_Status::OPEN,
@@ -1127,12 +1144,14 @@ class SPBController extends Controller
                 ];
             }),
             "total" => $spbProject->total_produk,
+            'file_attachement' => $this->getDocument($spbProject),
             'unit_kerja' => $spbProject->unit_kerja,
             'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
             'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
             "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
-            "harga_termin_spb" => $spbProject->harga_termin_spb ?? null,
+            "harga__total_termin_spb" => $spbProject->harga_termin_spb ?? null,
             "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
+            "riwayat_termin" => $this->getRiwayatTermin($spbProject),
             "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
             "know_spb_marketing" => $this->getUserRole($spbProject->know_marketing),
             "know_spb_supervisor" => $this->getUserRole($spbProject->know_supervisor),
@@ -1362,15 +1381,15 @@ class SPBController extends Controller
             "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
             "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
             "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
-                "harga_termin_spb" => $spbProject->harga_termin_spb ?? null,
-                "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
-                "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
-            // "nama_toko" => $spbProject->nama_toko,
+            "harga_total_termin_spb" => $spbProject->harga_termin_spb ?? null,
+            "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
+            "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
+            "riwayat_termin" => $this->getRiwayatTermin($spbProject),
             "know_spb_marketing" => $this->getUserRole($spbProject->know_marketing),
-                "know_spb_supervisor" => $this->getUserRole($spbProject->know_supervisor),
-                "know_spb_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
-                "accept_spb_finance" => $this->getUserRole($spbProject->know_finance), 
-                "payment_request_owner" => auth()->user()->hasRole(Role::OWNER) || $spbProject->request_owner ? $this->getUserRole($spbProject->request_owner) : null,
+            "know_spb_supervisor" => $this->getUserRole($spbProject->know_supervisor),
+            "know_spb_kepalagudang" => $this->getUserRole($spbProject->know_kepalagudang),
+            "accept_spb_finance" => $this->getUserRole($spbProject->know_finance), 
+            "payment_request_owner" => auth()->user()->hasRole(Role::OWNER) || $spbProject->request_owner ? $this->getUserRole($spbProject->request_owner) : null,
             "created_at" => $spbProject->created_at->format('Y-m-d'),
             "updated_at" => $spbProject->updated_at->format('Y-m-d'),
         ];
@@ -1386,6 +1405,23 @@ class SPBController extends Controller
 
         // Kembalikan data dalam format yang sudah ditentukan
         return MessageActeeve::render($data);
+    }
+
+    protected function getRiwayatTermin($spbProject)
+    {
+        return $spbProject->termins->map(function ($termin) use ($spbProject) {
+            return [
+                'harga_termin' => $termin->harga_termin,
+                'deskripsi_termin' => $termin->deskripsi_termin,
+                'type_termin_spb' => $this->getDataTypetermin($termin->type_termin_spb),
+                'tanggal' => $termin->tanggal,
+                'file_attachment' => $termin->fileAttachment ? [
+                    'id' => $termin->fileAttachment->id,
+                    'name' => $termin->fileAttachment->spbProject->doc_type_spb . "/{$termin->fileAttachment->doc_no_spb}.{$termin->fileAttachment->id}/" . date('Y', strtotime($termin->fileAttachment->created_at)) . "." . pathinfo($termin->fileAttachment->file_path, PATHINFO_EXTENSION),
+                    'link' => asset("storage/{$termin->fileAttachment->file_path}"),
+                ] : null,
+            ];
+        });
     }
 
     protected function getDataTypetermin($status) {
@@ -2598,14 +2634,36 @@ class SPBController extends Controller
                     'updated_at' => $request->updated_at,
                 ];
 
-                // Tambahkan data termin jika ada
-                if ($request->has('harga_termin_spb')) {
-                    $updateFields['harga_termin_spb'] = $request->harga_termin_spb;
-                }
+                $fileAttachmentId = null;
 
-                if ($request->has('deskripsi_termin_spb')) {
+                // Menyimpan file attachment jika ada
+                if ($request->hasFile('attachment_file_spb')) {
+                    foreach ($request->file('attachment_file_spb') as $key => $file) {
+                        if ($file->isValid()) {
+                            $document = $this->saveDocument($spbProject, $file, $key + 1);
+                            $fileAttachmentId = $document->id; // Ambil ID dokumen untuk termin
+                        } else {
+                            return MessageActeeve::error('File upload failed');
+                        }
+                    }
+                }
+            
+                // Tambahkan data termin ke database jika ada
+                if ($request->has('harga_termin_spb') && $request->has('deskripsi_termin_spb')) {
+                    $newTermin = new SpbProjectTermin([
+                        'doc_no_spb' => $docNo,
+                        'harga_termin' => $request->harga_termin_spb,
+                        'deskripsi_termin' => $request->deskripsi_termin_spb,
+                        'type_termin_spb' => $request->type_termin_spb,
+                        'tanggal' => $request->updated_at,
+                        'file_attachment_id' => $fileAttachmentId, // Simpan ID file attachment ke termin
+                    ]);
+                    $newTermin->save();
+            
+                    $updateFields['harga_termin_spb'] = $request->harga_termin_spb;
                     $updateFields['deskripsi_termin_spb'] = $request->deskripsi_termin_spb;
                 }
+
 
                 if ($request->has('type_termin_spb')) {
                     $updateFields['type_termin_spb'] = $request->type_termin_spb;
@@ -2649,6 +2707,7 @@ class SPBController extends Controller
 
                 // Update SPB Project
                 $spbProject->update($updateFields);
+
             } else {
                 // Logika untuk Non-Borongan
                 $existingLog = $spbProject->logs()
@@ -2687,18 +2746,18 @@ class SPBController extends Controller
                 $spbProject->productCompanySpbprojects()->update([
                     'status_produk' => ProductCompanySpbProject::TEXT_PAID_PRODUCT,
                 ]);
-            }
 
-            // Menyimpan file attachment jika ada
-            if ($request->hasFile('attachment_file_spb')) {
-                foreach ($request->file('attachment_file_spb') as $key => $file) {
-                    if ($file->isValid()) {
-                        $this->saveDocument($spbProject, $file, $key + 1);
-                    } else {
-                        return MessageActeeve::error('File upload failed');
+                    // Menyimpan file attachment jika ada
+                if ($request->hasFile('attachment_file_spb')) {
+                    foreach ($request->file('attachment_file_spb') as $key => $file) {
+                        if ($file->isValid()) {
+                            $this->saveDocument($spbProject, $file, $key + 1);
+                        } else {
+                            return MessageActeeve::error('File upload failed');
+                        }
                     }
                 }
-            }
+            } 
 
             DB::commit();
             return MessageActeeve::success("SPB Project $docNo payment updated successfully");

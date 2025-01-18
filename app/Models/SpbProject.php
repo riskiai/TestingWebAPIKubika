@@ -146,6 +146,12 @@ class SpbProject extends Model
         return $this->belongsTo(SpbProject_Status::class, 'spbproject_status_id');
     }
 
+    public function termins()
+    {
+        return $this->hasMany(SpbProjectTermin::class, 'doc_no_spb', 'doc_no_spb');
+    }
+
+
         // Tambahkan relasi hasMany ke ProductCompanySpbProject
     public function productCompanySpbprojects()
     {

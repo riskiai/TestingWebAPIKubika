@@ -25,7 +25,7 @@
             <p><strong>Selamat <br> Password Akun Anda Telah Berhasil Diubah.</strong></p>
             <p><strong>Email : {{ $user->email }}</strong></p>
             <p><strong>Password Terbaru : {{ $user->passwordRecovery }}</strong></p>
-            <p><Strong>Link Website : </Strong> <a href="https://kubikawebsite.com/login"
+            <p><Strong>Link Website : </Strong> <a href="https://kubikaexpo.id/login"
                     style="text-decoration: none; font-size:13px; font-weight:bold; color:blue;">kubikaexpo.id</a>
             </p>
             <p><strong>Terimakasih <br> Sudah menggunakan layanan kami.</strong></p>

@@ -246,10 +246,12 @@ class ProjectController extends Controller
         }
 
         if ($request->has('marketing_id')) {
-            $query->where('user_id', $request->marketing_id)
-                  ->whereHas('user', function ($q) {
-                      $q->where('role_id', Role::MARKETING); // Pastikan pembuat proyek adalah Marketing
+            $query->whereHas('tenagaKerja', function ($q) use ($request) {
+                $q->where('users.id', $request->marketing_id) // Filter berdasarkan ID marketing
+                  ->whereHas('role', function ($roleQuery) {
+                      $roleQuery->where('role_id', Role::MARKETING); // Pastikan role adalah Marketing
                   });
+            });
         }        
 
         // Urutkan berdasarkan tahun dan increment ID proyek
