@@ -1384,7 +1384,7 @@ class SPBController extends Controller
             'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
             'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
             "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
-            "harga__total_termin_spb" => $spbProject->harga_termin_spb ?? null,
+            "harga_total_termin_spb" => $spbProject->harga_termin_spb ?? null,
             "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
             "riwayat_termin" => $this->getRiwayatTermin($spbProject),
             "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
