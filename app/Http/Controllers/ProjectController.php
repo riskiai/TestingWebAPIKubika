@@ -165,6 +165,12 @@ class ProjectController extends Controller
             });
         }
 
+        // Filter berdasarkan status_bonus_project
+        if ($request->has('status_bonus_project')) {
+            $statusBonus = $request->status_bonus_project;
+            $query->where('status_bonus_project', $statusBonus);
+        }
+
         // Filter pencarian
         if ($request->has('search')) {
             $query->where(function ($query) use ($request) {

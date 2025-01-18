@@ -55,6 +55,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
       // Divisi Tenaga Kerja Di Role Users
     Route::get('divisi', [DivisiController::class, 'index']);
+    Route::get('divisiall', [DivisiController::class, 'divisiall']);
     Route::post('divisi-store', [DivisiController::class, 'store']);
     Route::get('divisi/{id}', [DivisiController::class, 'show']);
     Route::put('divisi-update/{id}', [DivisiController::class, 'update']);

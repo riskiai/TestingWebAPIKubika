@@ -43,6 +43,36 @@ class DivisiController extends Controller
         return new DivisiCollection($divisi);
     }
 
+    public function divisiall(Request $request)
+    {
+        $query = Divisi::query();
+
+        // Filter pencarian berdasarkan 'id' atau 'name'
+        if ($request->has('search')) {
+            $query->where(function ($query) use ($request) {
+                $query->where('id', 'like', '%' . $request->search . '%')
+                      ->orWhere('name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Filter berdasarkan 'kode_divisi'
+        if ($request->has('kode_divisi')) {
+            $query->where('kode_divisi', 'like', '%' . $request->kode_divisi . '%');
+        }
+
+        // Filter berdasarkan tanggal (range)
+        if ($request->has('date')) {
+            $date = str_replace(['[', ']'], '', $request->date);
+            $date = explode(", ", $date);
+            $query->whereBetween('created_at', [$date[0], $date[1]]);
+        }
+
+        // Paginate hasil query berdasarkan jumlah per halaman
+        $divisi = $query->get();
+
+        return new DivisiCollection($divisi);
+    }
+
     public function store(CreateRequest $request)
     {
         DB::beginTransaction();
