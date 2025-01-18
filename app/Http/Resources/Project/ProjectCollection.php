@@ -86,7 +86,7 @@ class ProjectCollection extends ResourceCollection
                                 ->first()?->divisi->name ?? null,
                         ],
                     ]
-                    : [],
+                    : null,
                 'tukang' => $project->tenagaKerja() 
                 ->get()
                 ->map(function ($user) {

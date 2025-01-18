@@ -781,7 +781,7 @@ class ProjectController extends Controller
                                 ->first()?->divisi->name ?? null,
                         ],
                     ]
-                    : [],
+                    : null,
             'tukang' => $project->tenagaKerja() 
                 ->get()
                 ->map(function ($user) {
