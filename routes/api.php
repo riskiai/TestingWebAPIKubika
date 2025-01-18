@@ -128,7 +128,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('spbproject', [SPBController::class, 'index']);
     Route::get('spbproject/counting', [SPBController::class, 'counting']); 
-    Route::get('spbproject/countingspb', [SPBController::class, 'countingspb']); 
+    Route::get('spbproject/countingspb', [SPBController::class, 'countingspb']);
+    Route::get('spbproject/countingspbusersproject', [SPBController::class, 'countingspbusers']);
+    Route::get('spbproject/countingnonproject', [SPBController::class, 'countingspbnonprojects']);
     Route::post('spbproject/create-spb', [SPBController::class, 'store']);
     Route::put('addspbproject/toproject/{id}', [SPBController::class, 'addspbtoproject']);
     Route::put('spbproject/update-spb/{id}', [SPBController::class, 'update']);

@@ -181,6 +181,83 @@ class SPBController extends Controller
         return new SPBprojectCollection($spbProjects);
     }
 
+    public function countingspbusers(Request $request)
+    {
+        $user = auth()->user();
+        $role = $user->role_id;
+
+        // Query dasar untuk mengambil SPB Project
+        $query = SpbProject::query();
+
+        // Tambahkan filter berdasarkan proyek jika ada
+        if ($request->has('project')) {
+            $query->where('project_id', $request->project);
+        }
+
+        if ($request->has('doc_no_spb')) {
+            $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
+        }
+
+        // Filter berdasarkan role user yang login
+        switch ($role) {
+            case Role::GUDANG:
+                $query->whereNull('know_kepalagudang');
+                break;
+
+            case Role::SUPERVISOR:
+                $query->whereNull('know_supervisor');
+                break;
+
+            case Role::OWNER:
+                $query->whereNull('request_owner');
+                break;
+
+            default:
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Role not authorized for this action.'
+                ], 403);
+        }
+
+        // Pagination bawaan Laravel
+        $perPage = $request->get('per_page', 10); // Default 10 item per halaman
+        $currentPage = $request->get('page', 1); // Halaman saat ini
+        $paginatedData = $query->paginate($perPage, ['*'], 'page', $currentPage);
+
+        // Map data untuk detail unapproved SPB
+        $detailUnapprovedSpb = $paginatedData->map(function ($spb) {
+            return [
+                'docNo' => $spb->doc_no_spb,
+                'unapprove_spb' => 1, // Setiap entry dihitung sebagai 1 unapprove SPB
+                'createdAt' => $spb->created_at,
+                'updatedAt' => $spb->updated_at,
+            ];
+        });
+
+        // Hitung total SPB yang belum di-approve
+        $unapprovedSpb = $query->count();
+
+        // Query untuk menghitung total semua SPB, dengan filter proyek jika ada
+        $totalQuery = SpbProject::query();
+        if ($request->has('project')) {
+            $totalQuery->where('project_id', $request->project);
+        }
+        $totalSpb = $totalQuery->count();
+
+        // Respons JSON
+        return response()->json([
+            'total_spb' => $totalSpb,
+            'unapprove_spb_total' => $unapprovedSpb,
+            'detail_unapprove_spb' => $detailUnapprovedSpb,
+            'pagination' => [
+                'current_page' => $paginatedData->currentPage(),
+                'per_page' => $paginatedData->perPage(),
+                'total' => $paginatedData->total(),
+                'last_page' => $paginatedData->lastPage(),
+            ],
+        ]);
+    }
+
     public function countingspb(Request $request)
     {
         // Ambil data kategori Borongan saja
@@ -188,6 +265,11 @@ class SPBController extends Controller
 
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
+        }
+
+          // Tambahkan filter berdasarkan proyek jika ada
+        if ($request->has('project')) {
+            $query->where('project_id', $request->project);
         }
 
         // Subtotal untuk Borongan
@@ -256,20 +338,33 @@ class SPBController extends Controller
             // Tambahkan logika tambahan berdasarkan status SPB
             if ($spbProject->status) {
                 switch ($spbProject->status->id) {
-                    case SpbProject_Status::TEXT_OPEN:
+                    case SpbProject_Status::OPEN:
                         $open += $hargaTotal;
+                        $statusText = SpbProject_Status::TEXT_OPEN;
                         break;
-
-                    case SpbProject_Status::TEXT_OVERDUE:
+            
+                    case SpbProject_Status::OVERDUE:
                         $over_due += $hargaTotal;
+                        $statusText = SpbProject_Status::TEXT_OVERDUE;
                         break;
-
-                    case SpbProject_Status::TEXT_DUEDATE:
+            
+                    case SpbProject_Status::DUEDATE:
                         $due_date += $hargaTotal;
+                        $statusText = SpbProject_Status::TEXT_DUEDATE;
                         break;
-
+            
+                    case SpbProject_Status::VERIFIED:
+                        $verified += $hargaTotal;
+                        $statusText = SpbProject_Status::TEXT_VERIFIED;
+                        break;
+            
+                    case SpbProject_Status::PAID:
+                        $paid += $hargaTotal;
+                        $statusText = SpbProject_Status::TEXT_PAID;
+                        break;
+            
                     default:
-                        // Abaikan status lainnya
+                        $statusText = 'Unknown';
                         break;
                 }
             }
@@ -291,6 +386,144 @@ class SPBController extends Controller
         ]);
     }
 
+    public function countingspbnonprojects(Request $request)
+    {
+        // Query dasar untuk mengambil SPB dengan tipe Non-Project
+        $query = SpbProject::where('type_project', SpbProject::TYPE_NON_PROJECT_SPB);
+    
+        // Filter berdasarkan project ID jika ada
+        if ($request->has('project')) {
+            $query->whereHas('project', function ($query) use ($request) {
+                $query->where('projects.id', $request->project);
+            });
+        }
+    
+        if ($request->has('status')) {
+            $status = $request->status;
+            if (in_array($status, [
+                SpbProject_Status::AWAITING,
+                SpbProject_Status::VERIFIED,
+                SpbProject_Status::OPEN,
+                SpbProject_Status::OVERDUE,
+                SpbProject_Status::DUEDATE,
+                SpbProject_Status::REJECTED,
+                SpbProject_Status::PAID
+            ])) {
+                $query->whereHas('status', function ($query) use ($status) {
+                    $query->where('id', $status);
+                });
+            }
+        }
+    
+        if ($request->has('status_produk')) {
+            $status_produk = $request->status_produk;
+    
+            $query->whereHas('products', function ($query) use ($status_produk) {
+                $query->where('status_produk', $status_produk);
+            });
+        }
+    
+        // Filter berdasarkan tab_spb
+        if ($request->has('tab_spb')) {
+            $tab = $request->get('tab_spb');
+            if (in_array($tab, [
+                SpbProject::TAB_SUBMIT,
+                SpbProject::TAB_VERIFIED,
+                SpbProject::TAB_PAYMENT_REQUEST,
+                SpbProject::TAB_PAID
+            ])) {
+                $query->where('tab_spb', $tab);
+            }
+        }
+    
+        if ($request->has('doc_no_spb')) {
+            $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
+        }
+    
+        // Filter berdasarkan range date (tanggal_dibuat_spb)
+        if ($request->has('tanggal_dibuat_spb')) {
+            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb));
+            $query->whereBetween('tanggal_dibuat_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
+        }
+    
+        if ($request->has('tanggal_berahir_spb')) {
+            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_berahir_spb));
+            $query->whereBetween('tanggal_berahir_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
+        }
+    
+        // Ambil semua data tanpa pagination
+        $collection = $query->get();
+    
+        // Inisialisasi variabel untuk menghitung masing-masing status
+        $submit = 0;
+        $verified = 0;
+        $over_due = 0;
+        $open = 0;
+        $due_date = 0;
+        $payment_request = 0;
+        $paid = 0;
+    
+        // Menghitung jumlah data SPB yang sesuai
+        $received = $collection->count();
+    
+        foreach ($collection as $spbProject) {
+            $total = $spbProject->getTotalProdukAttribute(); // Mengambil nilai total dari setiap objek SPB
+    
+            $dueDate = Carbon::parse($spbProject->tanggal_berahir_spb);
+            $nowDate = Carbon::now();
+    
+            switch ($spbProject->tab_spb) {
+                case SpbProject::TAB_VERIFIED:
+                    $verified += $total;
+                    if ($dueDate->gt($nowDate)) {
+                        $open += $total;
+                    } elseif ($dueDate->eq($nowDate)) {
+                        $due_date += $total;
+                    } elseif ($dueDate->lt($nowDate)) {
+                        $over_due += $total;
+                    }
+                    break;
+                case SpbProject::TAB_PAYMENT_REQUEST:
+                    $payment_request += $total;
+                    if ($dueDate->lt($nowDate)) {
+                        $over_due += $total;
+                    }
+                    break;
+                case SpbProject::TAB_PAID:
+                    $paid += $total;
+                    break;
+                case SpbProject::TAB_SUBMIT:
+                    $submit += $total;
+                    break;
+            }
+    
+            if ($dueDate->eq($nowDate)) {
+                $due_date += $total;
+            }
+        }
+    
+        $unknownSpb = SpbProject::where('type_project', SpbProject::TYPE_NON_PROJECT_SPB)
+            ->where(function ($query) {
+                $query->whereNull('know_supervisor')
+                    ->orWhereNull('know_kepalagudang')
+                    ->orWhereNull('request_owner');
+            })
+            ->count();
+    
+        // Respons JSON
+        return response()->json([
+            'received' => $received, // Jumlah data
+            'total_spb_yang_belum_diapprove' => $unknownSpb,
+            'submit' => $submit,
+            'verified' => $verified,
+            'over_due' => $over_due,
+            'open' => $open,
+            'due_date' => $due_date,
+            'payment_request' => $payment_request,
+            'paid' => $paid,
+        ]);
+    }
+    
 
     public function counting(Request $request)
     {
@@ -298,7 +531,7 @@ class SPBController extends Controller
         $role = auth()->user()->role_id;
 
         // Ambil semua data SPB (tidak melakukan filter berdasarkan doc_no_spb)
-        $query = SpbProject::query();
+        $query = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB);
 
         if ($request->has('type_project')) {
             $typeProject = $request->type_project;
@@ -369,14 +602,16 @@ class SPBController extends Controller
             $query->whereBetween('tanggal_berahir_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
         }
 
-           // Periksa apakah parameter page dan per_page diberikan
+          
             if ($request->has('page') || $request->has('per_page')) {
-                $perPage = (int) $request->per_page ?: 10; // Jumlah data per halaman, default 10
-                $spbProjects = $query->paginate($perPage); // Gunakan pagination
-                $collection = collect($spbProjects->items()); // Data hanya pada halaman aktif
+                $perPage = (int) $request->per_page ?: 10; 
+                $spbProjects = $query->paginate($perPage); 
+                $collection = collect($spbProjects->items()); 
             } else {
-                $collection = $query->get(); // Ambil semua data jika tidak ada pagination
+                $collection = $query->get(); 
             }
+
+            // $collection = $query->get();
 
             // Inisialisasi variabel untuk menghitung masing-masing status
             $submit = 0;
@@ -1935,20 +2170,27 @@ class SPBController extends Controller
                 ], 404);
             }
 
-            // Validasi apakah user memiliki peran Finance
-            /* if (!auth()->user()->hasRole(Role::FINANCE)) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Only users with the Finance role can accept this SPB.',
-                ], 403);
-            } */
-
              // Validasi apakah user memiliki peran Finance, Owner, atau Admin
             if (!auth()->user()->hasRole(Role::FINANCE) && !auth()->user()->hasRole(Role::OWNER) && !auth()->user()->hasRole(Role::ADMIN)) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Only users with the Finance, Owner, or Admin role can accept this SPB.',
                 ], 403);
+            }
+
+            // Periksa tanggal berakhir SPB
+            $dueDate = Carbon::parse($spbProject->tanggal_berahir_spb);
+            $nowDate = Carbon::now();
+
+            $spbStatus = null;
+
+            // Logika pembaruan status berdasarkan tanggal akhir SPB
+            if ($nowDate->isSameDay($dueDate)) {
+                $spbStatus = SpbProject_Status::DUEDATE; // Status Due Date
+            } elseif ($nowDate->gt($dueDate)) {
+                $spbStatus = SpbProject_Status::OVERDUE; // Status Overdue
+            } elseif ($nowDate->lt($dueDate)) {
+                $spbStatus = SpbProject_Status::OPEN; // Status Open
             }
 
             // Iterasi semua produk yang terkait dengan SPB Project
@@ -1977,7 +2219,7 @@ class SPBController extends Controller
 
             // Perbarui status, tab, dan know_finance untuk SPB Project
             $spbProject->update([
-                'spbproject_status_id' => SpbProject_Status::VERIFIED,
+                'spbproject_status_id' => $spbStatus,
                 'tab_spb' => SpbProject::TAB_VERIFIED,
                 'know_finance' => auth()->user()->hasRole(Role::FINANCE) ? auth()->user()->id : null, // Tandai bahwa Finance telah menerima SPB
                 'approve_date' => now(), // Waktu persetujuan
@@ -1996,6 +2238,7 @@ class SPBController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => "SPB Project {$id} has been accepted by " . auth()->user()->name,
+                'new_status' => SpbProject_Status::getStatusText($spbStatus),
             ]);
             
         } catch (\Throwable $th) {
