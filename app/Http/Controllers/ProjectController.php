@@ -238,6 +238,7 @@ class ProjectController extends Controller
                 $query->whereHas('manPowers', function ($q) {
                     $q->where('work_type', 1); // Hanya ambil tukang harian
                 });
+
             } elseif ($workType == 0) {
                 $query->whereHas('manPowers', function ($q) {
                     $q->where('work_type', 0); // Hanya ambil tukang borongan
@@ -372,8 +373,13 @@ class ProjectController extends Controller
         }
 
         if ($request->has('marketing_id')) {
-            $query->where('user_id', $request->marketing_id); // Filter proyek berdasarkan marketing_id
-        }
+            $query->whereHas('tenagaKerja', function ($q) use ($request) {
+                $q->where('users.id', $request->marketing_id) // Filter berdasarkan ID marketing
+                  ->whereHas('role', function ($roleQuery) {
+                      $roleQuery->where('role_id', Role::MARKETING); // Pastikan role adalah Marketing
+                  });
+            });
+        }      
     
         if ($request->has('date')) {
             $date = str_replace(['[', ']'], '', $request->date);
@@ -397,12 +403,15 @@ class ProjectController extends Controller
         $percent = ($totalBilling > 0) ? ($totalMargin / $totalBilling) * 100 : 0;
         $percent = round($percent, 2) . '%'; // Membulatkan hingga dua angka desimal
 
+        $totalHargaType = (float) $query->sum('harga_type_project');
+
         // Response data
         return response()->json([
             "billing" => $totalBilling,
             "cost_estimate" => $totalCostEstimate,
             "margin" => $totalMargin,
             "percent" => $percent,
+            "harga_type_project_total_borongan" => $totalHargaType,
         ]);
     } 
 
@@ -727,6 +736,52 @@ class ProjectController extends Controller
                         'kode_produk' => $product->kode_produk,
                     ];
                 }), */
+                'marketing' => $project->tenagaKerja()
+                    ->whereHas('role', function ($query) {
+                        $query->where('role_name', 'Marketing');
+                    })
+                    ->first() // Mengambil hanya satu data
+                    ?->loadMissing(['salary', 'divisi']) // Memastikan salary dan divisi dimuat
+                    ? [
+                        'id' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Marketing');
+                            })
+                            ->first()?->id ?? null,
+                        'name' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Marketing');
+                            })
+                            ->first()?->name ?? null,
+                        'daily_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Marketing');
+                            })
+                            ->first()?->salary->daily_salary ?? 0,
+                        'hourly_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Marketing');
+                            })
+                            ->first()?->salary->hourly_salary ?? 0,
+                        'hourly_overtime_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Marketing');
+                            })
+                            ->first()?->salary->hourly_overtime_salary ?? 0,
+                        'divisi' => [
+                            'id' => $project->tenagaKerja()
+                                ->whereHas('role', function ($query) {
+                                    $query->where('role_name', 'Marketing');
+                                })
+                                ->first()?->divisi->id ?? null,
+                            'name' => $project->tenagaKerja()
+                                ->whereHas('role', function ($query) {
+                                    $query->where('role_name', 'Marketing');
+                                })
+                                ->first()?->divisi->name ?? null,
+                        ],
+                    ]
+                    : [],
             'tukang' => $project->tenagaKerja() 
                 ->get()
                 ->map(function ($user) {

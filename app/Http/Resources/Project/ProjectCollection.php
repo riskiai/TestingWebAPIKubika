@@ -86,19 +86,7 @@ class ProjectCollection extends ResourceCollection
                                 ->first()?->divisi->name ?? null,
                         ],
                     ]
-                    : [
-                        'id' => null,
-                        'name' => null,
-                        'daily_salary' => 0,
-                        'hourly_salary' => 0,
-                        'hourly_overtime_salary' => 0,
-                        'divisi' => [
-                            'id' => null,
-                            'name' => null,
-                        ],
-                    ],
-
-
+                    : [],
                 'tukang' => $project->tenagaKerja() 
                 ->get()
                 ->map(function ($user) {
