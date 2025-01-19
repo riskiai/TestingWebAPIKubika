@@ -44,6 +44,35 @@ class KategoriController extends Controller
         return new KategoriCollection($kategori);
     }
 
+    public function categoryall(Request $request)
+    {
+        $query = Kategori::query();
+
+        // Filter pencarian berdasarkan 'id' atau 'name'
+        if ($request->has('search')) {
+            $query->where(function ($query) use ($request) {
+                $query->where('id', 'like', '%' . $request->search . '%')
+                      ->orWhere('name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Filter berdasarkan 'kode_kategori'
+        if ($request->has('kode_kategori')) {
+            $query->where('kode_kategori', 'like', '%' . $request->kode_kategori . '%');
+        }
+
+        // Filter berdasarkan tanggal (range)
+        if ($request->has('date')) {
+            $date = str_replace(['[', ']'], '', $request->date);
+            $date = explode(", ", $date);
+            $query->whereBetween('created_at', [$date[0], $date[1]]);
+        }
+
+        $kategori = $query->get();
+
+        return new KategoriCollection($kategori);
+    }
+
     public function store(CreateRequest $request)
     {
         DB::beginTransaction();

@@ -85,6 +85,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
      // Kategori
      Route::get('kategori', [KategoriController::class, 'index']);
+     Route::get('kategoriall', [KategoriController::class, 'categoryall']);
      Route::post('kategori-store', [KategoriController::class, 'store']);
      Route::get('kategori/{id}', [KategoriController::class, 'show']);
      Route::put('kategori-update/{id}', [KategoriController::class, 'update']);
