@@ -260,7 +260,7 @@ class Project extends Model
     //     return $this->belongsToMany(SpbProject::class, 'project_spb_project', 'project_id', 'spb_project_id');
     // }
 
-        public function spbProjects()
+    public function spbProjects()
     {
         return $this->hasMany(SpbProject::class, 'project_id', 'id'); // Project memiliki banyak SpbProject
     }
