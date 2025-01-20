@@ -878,20 +878,29 @@ class ProjectController extends Controller
     protected function costProgress($project)
     {
         $status = Project::STATUS_OPEN;
-        $total = 0;
+        $totalSpbCost = 0;
+        $totalManPowerCost = 0;
 
         // Ambil semua SPB Project dengan status 'PAID'
         $spbProjects = $project->spbProjects()->where('tab_spb', SpbProject::TAB_PAID)->get();
 
         // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
         foreach ($spbProjects as $spbProject) {
-            // Ambil total dari masing-masing SpbProject
-            $total += $spbProject->getTotalProdukAttribute(); 
+            $totalSpbCost += $spbProject->getTotalProdukAttribute();
         }
+
+        // Hitung total salary dari ManPower terkait proyek
+        $manPowers = $project->manPowers()->get();
+        foreach ($manPowers as $manPower) {
+            $totalManPowerCost += $manPower->current_salary + $manPower->current_overtime_salary;
+        }
+
+        // Total biaya aktual (real cost)
+        $totalCost = $totalSpbCost + $totalManPowerCost;
 
         // Cek jika cost_estimate lebih besar dari 0 sebelum melakukan pembagian
         if ($project->cost_estimate > 0) {
-            $costEstimate = round(($total / $project->cost_estimate) * 100, 2);
+            $costEstimate = round(($totalCost / $project->cost_estimate) * 100, 2);
         } else {
             // Default value jika cost_estimate adalah 0
             $costEstimate = 0;
@@ -913,7 +922,9 @@ class ProjectController extends Controller
         return [
             'status_cost_progres' => $status,
             'percent' => $costEstimate . '%',
-            'real_cost' => $total
+            'real_cost' => $totalCost,
+            'spb_cost' => $totalSpbCost,
+            'man_power_cost' => $totalManPowerCost,
         ];
     }
 
