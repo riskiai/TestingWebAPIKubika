@@ -138,7 +138,7 @@ class ProjectCollection extends ResourceCollection
                 'cost_estimate' => $project->cost_estimate,
                 'margin' => $project->margin,
                 'percent' => $this->formatPercent($project->percent),
-                'cost_progress_paid_spb' => $this->costProgress($project),
+                'cost_progress_project' => $this->costProgress($project),
                 'harga_type_project' => $project->harga_type_project ?? 0,
                 'file_attachment' => [
                     'name' => $project->file ? date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->file, PATHINFO_EXTENSION) : null,
