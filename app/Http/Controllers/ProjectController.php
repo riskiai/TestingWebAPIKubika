@@ -494,7 +494,7 @@ class ProjectController extends Controller
 
             // Commit transaksi
             DB::commit(); // Commit transaksi
-            return MessageActeeve::success("Project created successfully.");
+            return MessageActeeve::success("Project created successfully. $project->id");
         } catch (\Exception $e) {
             // Rollback jika terjadi error
             DB::rollBack();
@@ -555,7 +555,7 @@ class ProjectController extends Controller
         }
     }
 
-    public function update(UpdateRequest $request, $id)
+   /*  public function update(UpdateRequest $request, $id)
     {
         DB::beginTransaction(); // Mulai transaksi manual
     
@@ -566,12 +566,7 @@ class ProjectController extends Controller
             if (!$project) {
                 return MessageActeeve::notFound('Project data not found!');
             }
-    
-            // Validasi role pengguna login sebagai "Marketing"
-            /* $currentUser = auth()->user();
-            if ($currentUser->role_id !== 3) {
-                throw new \Exception("Hanya pengguna dengan role 'Marketing' yang dapat mengupdate proyek.");
-            } */
+
     
             // Temukan perusahaan berdasarkan client_id yang dikirimkan di request
             $company = Company::find($request->client_id);
@@ -661,6 +656,127 @@ class ProjectController extends Controller
             // Commit transaksi
             DB::commit();
     
+            return MessageActeeve::success("Project {$project->name} has been updated successfully.");
+        } catch (\Throwable $th) {
+            // Rollback jika terjadi error
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    } */
+
+    public function update(UpdateRequest $request, $id)
+    {
+        DB::beginTransaction(); // Mulai transaksi manual
+
+        try {
+            // Temukan proyek berdasarkan ID yang diberikan
+            $project = Project::find($id);
+
+            if (!$project) {
+                return MessageActeeve::notFound('Project data not found!');
+            }
+
+            // Temukan perusahaan berdasarkan client_id yang dikirimkan di request
+            $company = Company::find($request->client_id);
+            if (!$company) {
+                throw new \Exception("Client data not found!");
+            }
+
+            // Gabungkan data client_id ke dalam request
+            $request->merge([
+                'company_id' => $company->id,
+            ]);
+
+            $currentStatus = $project->request_status_owner;
+
+            // Ambil tahun dari tanggal baru dan tanggal lama
+            $newYear = date('y', strtotime($request->date));  // Tahun dari tanggal baru
+            $currentYear = date('y', strtotime($project->date)); // Tahun dari tanggal lama
+
+            if ($newYear != $currentYear) {
+                // Generate ID baru berdasarkan tahun baru
+                $newId = 'PRO-' . $newYear . '-' . Project::generateSequenceNumber($newYear);
+
+                // Tambahkan ID baru ke tabel projects (simpan sementara)
+                Project::create([
+                    'id' => $newId,
+                    'name' => $project->name,
+                    'billing' => $project->billing,
+                    'cost_estimate' => $project->cost_estimate,
+                    'margin' => $project->margin,
+                    'percent' => $project->percent,
+                    'date' => $request->date,
+                    'company_id' => $project->company_id,
+                    'user_id' => $project->user_id,
+                    'request_status_owner' => $project->request_status_owner,
+                    'type_projects' => $project->type_projects,
+                    'no_dokumen_project' => $project->no_dokumen_project,
+                ]);
+
+                // Update foreign key di tabel project_user_produk
+                DB::table('project_user_produk')
+                    ->where('project_id', $id)
+                    ->update(['project_id' => $newId]);
+
+                // Update foreign key di tabel spb_projects
+                DB::table('spb_projects')
+                    ->where('project_id', $id)
+                    ->update(['project_id' => $newId]);
+
+                // Update foreign key di tabel man_powers
+                DB::table('man_powers')
+                    ->where('project_id', $id)
+                    ->update(['project_id' => $newId]);
+
+                // Hapus ID lama dari tabel projects
+                $project->delete();
+
+                // Update variabel proyek ke ID baru
+                $project = Project::find($newId);
+            }
+
+            if ($currentStatus == Project::REJECTED) {
+                $project->request_status_owner = Project::PENDING;
+            }
+
+            // Logika perubahan status otomatis
+            if ($project->request_status_owner == Project::ACTIVE) {
+                $project->request_status_owner = Project::PENDING; // Set status ke pending
+            }
+
+            // Simpan perubahan status
+            $project->save();
+
+            // Jika ada file baru (attachment_file), hapus file lama dan simpan yang baru
+            if ($request->hasFile('attachment_file')) {
+                if ($project->file) {
+                    Storage::delete($project->file); // Hapus file lama jika ada
+                }
+                $project->file = $request->file('attachment_file')->store(Project::ATTACHMENT_FILE, 'public');
+            }
+
+            // Jika ada file baru (attachment_file_spb), hapus file lama dan simpan yang baru
+            if ($request->hasFile('attachment_file_spb')) {
+                if ($project->spb_file) {
+                    Storage::delete($project->spb_file); // Hapus file lama jika ada
+                }
+                $project->spb_file = $request->file('attachment_file_spb')->store(Project::ATTACHMENT_FILE_SPB, 'public');
+            }
+
+            // Update proyek dengan data baru
+            $project->update($request->except(['produk_id', 'user_id']));
+
+            // Ambil data produk_id dan user_id dari request
+            $produkIds = $request->input('produk_id', []);
+            $userIds = $request->input('user_id', []);
+
+            // Sinkronkan data produk dan user pada tabel pivot
+            $project->product()->sync(array_unique($produkIds)); // Sinkronkan data produk
+            $project->tenagaKerja()->sync(array_unique($userIds)); // Sinkronkan data user
+
+            // Commit transaksi
+            DB::commit();
+
             return MessageActeeve::success("Project {$project->name} has been updated successfully.");
         } catch (\Throwable $th) {
             // Rollback jika terjadi error
