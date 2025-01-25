@@ -199,7 +199,7 @@ class UsersController extends Controller
             return MessageActeeve::error('Token tidak ditemukan.');
         }
 
-        return MessageActeeve::success('Token dikirimkan.', ['token' => $user->token]);
+        return MessageActeeve::success('Token sudah dikirimkan.', ['token' => $user->token]);
     }
 
     public function verifyTokenAndUpdatePassword(Request $request)
