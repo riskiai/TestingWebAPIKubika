@@ -33,6 +33,9 @@ Route::prefix('auth')->group(function () {
 Route::get('show/{id}', [SPBController::class, 'showNotLogin']);
 Route::post('store-notlogin', [UsersController::class, 'storeNotLogin']);
 Route::put('updatepassword-email', [UsersController::class, 'UpdatePasswordWithEmail']);
+Route::put('updatepassword-emailtoken', [UsersController::class, 'UpdatePasswordWithEmailToken']);
+Route::put('verify-token', [UsersController::class, 'verifyTokenAndUpdatePassword']);
+Route::get('cektoken', [UsersController::class, 'cekToken']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
      // Users
@@ -144,6 +147,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('spbproject/reject/{id}', [SPBController::class, 'reject']);
     Route::put('spbproject/reject-produk/{id}', [SPBController::class, 'rejectproduk']);
 
+    Route::put('spbproject/update-termin/{id}', [SPBController::class, 'updateTermin']);
     Route::post('spbproject/add-produk/{id}', [SPBController::class, 'storeProduk']);
     Route::put('spbproject/activate-produk/{id}', [SPBController::class, 'activateproduk']);
     Route::put('spbproject/activate/{id}', [SPBController::class, 'activate']);

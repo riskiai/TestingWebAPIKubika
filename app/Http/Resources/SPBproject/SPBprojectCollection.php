@@ -277,6 +277,7 @@ class SPBprojectCollection extends ResourceCollection
     {
         return $spbProject->termins->map(function ($termin) use ($spbProject) {
             return [
+                'id' => $termin->id, 
                 'harga_termin' => $termin->harga_termin,
                 'deskripsi_termin' => $termin->deskripsi_termin,
                 'type_termin_spb' => $this->getDataTypetermin($termin->type_termin_spb),

@@ -32,6 +32,7 @@ use App\Http\Requests\SpbProject\RejectProdukRequest;
 use App\Http\Requests\SpbProject\UpdateProdukRequest;
 use App\Http\Requests\SpbProject\PaymentProdukRequest;
 use App\Http\Requests\SpbProject\ActivateProdukRequest;
+use App\Http\Requests\SpbProject\UpdateTerminRequest;
 use App\Http\Resources\SPBproject\SPBprojectCollection;
 
 class SPBController extends Controller
@@ -1676,6 +1677,7 @@ class SPBController extends Controller
     {
         return $spbProject->termins->map(function ($termin) use ($spbProject) {
             return [
+                'id' => $termin->id, 
                 'harga_termin' => $termin->harga_termin,
                 'deskripsi_termin' => $termin->deskripsi_termin,
                 'type_termin_spb' => $this->getDataTypetermin($termin->type_termin_spb),
@@ -2095,6 +2097,138 @@ class SPBController extends Controller
             DB::rollBack();
             return MessageActeeve::error('An error occurred: ' . $th->getMessage());
         }
+    }
+
+    public function updateTermin(UpdateTerminRequest $request, $docNo)
+    {
+        DB::beginTransaction();
+        
+        try {
+            // Cari SPB Project berdasarkan doc_no_spb
+            $spbProject = SpbProject::with(['termins', 'termins.fileAttachment'])->where('doc_no_spb', $docNo)->first();
+    
+            if (!$spbProject) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'SPB Project not found!',
+                ], 404);
+            }
+    
+            // Variabel untuk menyimpan data termin terakhir yang diupdate
+            $lastUpdatedTerminData = null;
+    
+            // Proses pembaruan termin berdasarkan ID termin yang diterima
+            foreach ($request->riwayat_termin as $index => $terminData) {
+                $termin = $spbProject->termins->where('id', $terminData['id'])->first();
+    
+                if (!$termin) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Termin with ID {$terminData['id']} not found!",
+                    ], 404);
+                }
+    
+                // Inisialisasi variabel untuk menyimpan file attachment
+                $fileAttachmentId = null;
+    
+                // Cek apakah ada file yang diupload untuk termin ini
+                if (isset($terminData['attachment_file_spb']) && !empty($terminData['attachment_file_spb'])) {
+                    foreach ($terminData['attachment_file_spb'] as $file) {
+                        if ($file && $file->isValid()) {
+                            // Cek apakah file attachment sudah ada, jika ada maka replace
+                            if ($termin->fileAttachment) {
+                                // Ganti file yang lama dengan file yang baru
+                                $document = $this->replaceDocuments($termin->fileAttachment, $file, $index);
+                                $fileAttachmentId = $document->id;  // Simpan ID file attachment yang baru
+                            } else {
+                                // Jika belum ada file attachment, simpan file baru
+                                $document = $this->saveDocument($spbProject, $file, $index);
+                                $fileAttachmentId = $document->id;  // Simpan ID file attachment yang baru
+                            }
+                        } else {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'File upload failed',
+                            ], 400);
+                        }
+                    }
+                } else {
+                    // Jika tidak ada file yang diupload, hapus file attachment yang lama
+                    if ($termin->fileAttachment) {
+                        // Hapus file fisik yang terkait
+                        if (Storage::disk('public')->exists($termin->fileAttachment->file_path)) {
+                            Storage::disk('public')->delete($termin->fileAttachment->file_path); // Menghapus file fisik
+                        }
+    
+                        // Hapus record file attachment dari database
+                        $termin->fileAttachment->delete();
+    
+                        // Pastikan file_attachment_id di termin menjadi null
+                        $termin->update([
+                            'file_attachment_id' => null,
+                        ]);
+                    }
+                }
+    
+                // Update data termin dengan file_attachment_id yang baru (atau null jika tidak ada file)
+                $termin->update([
+                    'harga_termin' => $terminData['harga_termin'],
+                    'deskripsi_termin' => $terminData['deskripsi_termin'],
+                    'type_termin_spb' => $terminData['type_termin_spb'], // Langsung pakai ID
+                    'tanggal' => $terminData['tanggal'],
+                    'file_attachment_id' => $fileAttachmentId,  // null jika tidak ada file
+                ]);
+    
+                $spbProject->load('termins.fileAttachment');
+    
+                // Simpan data termin terakhir yang diupdate
+                $lastUpdatedTerminData = $terminData;
+            }
+    
+            // Jika ada termin yang diupdate, perbarui deskripsi dan tipe termin SPB
+            if ($lastUpdatedTerminData) {
+                $spbProject->update([
+                    'deskripsi_termin_spb' => $lastUpdatedTerminData['deskripsi_termin'],
+                    'type_termin_spb' => $lastUpdatedTerminData['type_termin_spb'], // ID Type Termin
+                ]);
+            }
+    
+            // Menghitung ulang harga total termin setelah update termin
+            $totalHargaTermin = $spbProject->termins->sum('harga_termin');
+    
+            // Update harga_total_termin_spb di SPB Project
+            $spbProject->update([
+                'harga_termin_spb' => $totalHargaTermin,
+            ]);
+    
+            DB::commit();
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Termin data updated successfully!',
+            ]);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+    
+            return response()->json([
+                'status' => 'error',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
+
+    protected function replaceDocuments($existingDocument, $file, $iteration)
+    {
+        // Hapus file fisik yang lama
+        if (Storage::disk('public')->exists($existingDocument->file_path)) {
+            Storage::disk('public')->delete($existingDocument->file_path); // Menghapus file fisik
+        }
+
+        // Hapus record file attachment yang lama dari database
+        $existingDocument->delete();
+
+        // Simpan file baru dan kembalikan ID-nya
+        return $this->saveDocument($existingDocument->spbProject, $file, $iteration);
     }
 
     public function acceptproduk(AcceptRequest $request, $id)

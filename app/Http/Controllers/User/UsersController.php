@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Models\Role;
 use App\Models\User;
 use App\Mail\RegisterMail;
+use App\Mail\SendTokenMail;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
@@ -177,6 +178,107 @@ class UsersController extends Controller
         } catch (\Throwable $th) {
             DB::rollBack();
             return MessageActeeve::error($th->getMessage());
+        }
+    }
+
+    // Cek token menggunakan GET request
+    public function cekToken(Request $request)
+    {
+        // Ambil token dari query parameter URL
+        $token = $request->query('token'); // Ambil token dari query string, misalnya ?token=your_token_here
+
+        // Pastikan token diberikan dalam request
+        if (!$token) {
+            return MessageActeeve::error('Token wajib diisi.');
+        }
+
+        // Cek apakah ada user dengan token yang sesuai
+        $user = User::where('token', $token)->first();
+
+        if (!$user) {
+            return MessageActeeve::error('Token tidak ditemukan.');
+        }
+
+        return MessageActeeve::success('Token dikirimkan.', ['token' => $user->token]);
+    }
+
+    public function verifyTokenAndUpdatePassword(Request $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Validasi input dari pengguna
+            $request->validate([
+                'token' => 'required|string|exists:users,token',  // Token harus ada di database
+                'password_new' => 'required|min:8|confirmed',     // Password baru harus valid dan sesuai konfirmasi
+                'password_new_confirmation' => 'required',         // Konfirmasi password harus diisi
+            ]);
+
+            // Ambil user berdasarkan token yang diberikan
+            $user = User::where('token', $request->token)->first();
+
+            // Jika token tidak valid atau tidak ada
+            if (!$user) {
+                return MessageActeeve::error('Invalid or expired token.');
+            }
+
+            // Cek apakah password baru dan konfirmasi password sesuai
+            if ($request->password_new !== $request->password_new_confirmation) {
+                return MessageActeeve::error('Password confirmation does not match.');
+            }
+
+            // Update password pengguna dengan mengenkripsi password baru
+            $user->update([
+                'password' => bcrypt($request->password_new),  // Enkripsi password baru menggunakan bcrypt
+                'token' => null,                               // Hapus token setelah digunakan
+            ]);
+
+            DB::commit();
+
+            // Kembalikan pesan sukses
+            return MessageActeeve::success('Your password has been successfully updated.');
+
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            // Jika terjadi error
+            return MessageActeeve::error('An error occurred while updating the password: ' . $th->getMessage());
+        }
+    }
+
+    public function UpdatePasswordWithEmailToken(Request $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Validasi email yang diberikan
+            $request->validate([
+                'email' => 'required|email|exists:users,email', // Pastikan email valid dan ada di database
+            ]);
+
+            // Ambil user berdasarkan email
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user) {
+                return MessageActeeve::error('Email not found!'); // Jika tidak ada user dengan email ini
+            }
+
+            // Generate token verifikasi yang unik
+            $token = $this->generateRandomPassword(); // Generate token acak, panjang 32 karakter
+
+            // Simpan token ke kolom 'token' pada tabel users
+            $user->update([
+                'token' => $token,
+            ]);
+
+            // Kirim email dengan token ke pengguna
+            Mail::to($user->email)->send(new SendTokenMail($user, $token));
+
+            DB::commit();
+
+            return MessageActeeve::success('Token has been sent to your email. Please check your email for verification.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error('An error occurred while sending the token: ' . $th->getMessage());
         }
     }
 
