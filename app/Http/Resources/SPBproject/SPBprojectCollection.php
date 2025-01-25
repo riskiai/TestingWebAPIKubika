@@ -23,6 +23,8 @@ class SPBprojectCollection extends ResourceCollection
         $data = [];
 
         foreach ($this as $key => $spbProject) {
+            $company = $spbProject->company;
+
               // Determine the tab name
             $tabNames = [
                 SpbProject::TAB_SUBMIT => 'Submit',
@@ -222,6 +224,12 @@ class SPBprojectCollection extends ResourceCollection
                 'file_attachement' => $this->getDocument($spbProject),
                 "unit_kerja" => $spbProject->unit_kerja,
                 "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
+                "vendor_borongan" => $company ? [
+                        "id" => $company->id,
+                        "name" => $company->name,
+                        "bank_name" => $company->bank_name,
+                        "account_name" => $company->account_name,
+                    ] : null,
                 "harga_total_termin_spb" => $this->getHargaTerminSpb($spbProject),
                 "deskripsi_termin_spb" => $this->getDeskripsiTerminSpb($spbProject),
                 "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
@@ -545,29 +553,40 @@ class SPBprojectCollection extends ResourceCollection
 
         // Pengecekan untuk TAB_PAYMENT_REQUEST
         elseif ($spbProject->tab_spb == SpbProject::TAB_PAYMENT_REQUEST) {
-            $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
-            $nowDate = Carbon::now();
-
-            $data = [
-                "id" => SpbProject_Status::OPEN,
-                "name" => SpbProject_Status::TEXT_OPEN,
-                "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
-            ];
-
-            if ($nowDate->gt($dueDate)) {
+            // Pastikan jika statusnya REJECTED, maka status akan diubah menjadi REJECTED dalam respons
+            if ($spbProject->status->id == SpbProject_Status::REJECTED) {
                 $data = [
-                    "id" => SpbProject_Status::OVERDUE,
-                    "name" => SpbProject_Status::TEXT_OVERDUE,
+                    "id" => SpbProject_Status::REJECTED,
+                    "name" => 'Rejected',
+                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    "reject_note" => $spbProject->reject_note ?? 'No reject note',  // Menambahkan catatan reject
+                ];
+            } else {
+                // Jika status lainnya, tetap ikuti kondisi sebelumnya
+                $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
+                $nowDate = Carbon::now();
+
+                $data = [
+                    "id" => SpbProject_Status::OPEN,
+                    "name" => SpbProject_Status::TEXT_OPEN,
                     "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
-            }
 
-            if ($nowDate->toDateString() == $spbProject->tanggal_berahir_spb) {
-                $data = [
-                    "id" => SpbProject_Status::DUEDATE,
-                    "name" => SpbProject_Status::TEXT_DUEDATE,
-                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
-                ];
+                if ($nowDate->gt($dueDate)) {
+                    $data = [
+                        "id" => SpbProject_Status::OVERDUE,
+                        "name" => SpbProject_Status::TEXT_OVERDUE,
+                        "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    ];
+                }
+
+                if ($nowDate->toDateString() == $spbProject->tanggal_berahir_spb) {
+                    $data = [
+                        "id" => SpbProject_Status::DUEDATE,
+                        "name" => SpbProject_Status::TEXT_DUEDATE,
+                        "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    ];
+                }
             }
         }
 

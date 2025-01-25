@@ -129,7 +129,7 @@ class SpbProject extends Model
 
         // Hitung total dari semua produk
         $grandTotal = $products->sum(function ($product) {
-            return $product->subtotal_produk; // Menggunakan atribut subtotal_produk dari ProductCompanySpbProject
+            return $product->subtotal_produk;
         });
 
         return round($grandTotal); // Membulatkan hasil total ke bilangan bulat
@@ -151,14 +151,11 @@ class SpbProject extends Model
         return $this->hasMany(SpbProjectTermin::class, 'doc_no_spb', 'doc_no_spb');
     }
 
-
-        // Tambahkan relasi hasMany ke ProductCompanySpbProject
     public function productCompanySpbprojects()
     {
         return $this->hasMany(ProductCompanySpbproject::class, 'spb_project_id', 'doc_no_spb');
     }
 
-    // Relasi dengan Vendor (Company)
     public function vendors()
     {
         return $this->belongsToMany(Company::class, 'product_company_spbproject', 'spb_project_id', 'company_id')
@@ -201,10 +198,9 @@ class SpbProject extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    
     public function project()
     {
-        return $this->belongsTo(Project::class, 'project_id', 'id'); // Menggunakan 'project_id' di tabel spb_projects
+        return $this->belongsTo(Project::class, 'project_id', 'id'); 
     }
     
     public function logs()

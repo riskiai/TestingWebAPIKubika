@@ -25,6 +25,7 @@ class UpdateRequest extends FormRequest
             'tanggal_berahir_spb' => 'required|date',
             'type_project' => 'nullable|in:1,2',
             'unit_kerja' => 'nullable|string|max:255',
+            'vendor_borongan_id' => 'nullable|exists:companies,id',
            
         ];
 

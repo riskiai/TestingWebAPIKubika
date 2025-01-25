@@ -32,6 +32,7 @@ public function rules(): array
             'unit_kerja' => 'nullable|string|max:255',
             'harga_total_pembayaran_borongan_spb' => 'nullable|numeric|min:0',
             'type_termin_spb' => 'nullable|in:1,2',
+            'vendor_borongan_id' => 'nullable|exists:companies,id',
             'produk_data' => 'nullable|array',
             'produk_data.*.produk_id' => 'nullable|exists:products,id',
             'produk_data.*.vendor_id' => 'nullable|exists:companies,id',

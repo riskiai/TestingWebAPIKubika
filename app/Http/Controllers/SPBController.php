@@ -710,7 +710,7 @@ class SPBController extends Controller
                 $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $nowDate->gt($tanggalBerahirSpb) => SpbProject_Status::OVERDUE,
                 $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $nowDate->lt($tanggalBerahirSpb) => SpbProject_Status::OPEN,
                 $request->type_project == SpbProject::TYPE_PROJECT_SPB && $spbCategory->id == SpbProject_Category::INVOICE => SpbProject_Status::AWAITING,
-                default => SpbProject_Status::AWAITING, // Status default jika tidak memenuhi kondisi di atas
+                default => SpbProject_Status::AWAITING, 
             };
 
             // Generate doc_no_spb
@@ -723,6 +723,8 @@ class SPBController extends Controller
             ? SpbProject::TYPE_TERMIN_BELUM_LUNAS 
             : null;
 
+            $company_id = $request->vendor_borongan_id;
+
             // Merge data untuk SPB Project
             $request->merge([
                 'doc_no_spb' => $this->generateDocNo($maxNumericPart, $spbCategory),
@@ -733,6 +735,7 @@ class SPBController extends Controller
                     : SpbProject::TAB_SUBMIT,
                 'user_id' => auth()->user()->id,
                 'type_termin_spb' => $typeTerminSpb,
+                'company_id' => $company_id,
             ]);
 
             // Buat SPB Project baru
@@ -750,6 +753,8 @@ class SPBController extends Controller
                 'tanggal_berahir_spb',
                 'harga_total_pembayaran_borongan_spb',
                 'type_termin_spb',
+                'company_id',
+                'vendor_borongan_id',
             ]));
 
              // Proses produk_data
@@ -910,6 +915,8 @@ class SPBController extends Controller
                 $request->merge(['project_id' => null]);
             }
 
+            $company_id = $request->vendor_borongan_id;
+
             // Mengupdate data SPB Project sesuai dengan input pada request
             $spbProject->update($request->only([
                 'doc_type_spb',
@@ -923,7 +930,14 @@ class SPBController extends Controller
                 'harga_termin_spb',
                 'deskripsi_termin_spb',
                 'type_termin_spb',
+                'company_id',
+                'vendor_borongan_id',
             ]));
+
+            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN && $company_id) {
+                $spbProject->company_id = $company_id; // Update company_id dengan vendor_borongan_id
+                $spbProject->save();
+            }
 
             // Menyimpan atau mengganti file attachment jika ada
             if ($request->hasFile('attachment_file_spb')) {
@@ -1210,6 +1224,8 @@ class SPBController extends Controller
                 : SpbProject::TEXT_NON_PROJECT_SPB,
         ];
 
+        $company = $spbProject->company;
+
         // Siapkan data proyek untuk dikembalikan
         $data = [
             "doc_no_spb" => $spbProject->doc_no_spb,
@@ -1384,6 +1400,12 @@ class SPBController extends Controller
             'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
             'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
             "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
+            "vendor_borongan" => $company ? [
+                    "id" => $company->id,
+                    "name" => $company->name,
+                    "bank_name" => $company->bank_name,
+                    "account_name" => $company->account_name,
+                ] : null,
             "harga_total_termin_spb" => $spbProject->harga_termin_spb ?? null,
             "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
             "riwayat_termin" => $this->getRiwayatTermin($spbProject),
@@ -1434,6 +1456,8 @@ class SPBController extends Controller
             ? SpbProject::TEXT_PROJECT_SPB
             : SpbProject::TEXT_NON_PROJECT_SPB,
     ];
+
+    $company = $spbProject->company;
 
     // Siapkan data proyek untuk dikembalikan
     $data = [
@@ -1616,6 +1640,12 @@ class SPBController extends Controller
             "tanggal_dibuat_spb" => $spbProject->tanggal_dibuat_spb,
             "tanggal_berahir_spb" => $spbProject->tanggal_berahir_spb,
             "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
+            "vendor_borongan" => $company ? [
+                    "id" => $company->id,
+                    "name" => $company->name,
+                    "bank_name" => $company->bank_name,
+                    "account_name" => $company->account_name,
+                ] : null,
             "harga_total_termin_spb" => $spbProject->harga_termin_spb ?? null,
             "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
             "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
@@ -1918,29 +1948,40 @@ class SPBController extends Controller
 
         // Pengecekan untuk TAB_PAYMENT_REQUEST
         elseif ($spbProject->tab_spb == SpbProject::TAB_PAYMENT_REQUEST) {
-            $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
-            $nowDate = Carbon::now();
-
-            $data = [
-                "id" => SpbProject_Status::OPEN,
-                "name" => SpbProject_Status::TEXT_OPEN,
-                "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
-            ];
-
-            if ($nowDate->gt($dueDate)) {
+            // Pastikan jika statusnya REJECTED, maka status akan diubah menjadi REJECTED dalam respons
+            if ($spbProject->status->id == SpbProject_Status::REJECTED) {
                 $data = [
-                    "id" => SpbProject_Status::OVERDUE,
-                    "name" => SpbProject_Status::TEXT_OVERDUE,
+                    "id" => SpbProject_Status::REJECTED,
+                    "name" => 'Rejected',
+                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    "reject_note" => $spbProject->reject_note ?? 'No reject note',  // Menambahkan catatan reject
+                ];
+            } else {
+                // Jika status lainnya, tetap ikuti kondisi sebelumnya
+                $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
+                $nowDate = Carbon::now();
+
+                $data = [
+                    "id" => SpbProject_Status::OPEN,
+                    "name" => SpbProject_Status::TEXT_OPEN,
                     "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
                 ];
-            }
 
-            if ($nowDate->toDateString() == $spbProject->tanggal_berahir_spb) {
-                $data = [
-                    "id" => SpbProject_Status::DUEDATE,
-                    "name" => SpbProject_Status::TEXT_DUEDATE,
-                    "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
-                ];
+                if ($nowDate->gt($dueDate)) {
+                    $data = [
+                        "id" => SpbProject_Status::OVERDUE,
+                        "name" => SpbProject_Status::TEXT_OVERDUE,
+                        "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    ];
+                }
+
+                if ($nowDate->toDateString() == $spbProject->tanggal_berahir_spb) {
+                    $data = [
+                        "id" => SpbProject_Status::DUEDATE,
+                        "name" => SpbProject_Status::TEXT_DUEDATE,
+                        "tab_spb" => $tabName,  // Menambahkan tab dari nama yang sudah diambil
+                    ];
+                }
             }
         }
 
@@ -2217,10 +2258,17 @@ class SPBController extends Controller
                 ]);
             }
 
+             // Cek kategori SPB, jika kategori BORONGAN, ubah tab_spb ke PAYMENT REQUEST setelah accept
+            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
+                $tabSpb = SpbProject::TAB_PAYMENT_REQUEST; // Ubah tab SPB ke Payment Request
+            } else {
+                $tabSpb = SpbProject::TAB_VERIFIED; // Jika bukan BORONGAN, tetap di VERIFIED
+            }
+
             // Perbarui status, tab, dan know_finance untuk SPB Project
             $spbProject->update([
                 'spbproject_status_id' => $spbStatus,
-                'tab_spb' => SpbProject::TAB_VERIFIED,
+                'tab_spb' => $tabSpb,
                 'know_finance' => auth()->user()->hasRole(Role::FINANCE) ? auth()->user()->id : null, // Tandai bahwa Finance telah menerima SPB
                 'approve_date' => now(), // Waktu persetujuan
             ]);
@@ -2228,7 +2276,7 @@ class SPBController extends Controller
             // Tambahkan log
             LogsSPBProject::create([
                 'spb_project_id' => $spbProject->doc_no_spb,
-                'tab_spb' => SpbProject::TAB_VERIFIED,
+                'tab_spb' => $tabSpb,
                 'name' => auth()->user()->name,
                 'message' => "SPB Project {$spbProject->doc_no_spb} is now acknowledged by " . auth()->user()->name,
             ]);
@@ -2405,11 +2453,13 @@ class SPBController extends Controller
         }
 
         try {
+            $isFlashCash = $SpbProject->spbproject_category_id == SpbProject_Category::FLASH_CASH;
+
             // Update status dan tab di SpbProject
             $SpbProject->update([
                 'spbproject_status_id' => SpbProject_Status::REJECTED, // Status diubah menjadi REJECTED
                 'reject_note' => $request->note,
-                'tab_spb' => SpbProject::TAB_SUBMIT, // Tab tetap di SUBMIT
+                'tab_spb' => $isFlashCash ? SpbProject::TAB_PAYMENT_REQUEST : SpbProject::TAB_SUBMIT, 
             ]);
 
              // Mengupdate status produk yang terkait dengan SPB Project menjadi REJECTED
@@ -2418,9 +2468,9 @@ class SPBController extends Controller
             ]);
 
             // Mengecek apakah log dengan tab SUBMIT sudah ada sebelumnya untuk user yang sama
-            $existingLog = $SpbProject->logs()->where('tab_spb', SpbProject::TAB_SUBMIT)
-                                            ->where('name', auth()->user()->name)
-                                            ->first();
+            $existingLog = $SpbProject->logs()->where('tab_spb', $isFlashCash ? SpbProject::TAB_PAYMENT_REQUEST : SpbProject::TAB_SUBMIT)
+            ->where('name', auth()->user()->name)
+            ->first();
 
             if ($existingLog) {
                 // Jika log sudah ada, update pesan log yang sesuai
@@ -2432,7 +2482,7 @@ class SPBController extends Controller
             } else {
                 // Menyimpan log untuk reject jika belum ada
                 $SpbProject->logs()->create([
-                    'tab_spb' => SpbProject::TAB_SUBMIT, // Tab tetap di SUBMIT
+                    'tab_spb' => $isFlashCash ? SpbProject::TAB_PAYMENT_REQUEST : SpbProject::TAB_SUBMIT,
                     'name' => auth()->user()->name, // Nama pengguna yang melakukan aksi
                     'message' => 'SPB Project has been rejected', // Pesan untuk aksi reject
                     'reject_note' => $request->note, // Simpan note_reject dari request
@@ -2623,6 +2673,8 @@ class SPBController extends Controller
                 return MessageActeeve::error('SPB Project tidak dalam status REJECTED!');
             }
 
+            $company_id = $request->vendor_borongan_id;
+
             // Melakukan update terhadap SpbProject dengan data yang diterima pada request
             $SpbProject->update($request->only([
                 'doc_no_spb',
@@ -2637,15 +2689,43 @@ class SPBController extends Controller
                 'tanggal_berahir_spb',
                 'harga_total_pembayaran_borongan_spb',
                 'type_termin_spb',
+                'company_id',
+                'vendor_borongan_id',
             ]));
+
+            if ($SpbProject->spbproject_category_id == SpbProject_Category::BORONGAN && $company_id) {
+                $SpbProject->company_id = $company_id; // Update company_id dengan vendor_borongan_id
+                $SpbProject->save();
+            }
 
             // Menghapus produk lama yang terkait dengan SPB Project sebelum mengaktifkannya
             // $SpbProject->products()->detach();
 
+            $isFlashCash = $SpbProject->spbproject_category_id == SpbProject_Category::FLASH_CASH;
+
+            // Logika status berdasarkan tanggal berakhir SPB untuk kategori FLASH_CASH
+            if ($isFlashCash) {
+                // Periksa tanggal berakhir SPB
+                $dueDate = Carbon::parse($SpbProject->tanggal_berahir_spb);
+                $nowDate = Carbon::now();
+
+                // Tentukan status berdasarkan tanggal
+                if ($nowDate->isSameDay($dueDate)) {
+                    $spbStatus = SpbProject_Status::DUEDATE; // Status Due Date
+                } elseif ($nowDate->gt($dueDate)) {
+                    $spbStatus = SpbProject_Status::OVERDUE; // Status Overdue
+                } elseif ($nowDate->lt($dueDate)) {
+                    $spbStatus = SpbProject_Status::OPEN; // Status Open
+                }
+            } else {
+                // Untuk kategori lainnya, langsung set status ke AWAITING
+                $spbStatus = SpbProject_Status::AWAITING;
+            }
+
             // Pastikan reject_note dihapus saat SPB Project diaktifkan
             $SpbProject->update([
-                'spbproject_status_id' => SpbProject_Status::AWAITING, // Status diubah menjadi AWAITING
-                'tab_spb' => SpbProject::TAB_SUBMIT, // Tab tetap di SUBMIT
+                'spbproject_status_id' => $spbStatus,// Status diubah menjadi AWAITING
+                'tab_spb' => $isFlashCash ? SpbProject::TAB_PAYMENT_REQUEST : SpbProject::TAB_SUBMIT, 
                 'reject_note' => null, // Menghapus reject note yang sebelumnya
                 'type_project' => $request->type_project,
             ]);
@@ -2708,11 +2788,19 @@ class SPBController extends Controller
                 }
             }
 
+            $statusName = SpbProject_Status::find($SpbProject->spbproject_status_id)->name;
+
+            // Tentukan pesan log sesuai dengan kategori SPB
+            $message = $isFlashCash 
+                ? "SPB Project $docNo dengan jenis FLASH CASH telah diaktifkan dan statusnya sekarang '$statusName' dengan tab 'Payment Request'." 
+                : "SPB Project $docNo telah diaktifkan dan statusnya sekarang '$statusName'.";
+
+
              // Menambahkan log untuk aksi activate
             $SpbProject->logs()->create([
-                'tab_spb' => SpbProject::TAB_SUBMIT,
+                'tab_spb' => $isFlashCash ? SpbProject::TAB_PAYMENT_REQUEST : SpbProject::TAB_SUBMIT, 
                 'name' => auth()->user()->name, // Nama pengguna yang melakukan aktivasi
-                'message' => 'SPB Project has been activated and status is now awaiting.', // Pesan log
+                'message' => $message,// Pesan log
                 'created_at' => now(),
             ]);
 
@@ -2721,7 +2809,7 @@ class SPBController extends Controller
             DB::commit();
 
             // Kembali dengan pesan sukses
-            return MessageActeeve::success("SPB Project $docNo telah diaktifkan dan statusnya sekarang awaiting.");
+            return MessageActeeve::success("SPB Project $docNo telah diaktifkan dan statusnya sekarang '$statusName'.");
 
         } catch (\Throwable $th) {
             // Rollback transaksi jika ada error
@@ -2903,7 +2991,9 @@ class SPBController extends Controller
                     ]);
                     $newTermin->save();
             
-                    $updateFields['harga_termin_spb'] = $request->harga_termin_spb;
+                    $totalHargaTermin = $spbProject->termins->sum('harga_termin');
+                    $updateFields['harga_termin_spb'] = $totalHargaTermin;  // Update field harga total termin
+
                     $updateFields['deskripsi_termin_spb'] = $request->deskripsi_termin_spb;
                 }
 

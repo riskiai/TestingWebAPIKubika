@@ -9,14 +9,15 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
 use App\Mail\ResetPasswordMail;
+use App\Mail\PasswordRecoveryMail;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\User\CreateNotLoginRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\User\CreateRequest;
 use App\Http\Requests\User\UpdateRequest;
 use App\Http\Resources\Users\UsersCollection;
+use App\Http\Requests\User\CreateNotLoginRequest;
 use App\Http\Requests\User\UpdatePasswordRequest;
 
 class UsersController extends Controller
@@ -179,7 +180,43 @@ class UsersController extends Controller
         }
     }
 
+    public function UpdatePasswordWithEmail(Request $request)
+    {
+        DB::beginTransaction();
     
+        try {
+            // Validasi email yang diberikan
+            $request->validate([
+                'email' => 'required|email|exists:users,email', // Pastikan email valid dan ada di database
+            ]);
+    
+            // Ambil user berdasarkan email
+            $user = User::where('email', $request->email)->first();
+    
+            if (!$user) {
+                return MessageActeeve::error('Email not found!'); // Jika tidak ada user dengan email ini
+            }
+    
+            // Generate password baru secara acak
+            $newPassword = $this->generateRandomPassword(); // 8 karakter, bisa disesuaikan
+    
+            // Update password pengguna dengan password baru
+            $user->update([
+                'password' => bcrypt($newPassword), // Enkripsi password
+            ]);
+    
+            // Kirim email dengan password baru ke pengguna
+            Mail::to($user->email)->send(new PasswordRecoveryMail($user, $newPassword));
+    
+            DB::commit();
+    
+            // Tambahkan password baru di response
+            return MessageActeeve::success('Password has been reset successfully. Check your email for the new password.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error('An error occurred while resetting the password: ' . $th->getMessage());
+        }
+    }
 
     public function store(CreateRequest $request)
     {

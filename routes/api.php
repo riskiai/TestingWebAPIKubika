@@ -32,6 +32,7 @@ Route::prefix('auth')->group(function () {
 
 Route::get('show/{id}', [SPBController::class, 'showNotLogin']);
 Route::post('store-notlogin', [UsersController::class, 'storeNotLogin']);
+Route::put('updatepassword-email', [UsersController::class, 'UpdatePasswordWithEmail']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
      // Users

@@ -36,10 +36,6 @@ class Company extends Model
         'swift_code',
     ];
 
-    /**
-     * Relasi ke tabel contact_type
-     * Sebuah perusahaan memiliki satu tipe kontak
-     */
     public function contactType()
     {
         return $this->belongsTo(ContactType::class, 'contact_type_id');

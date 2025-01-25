@@ -109,23 +109,34 @@ class ProjectCollection extends ResourceCollection
                 ],
                 // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
                 'spb_projects' => $project->spbProjects->map(function ($spbProject) {
+                    // Memeriksa kategori SPB, jika kategori BORONGAN maka ambil nilai harga_total_pembayaran_borongan_spb
+                    $spbCategory = $spbProject->spbproject_category_id;
+                    $isBorongan = $spbCategory == \App\Models\SpbProject_Category::BORONGAN;
+
                     return [
                         'doc_no_spb' => $spbProject->doc_no_spb,
                         'doc_type_spb' => $spbProject->doc_type_spb,
                         'unit_kerja' => $spbProject->unit_kerja,
                         'tanggal_dibuat_spb' => $spbProject->tanggal_dibuat_spb,
                         'tanggal_berahir_spb' => $spbProject->tanggal_berahir_spb,
-                        // Menampilkan seluruh produk yang terkait, tanpa filter status PAID
+                        
+                        // Menambahkan informasi kategori Borongan
+                        'kategori_spb' => \App\Models\SpbProject_Category::getCategoryName($spbProject->spbproject_category_id),
+                        
+                        // Menampilkan produk yang terkait
                         'produk' => $spbProject->productCompanySpbprojects->map(function ($product) use ($spbProject) {
                             return [
                                 'produk_id' => $product->produk_id,
                                 'produk_nama' => $product->product->nama ?? 'Unknown',
                                 'vendor_id' => $product->company->id ?? 'Unknown',
                                 'vendor_name' => $product->company->name ?? 'Unknown',
-                                'subtotal_produk' => $product->subtotal_produk, 
+                                'subtotal_produk' => $product->subtotal_produk,
                             ];
                         }),
                         'total_keseluruhanproduk' => $spbProject->total_produk,
+
+                        // Menambahkan kondisi untuk biaya borongan
+                        'spb_borongan_cost' => $isBorongan ? $spbProject->harga_total_pembayaran_borongan_spb : null, // Menampilkan harga borongan jika kategori borongan
                     ];
                 }),
                /* 'file_attachment_spb' => [
@@ -219,13 +230,18 @@ class ProjectCollection extends ResourceCollection
         $status = Project::STATUS_OPEN;
         $totalSpbCost = 0;
         $totalManPowerCost = 0;
+        $totalSpbBoronganCost = 0; // Menambahkan variabel untuk spb_borongan_cost
 
         // Ambil semua SPB Project dengan status 'PAID'
         $spbProjects = $project->spbProjects()->where('tab_spb', SpbProject::TAB_PAID)->get();
 
         // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
         foreach ($spbProjects as $spbProject) {
+            // Total biaya produk SPB
             $totalSpbCost += $spbProject->getTotalProdukAttribute();
+
+            // Total biaya borongan SPB
+            $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0; // Ambil harga borongan jika ada
         }
 
         // Hitung total salary dari ManPower terkait proyek
@@ -235,8 +251,9 @@ class ProjectCollection extends ResourceCollection
         }
 
         // Total biaya aktual (real cost)
-        $totalCost = $totalSpbCost + $totalManPowerCost;
+        $totalCost = $totalSpbCost + $totalManPowerCost + $totalSpbBoronganCost; // Menambahkan spb_borongan_cost
 
+        // Percent Itu didapat dari cost estimate project dibagi dengan total cost * 100
         // Cek jika cost_estimate lebih besar dari 0 sebelum melakukan pembagian
         if ($project->cost_estimate > 0) {
             $costEstimate = round(($totalCost / $project->cost_estimate) * 100, 2);
@@ -262,11 +279,11 @@ class ProjectCollection extends ResourceCollection
             'status_cost_progres' => $status,
             'percent' => $costEstimate . '%',
             'real_cost' => $totalCost,
-            'spb_cost' => $totalSpbCost,
+            'spb_produk_cost' => $totalSpbCost,
+            'spb_borongan_cost' => $totalSpbBoronganCost, // Menambahkan spb_borongan_cost
             'man_power_cost' => $totalManPowerCost,
         ];
     }
-
 
     protected function tukangHarianSalary($query) {
         return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", true)->first()->total;
