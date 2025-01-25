@@ -60,7 +60,7 @@ class Project extends Model
         'cost_estimate',
         'margin',
         'percent',
-        'status_cost_progress',
+        'status_cost_progres',
         'file',
         'spb_file',
         'date',

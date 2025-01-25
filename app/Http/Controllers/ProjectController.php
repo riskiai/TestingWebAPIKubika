@@ -191,7 +191,8 @@ class ProjectController extends Controller
 
         // Filter berdasarkan status cost progress
         if ($request->has('status_cost_progres')) {
-            $query->where('status_cost_progres', $request->status_cost_progres);
+            $statusCostProgress = $request->status_cost_progres;
+            $query->where('status_cost_progres', $statusCostProgress);
         }
 
         if ($request->has('no_dokumen_project')) {
