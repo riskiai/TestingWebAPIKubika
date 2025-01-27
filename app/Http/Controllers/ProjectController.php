@@ -355,7 +355,7 @@ class ProjectController extends Controller
     public function counting(Request $request)
     {
         $query = Project::query();
-    
+
         if ($request->has('search')) {
             $query->where(function ($query) use ($request) {
                 $query->where('id', 'like', '%' . $request->search . '%');
@@ -365,16 +365,16 @@ class ProjectController extends Controller
                 });
             });
         }
-    
+
         // Lakukan filter berdasarkan project jika ada
         if ($request->has('project')) {
             $query->where('id', $request->project);
         }
-    
+
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-    
+
         if ($request->has('vendor')) {
             $query->where('company_id', $request->vendor);
         }
@@ -382,33 +382,29 @@ class ProjectController extends Controller
         if ($request->has('marketing_id')) {
             $query->whereHas('tenagaKerja', function ($q) use ($request) {
                 $q->where('users.id', $request->marketing_id) // Filter berdasarkan ID marketing
-                  ->whereHas('role', function ($roleQuery) {
-                      $roleQuery->where('role_id', Role::MARKETING); // Pastikan role adalah Marketing
-                  });
+                ->whereHas('role', function ($roleQuery) {
+                    $roleQuery->where('role_id', Role::MARKETING); // Pastikan role adalah Marketing
+                });
             });
-        }      
-    
+        }
+
         if ($request->has('date')) {
             $date = str_replace(['[', ']'], '', $request->date);
             $date = explode(", ", $date);
             $query->whereBetween('created_at', $date);
         }
-    
-         // Pagination sesuai dengan jumlah data yang ingin ditampilkan
-        $perPage = $request->has('per_page') ? (int) $request->per_page : 10;  // default value = 10
-        $projectData = $query->paginate($perPage);
 
-        // Mengambil koleksi dari data yang dipaginasi menggunakan method 'items()'
-        $collection = $projectData->items();
+        // Ambil seluruh data tanpa paginasi
+        $collection = $query->get();
 
-        // Menghitung total billing, cost_estimate, dan margin untuk halaman aktif
-        $totalBilling = collect($collection)->sum('billing');
-        $totalCostEstimate = collect($collection)->sum('cost_estimate');
-        $totalMargin = collect($collection)->sum('margin');
+        // Menghitung total billing, cost_estimate, dan margin untuk seluruh data
+        $totalBilling = $collection->sum('billing');
+        $totalCostEstimate = $collection->sum('cost_estimate');
+        $totalMargin = $collection->sum('margin');
 
         // Menghitung persentase margin terhadap billing
         $percent = ($totalBilling > 0) ? ($totalMargin / $totalBilling) * 100 : 0;
-        $percent = round($percent, 2) . '%'; // Membulatkan hingga dua angka desimal
+        $percent = round($percent, 2) . '%';
 
         $totalHargaType = (float) $query->sum('harga_type_project');
 
@@ -420,7 +416,8 @@ class ProjectController extends Controller
             "percent" => $percent,
             "harga_type_project_total_borongan" => $totalHargaType,
         ]);
-    } 
+    }
+
 
     public function createInformasi(StoreRequest $request)
     {

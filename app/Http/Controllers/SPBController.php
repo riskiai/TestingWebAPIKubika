@@ -2543,11 +2543,11 @@ class SPBController extends Controller
 
             // Logika pembaruan status berdasarkan tanggal akhir SPB
             if ($nowDate->isSameDay($dueDate)) {
-                $spbStatus = SpbProject_Status::DUEDATE; // Status Due Date
+                $spbStatus = SpbProject_Status::DUEDATE; 
             } elseif ($nowDate->gt($dueDate)) {
-                $spbStatus = SpbProject_Status::OVERDUE; // Status Overdue
+                $spbStatus = SpbProject_Status::OVERDUE; 
             } elseif ($nowDate->lt($dueDate)) {
-                $spbStatus = SpbProject_Status::OPEN; // Status Open
+                $spbStatus = SpbProject_Status::OPEN; 
             }
 
             // Iterasi semua produk yang terkait dengan SPB Project
