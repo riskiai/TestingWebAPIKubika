@@ -67,6 +67,9 @@ class SPBController extends Controller
                       ->orWhere('doc_type_spb', 'like', '%' . $request->search . '%')
                       ->orWhereHas('company', function ($query) use ($request) {
                           $query->where('name', 'like', '%' . $request->search . '%');
+                      })
+                      ->orWhereHas('vendors', function ($query) use ($request) {
+                          $query->where('name', 'like', '%' . $request->search . '%'); // Filter vendor
                       });
             });
         }
@@ -2159,6 +2162,107 @@ class SPBController extends Controller
         }
     }
 
+    public function deleteTermin(Request $request, $docNoSpb)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Validasi input JSON
+            if (!$request->has('riwayat_termin') || !is_array($request->riwayat_termin)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid JSON format. "riwayat_termin" must be an array of IDs.',
+                ], 400);
+            }
+
+            // Ambil ID termin yang akan dihapus
+            $terminIdsToDelete = $request->riwayat_termin;
+
+            // Cari termin yang sesuai dengan ID yang diberikan
+            $terminsToDelete = DB::table('spb_project_termins')
+                ->where('doc_no_spb', $docNoSpb)
+                ->whereIn('id', $terminIdsToDelete)
+                ->get();
+
+            if ($terminsToDelete->isEmpty()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No valid termin IDs found for deletion!',
+                ], 404);
+            }
+
+            // Cek apakah ada termin dengan type_termin_spb == TYPE_TERMIN_LUNAS
+            $cannotDeleteTermin = $terminsToDelete->firstWhere('type_termin_spb', SpbProject::TYPE_TERMIN_LUNAS);
+
+            if ($cannotDeleteTermin) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'One or more termin(s) cannot be deleted because they are already marked as Lunas.',
+                ], 400);
+            }
+
+            // Loop untuk menghapus setiap termin
+            foreach ($terminsToDelete as $termin) {
+                // Hapus file attachment jika ada
+                if (!empty($termin->file_attachment_id)) {
+                    $file = DB::table('document_spb')->where('id', $termin->file_attachment_id)->first();
+                    if ($file) {
+                        if (Storage::disk('public')->exists($file->file_path)) {
+                            Storage::disk('public')->delete($file->file_path);
+                        }
+                        DB::table('document_spb')->where('id', $termin->file_attachment_id)->delete();
+                    }
+                }
+
+                // Hapus termin dari database
+                DB::table('spb_project_termins')->where('id', $termin->id)->delete();
+            }
+
+            // Hitung ulang total harga termin
+            $totalHargaTermin = DB::table('spb_project_termins')
+                ->where('doc_no_spb', $docNoSpb)
+                ->sum(DB::raw('CAST(harga_termin AS UNSIGNED)')); // Pastikan tipe data
+
+            // Jika tidak ada termin yang tersisa
+            if ($totalHargaTermin == 0) {
+                DB::table('spb_projects')->where('doc_no_spb', $docNoSpb)->update([
+                    'deskripsi_termin_spb' => null,
+                    'type_termin_spb' => null,
+                    'harga_termin_spb' => 0,
+                ]);
+            } else {
+                // Jika masih ada termin, ambil termin terakhir untuk update deskripsi dan type
+                $lastTermin = DB::table('spb_project_termins')
+                    ->where('doc_no_spb', $docNoSpb)
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                DB::table('spb_projects')->where('doc_no_spb', $docNoSpb)->update([
+                    'deskripsi_termin_spb' => $lastTermin->deskripsi_termin,
+                    'type_termin_spb' => $lastTermin->type_termin_spb,
+                    'harga_termin_spb' => $totalHargaTermin,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Selected termin(s) deleted successfully!',
+                'remaining_total_termin' => $totalHargaTermin,
+            ]);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            Log::error('Error during termin deletion: ' . $th->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
+
+
     public function updateTermin(UpdateTerminRequest $request, $docNo)
     {
         DB::beginTransaction();
@@ -2404,12 +2508,23 @@ class SPBController extends Controller
                 ], 404);
             }
 
-             // Validasi apakah semua persetujuan sudah diisi
-            if (!$spbProject->know_kepalagudang || !$spbProject->know_supervisor || !$spbProject->request_owner) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Cannot accept SPB Project. All approvals must be completed first.',
-                ], 400);
+             // Validasi persetujuan berdasarkan kategori SPB
+            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
+                // Jika kategori BORONGAN, hanya perlu persetujuan request_owner
+                if (!$spbProject->request_owner) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Cannot accept SPB Project. Request owner approval is required for BORONGAN category.',
+                    ], 400);
+                }
+            } else {
+                // Jika kategori lain, semua persetujuan harus diisi
+                if (!$spbProject->know_kepalagudang || !$spbProject->know_supervisor || !$spbProject->request_owner) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Cannot accept SPB Project. All approvals must be completed first.',
+                    ], 400);
+                }
             }
 
              // Validasi apakah user memiliki peran Finance, Owner, atau Admin
@@ -2601,7 +2716,40 @@ class SPBController extends Controller
         }
     
         try {
-            // Mengurangi nilai tab_spb satu tingkat
+            // Cek apakah kategori SPB adalah BORONGAN
+            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
+                // Reset tab_spb ke SUBMIT untuk kategori BORONGAN
+                $newTab = SpbProject::TAB_SUBMIT;
+    
+                // Reset status produk di pivot table
+                foreach ($spbProject->productCompanySpbprojects as $product) {
+                    $product->update([
+                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, // Ubah status menjadi "Awaiting"
+                        'ppn' => 0, // Reset PPN
+                        'pph' => null, // Reset PPH
+                    ]);
+                }
+    
+                // Update status SPB Project dan tab
+                $spbProject->update([
+                    'spbproject_status_id' => SpbProject_Status::AWAITING,  // Status diubah kembali ke AWAITING
+                    'tab_spb' => $newTab,  // Tab dikembalikan ke SUBMIT
+                ]);
+    
+                // Tambahkan log undo untuk kategori BORONGAN
+                LogsSPBProject::create([
+                    'spb_project_id' => $spbProject->doc_no_spb,
+                    'tab_spb' => $newTab,
+                    'name' => auth()->user()->name,
+                    'message' => 'SPB Project with category BORONGAN has been undone and reverted to SUBMIT',
+                ]);
+    
+                DB::commit();
+    
+                return MessageActeeve::success("SPB Project $docNoSpb has been undone successfully and reverted to SUBMIT for BORONGAN category");
+            }
+    
+            // Jika bukan kategori BORONGAN, kurangi tab_spb satu tingkat
             $newTab = $spbProject->tab_spb - 1;
     
             // Reset status produk di pivot table
@@ -2613,18 +2761,18 @@ class SPBController extends Controller
                 ]);
             }
     
-            // Update status SPB Project dan tab sesuai dengan pengurangan
+            // Update status SPB Project dan tab
             $spbProject->update([
                 'spbproject_status_id' => SpbProject_Status::AWAITING,  // Status diubah kembali ke AWAITING
                 'tab_spb' => $newTab,  // Tab dikurangi satu tingkat
             ]);
     
-            // Tambahkan log undo
+            // Tambahkan log undo untuk kategori lain
             LogsSPBProject::create([
                 'spb_project_id' => $spbProject->doc_no_spb,
-                'tab_spb' => $newTab,  // Tab sesuai dengan yang baru
+                'tab_spb' => $newTab,
                 'name' => auth()->user()->name,
-                'message' => 'SPB Project has been undone and reverted',  // Pesan untuk undo
+                'message' => 'SPB Project has been undone and reverted',
             ]);
     
             DB::commit();
@@ -2636,6 +2784,7 @@ class SPBController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
+    
     
 
     public function reject($docNoSpb, Request $request)

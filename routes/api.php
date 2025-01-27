@@ -147,6 +147,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('spbproject/reject/{id}', [SPBController::class, 'reject']);
     Route::put('spbproject/reject-produk/{id}', [SPBController::class, 'rejectproduk']);
 
+    Route::delete('spbproject/delete-termin/{id}', [SPBController::class, 'deleteTermin']);
     Route::put('spbproject/update-termin/{id}', [SPBController::class, 'updateTermin']);
     Route::post('spbproject/add-produk/{id}', [SPBController::class, 'storeProduk']);
     Route::put('spbproject/activate-produk/{id}', [SPBController::class, 'activateproduk']);
