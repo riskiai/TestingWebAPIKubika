@@ -2332,7 +2332,6 @@ class SPBController extends Controller
         }
     }
 
-
     public function accept($id)
     {
         DB::beginTransaction();
@@ -2345,6 +2344,14 @@ class SPBController extends Controller
                     'status' => 'error',
                     'message' => 'SPB Project not found!',
                 ], 404);
+            }
+
+             // Validasi apakah semua persetujuan sudah diisi
+            if (!$spbProject->know_kepalagudang || !$spbProject->know_supervisor || !$spbProject->request_owner) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cannot accept SPB Project. All approvals must be completed first.',
+                ], 400);
             }
 
              // Validasi apakah user memiliki peran Finance, Owner, atau Admin
@@ -3087,11 +3094,11 @@ class SPBController extends Controller
             }
 
             $actorField = null;
-            if (auth()->user()->hasRole(Role::FINANCE)) {
+          /*   if (auth()->user()->hasRole(Role::FINANCE)) {
                 $actorField = 'know_finance';
             } elseif (auth()->user()->hasRole(Role::OWNER)) {
                 $actorField = 'request_owner';
-            }
+            } */
 
             // Logika untuk Borongan
             if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
