@@ -220,16 +220,18 @@ class SPBController extends Controller
                 ], 403);
         }
 
-        // Pagination bawaan Laravel
-        $perPage = $request->get('per_page', 10); // Default 10 item per halaman
-        $currentPage = $request->get('page', 1); // Halaman saat ini
+        $perPage = $request->get('per_page', 10); 
+        $currentPage = $request->get('page', 1);
         $paginatedData = $query->paginate($perPage, ['*'], 'page', $currentPage);
 
         // Map data untuk detail unapproved SPB
         $detailUnapprovedSpb = $paginatedData->map(function ($spb) {
+            $projectId = $spb->project ? $spb->project->id : null;
+
             return [
                 'docNo' => $spb->doc_no_spb,
-                'unapprove_spb' => 1, // Setiap entry dihitung sebagai 1 unapprove SPB
+                'projectId' => $projectId,
+                'unapprove_spb' => 1, 
                 'createdAt' => $spb->created_at,
                 'updatedAt' => $spb->updated_at,
             ];
