@@ -182,7 +182,6 @@ class ProjectController extends Controller
                       });
             });
         }
-        
 
         // Filter berdasarkan status request_status_owner
         if ($request->has('request_status_owner')) {
@@ -364,6 +363,51 @@ class ProjectController extends Controller
                     $query->where('name', 'like', '%' . $request->search . '%');
                 });
             });
+        }
+
+        if ($request->has('year')) {
+            $year = $request->year;
+            $query->whereYear('date', $year);
+        }
+
+          // Terapkan filter berdasarkan peran pengguna
+          if ($request->has('role_id')) {
+            // Ambil array role_id dari request, pastikan dalam bentuk array
+            $roleIds = is_array($request->role_id) ? $request->role_id : explode(',', $request->role_id);
+
+            // Terapkan filter untuk role_id
+            $query->whereHas('tenagaKerja', function ($q) use ($roleIds) {
+                $q->whereIn('role_id', $roleIds); // Pastikan menggunakan role_id
+            });
+        }
+
+        if ($request->has('status_cost_progres')) {
+            $statusCostProgress = $request->status_cost_progres;
+            $query->where('status_cost_progres', $statusCostProgress);
+        }
+
+        if ($request->has('divisi_name')) {
+            $divisiNames = is_array($request->divisi_name) ? $request->divisi_name : explode(',', $request->divisi_name);
+
+            $query->whereHas('tenagaKerja.divisi', function ($q) use ($divisiNames) {
+                $q->whereIn('name', $divisiNames); // Filter berdasarkan name divisi
+            });
+        }
+
+        if ($request->has('request_status_owner')) {
+            $query->where('request_status_owner', $request->request_status_owner);
+        }
+
+        if ($request->has('no_dokumen_project')) {
+            $query->where('no_dokumen_project', 'like', '%' . $request->no_dokumen_project . '%');
+        } 
+
+        if ($request->has('type_projects')) {
+            $typeProjects = is_array($request->type_projects) 
+                ? $request->type_projects 
+                : explode(',', $request->type_projects);
+    
+            $query->whereIn('type_projects', $typeProjects); // Filter proyek berdasarkan type_projects
         }
 
         // Lakukan filter berdasarkan project jika ada
