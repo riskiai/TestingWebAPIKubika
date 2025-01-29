@@ -144,16 +144,27 @@ class SPBController extends Controller
         }
 
         // Filter berdasarkan range date (tanggal_dibuat_spb atau tanggal tertentu dari SPB Project)
-        if ($request->has('tanggal_dibuat_spb')) {
-            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb)); // Parsing tanggal range
+        /* if ($request->has('tanggal_dibuat_spb')) {
+            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb)); 
             $query->whereBetween('tanggal_dibuat_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
-        }
+        } */
 
 
         // Filter berdasarkan due_date (tanggal_berahir_spb)
-        if ($request->has('tanggal_berahir_spb')) {
-            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_berahir_spb)); // Parsing tanggal range
+       /*  if ($request->has('tanggal_berahir_spb')) {
+            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_berahir_spb)); 
             $query->whereBetween('tanggal_berahir_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
+        } */
+
+        if ($request->has('tanggal_dibuat_spb')) {
+            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
+            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
+        }
+    
+        // Filter berdasarkan tanggal_berahir_spb
+        if ($request->has('tanggal_berahir_spb')) {
+            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
+            $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
         }
 
         // Pengurutan berdasarkan tab
@@ -190,10 +201,17 @@ class SPBController extends Controller
         $user = auth()->user();
         $role = $user->role_id;
 
-        // Query dasar untuk mengambil SPB Project
+        // Query dasar untuk mengambil SPB Project berdasarkan filter
         $query = SpbProject::query();
 
-        // Tambahkan filter berdasarkan proyek jika ada
+        if ($request->has('tanggal_dibuat_spb')) {
+            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($request->tanggal_dibuat_spb));
+        }
+
+        if ($request->has('tanggal_berahir_spb')) {
+            $query->whereDate('tanggal_berahir_spb', Carbon::parse($request->tanggal_berahir_spb));
+        }
+
         if ($request->has('project')) {
             $query->where('project_id', $request->project);
         }
@@ -223,37 +241,34 @@ class SPBController extends Controller
                 ], 403);
         }
 
-        $perPage = $request->get('per_page', 10); 
+        // Ambil data dengan pagination (hanya yang difilter)
+        $perPage = $request->get('per_page', 10);
         $currentPage = $request->get('page', 1);
         $paginatedData = $query->paginate($perPage, ['*'], 'page', $currentPage);
 
+        // Hitung total SPB yang belum di-approve (berdasarkan filter)
+        $unapprovedSpb = $query->count();
+
+        // 🔥 Perbaikan totalSpb agar berubah sesuai filter
+        $totalSpb = $request->hasAny(['tanggal_dibuat_spb', 'tanggal_berahir_spb', 'project', 'doc_no_spb'])
+            ? $query->count() // Jika ada filter, gunakan query yang sama
+            : SpbProject::count(); // Jika tidak ada filter, ambil semua data
+
         // Map data untuk detail unapproved SPB
         $detailUnapprovedSpb = $paginatedData->map(function ($spb) {
-            $projectId = $spb->project ? $spb->project->id : null;
-
             return [
                 'docNo' => $spb->doc_no_spb,
-                'projectId' => $projectId,
-                'unapprove_spb' => 1, 
+                'projectId' => $spb->project ? $spb->project->id : null,
+                'unapprove_spb' => 1,
                 'createdAt' => $spb->created_at,
                 'updatedAt' => $spb->updated_at,
             ];
         });
 
-        // Hitung total SPB yang belum di-approve
-        $unapprovedSpb = $query->count();
-
-        // Query untuk menghitung total semua SPB, dengan filter proyek jika ada
-        $totalQuery = SpbProject::query();
-        if ($request->has('project')) {
-            $totalQuery->where('project_id', $request->project);
-        }
-        $totalSpb = $totalQuery->count();
-
         // Respons JSON
         return response()->json([
-            'total_spb' => $totalSpb,
-            'unapprove_spb_total' => $unapprovedSpb,
+            'total_spb' => $totalSpb,  // 🔥 Sekarang berubah sesuai filter
+            'unapprove_spb_total' => $unapprovedSpb,  // Menampilkan total SPB yang difilter
             'detail_unapprove_spb' => $detailUnapprovedSpb,
             'pagination' => [
                 'current_page' => $paginatedData->currentPage(),
@@ -264,6 +279,8 @@ class SPBController extends Controller
         ]);
     }
 
+
+
     public function countingspb(Request $request)
     {
         // Ambil data kategori Borongan saja
@@ -273,10 +290,31 @@ class SPBController extends Controller
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
 
+        if ($request->has('project')) {
+            $query->where('project_id', $request->project);
+        }
+
+        if ($request->has('doc_no_spb')) {
+            $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
+        }
+
           // Tambahkan filter berdasarkan proyek jika ada
         if ($request->has('project')) {
             $query->where('project_id', $request->project);
         }
+
+        if ($request->has('tanggal_dibuat_spb')) {
+            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
+            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
+        }
+    
+        // Filter berdasarkan tanggal_berahir_spb
+        if ($request->has('tanggal_berahir_spb')) {
+            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
+            $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
+        }
+
+        $receivedTotalSpbBorongan = $query->count();
 
         // Subtotal untuk Borongan
         $subtotalHargaTotalBorongan = $query->sum('harga_total_pembayaran_borongan_spb');
@@ -378,6 +416,7 @@ class SPBController extends Controller
 
         // Respons JSON
         return response()->json([
+            "received_total_spb_borongan" => $receivedTotalSpbBorongan,
             "subtotal_harga_pembayaran_borongan_spb" => $subtotalHargaTotalBorongan,
             "subtotal_harga_termin_spb" => $subtotalHargaTerminBorongan,
             "submit_harga_total_pembayaran_borongan_spb" => $submit,
@@ -402,6 +441,17 @@ class SPBController extends Controller
             $query->whereHas('project', function ($query) use ($request) {
                 $query->where('projects.id', $request->project);
             });
+        }
+
+        if ($request->has('tanggal_dibuat_spb')) {
+            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
+            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
+        }
+    
+        // Filter berdasarkan tanggal_berahir_spb
+        if ($request->has('tanggal_berahir_spb')) {
+            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
+            $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
         }
     
         if ($request->has('status')) {
@@ -444,17 +494,6 @@ class SPBController extends Controller
     
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
-        }
-    
-        // Filter berdasarkan range date (tanggal_dibuat_spb)
-        if ($request->has('tanggal_dibuat_spb')) {
-            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb));
-            $query->whereBetween('tanggal_dibuat_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
-        }
-    
-        if ($request->has('tanggal_berahir_spb')) {
-            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_berahir_spb));
-            $query->whereBetween('tanggal_berahir_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
         }
     
         // Ambil semua data tanpa pagination
@@ -548,7 +587,8 @@ class SPBController extends Controller
         $role = auth()->user()->role_id;
     
         // Ambil semua data SPB (filter default untuk type_project = TYPE_PROJECT_SPB)
-        $query = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB);
+       $query = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB)
+        ->whereIn('spbproject_category_id', [SpbProject_Category::FLASH_CASH, SpbProject_Category::INVOICE]);
     
         // Filter berdasarkan type_project
         if ($request->has('type_project')) {
@@ -611,14 +651,14 @@ class SPBController extends Controller
     
         // Filter berdasarkan tanggal_dibuat_spb
         if ($request->has('tanggal_dibuat_spb')) {
-            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb));
-            $query->whereBetween('tanggal_dibuat_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
+            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
+            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
         }
     
         // Filter berdasarkan tanggal_berahir_spb
         if ($request->has('tanggal_berahir_spb')) {
-            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_berahir_spb));
-            $query->whereBetween('tanggal_berahir_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
+            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
+            $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
         }
     
         // Paginate atau get data
