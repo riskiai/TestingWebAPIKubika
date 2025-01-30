@@ -24,7 +24,7 @@ class AddProdukRequest extends FormRequest
     {
         return [
             'produk' => 'required|array',
-            'produk.*.produk_id' => 'required|exists:products,id',  
+            'produk.*.produk_id' => 'required|exists:products,id',  // Validasi produk_id
             'produk.*.vendor_id' => 'required|exists:companies,id', 
             'produk.*.ongkir' => 'nullable|numeric|min:0',
             'produk.*.harga' => 'required|numeric|min:0',

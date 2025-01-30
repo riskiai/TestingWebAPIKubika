@@ -2559,7 +2559,7 @@ class SPBController extends Controller
                 }
             } else {
                 // Jika kategori lain, semua persetujuan harus diisi
-                if (!$spbProject->know_kepalagudang || !$spbProject->know_supervisor || !$spbProject->request_owner) {
+                if (!$spbProject->know_kepalagudang || !$spbProject->know_supervisor) {
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Cannot accept SPB Project. All approvals must be completed first.',
