@@ -150,61 +150,38 @@ class ProdukController extends Controller
     public function update(UpdateRequest $request, $id)
     {
         DB::beginTransaction();
-
+    
         // Cari produk berdasarkan ID
         $product = Product::find($id);
         if (!$product) {
             return MessageActeeve::notFound('Product not found!');
         }
-
+    
         try {
             // Ambil nama baru dari request, atau gunakan nama lama jika tidak ada perubahan
             $newName = $request->input('nama', $product->nama);
-
+    
             // Log nama baru untuk debugging
             Log::info('Nama Baru: ' . $newName);
-
-            // Generate slug untuk kode produk baru dari nama baru
-            $firstChar = substr($newName, 0, 1);
-            $middleChar = substr($newName, (int)(strlen($newName) / 2), 1);
-            $lastChar = substr($newName, -1);
-            $nameSlug = strtoupper($firstChar . $middleChar . $lastChar);
-
-            // Pecah kode produk lama dengan asumsi format PRD-xxx-YYY-dd-mm-yyyy
-            $kodeParts = explode('-', $product->kode_produk);
-
-            // Log kode produk lama dan hasil pemecahan
-            Log::info('Kode Produk Lama: ' . $product->kode_produk);
-            Log::info('Kode Parts: ' . json_encode($kodeParts));
-
-            // Validasi apakah kode produk memiliki format yang benar
-            if (count($kodeParts) === 4) {
-                $incrementPart = $kodeParts[1]; // Bagian nomor increment tetap sama
-                $datePart = $kodeParts[3]; // Bagian tanggal tetap sama
-            } else {
-                // Jika format tidak sesuai, gunakan default
-                $incrementPart = '001';
-                $datePart = Carbon::now()->format('d-m-Y');
-            }
-
-            // Buat kode produk baru hanya dengan mengubah singkatan nama
-            $newKodeProduk = "PRD-{$incrementPart}-{$nameSlug}-{$datePart}";
-
-            // Log kode produk yang baru
-            Log::info('Kode Produk Baru: ' . $newKodeProduk);
-
-            // Perbarui produk dengan nama dan kode_produk yang baru
+    
+            // Tidak perlu generate kode produk baru, biarkan kode_produk tetap sama
+            $newKodeProduk = $product->kode_produk; // Mempertahankan kode_produk lama
+    
+            // Log kode produk yang lama dan yang baru (tetap sama)
+            Log::info('Kode Produk (Tetap): ' . $newKodeProduk);
+    
+            // Perbarui produk dengan nama dan kode_produk yang lama
             $product->update([
                 'nama' => $newName,
                 'id_kategori' => $request->input('id_kategori', $product->id_kategori),
                 'deskripsi' => $request->input('deskripsi', $product->deskripsi),
                 'stok' => $request->input('stok', $product->stok),
-                'kode_produk' => $newKodeProduk, // Update kode produk
+                'kode_produk' => $newKodeProduk, // Pertahankan kode produk lama
                 'type_pembelian' => $request->input('type_pembelian', $product->type_pembelian),
                 'harga_product' => $request->input('harga_product', $product->harga_product),
                 // 'ongkir' => $request->input('ongkir', $product->ongkir),
             ]);
-
+    
             DB::commit();
             return MessageActeeve::success("Product {$product->nama} has been updated");
         } catch (\Throwable $th) {
@@ -213,6 +190,7 @@ class ProdukController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
+    
 
     public function destroy(string $id)
     {
