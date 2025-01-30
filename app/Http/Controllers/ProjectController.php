@@ -987,6 +987,7 @@ class ProjectController extends Controller
                         return [
                             'produk_id' => $product->produk_id,
                             'produk_nama' => $product->product->nama ?? 'Unknown',
+                            'harga_product' => $product->product ? $product->product->harga_product : 'Unknown',
                             'vendor_id' => $product->company->id ?? 'Unknown',
                             'vendor_name' => $product->company->name ?? 'Unknown',
                             'subtotal_produk' => $product->subtotal_produk,
