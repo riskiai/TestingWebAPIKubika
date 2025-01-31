@@ -87,8 +87,7 @@ class ProdukController extends Controller
 
         return new ProductCollection($products);
     }
-
-
+    
     public function store(CreateRequest $request)
     {
         DB::beginTransaction();

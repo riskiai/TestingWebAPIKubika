@@ -279,12 +279,20 @@ class SPBController extends Controller
         ]);
     }
 
-
-
     public function countingspb(Request $request)
     {
+        
         // Ambil data kategori Borongan saja
         $query = SpbProject::where('spbproject_category_id', SpbProject_Category::BORONGAN);
+
+        if (auth()->user()->role_id == Role::MARKETING) {
+            $query->whereHas('project', function ($q) {
+                $q->where('user_id', auth()->user()->id)
+                  ->orWhereHas('tenagaKerja', function ($q) {
+                      $q->where('user_id', auth()->user()->id);
+                  });
+            });
+        }
 
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
@@ -436,6 +444,15 @@ class SPBController extends Controller
         // Query dasar untuk mengambil SPB dengan tipe Non-Project
         $query = SpbProject::where('type_project', SpbProject::TYPE_NON_PROJECT_SPB);
     
+        if (auth()->user()->role_id == Role::MARKETING) {
+            $query->whereHas('project', function ($q) {
+                $q->where('user_id', auth()->user()->id)
+                  ->orWhereHas('tenagaKerja', function ($q) {
+                      $q->where('user_id', auth()->user()->id);
+                  });
+            });
+        }
+
         // Filter berdasarkan project ID jika ada
         if ($request->has('project')) {
             $query->whereHas('project', function ($query) use ($request) {
@@ -590,6 +607,15 @@ class SPBController extends Controller
        $query = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB)
         ->whereIn('spbproject_category_id', [SpbProject_Category::FLASH_CASH, SpbProject_Category::INVOICE]);
     
+        if (auth()->user()->role_id == Role::MARKETING) {
+            $query->whereHas('project', function ($q) {
+                $q->where('user_id', auth()->user()->id)
+                  ->orWhereHas('tenagaKerja', function ($q) {
+                      $q->where('user_id', auth()->user()->id);
+                  });
+            });
+        }
+
         // Filter berdasarkan type_project
         if ($request->has('type_project')) {
             $typeProject = $request->type_project;
