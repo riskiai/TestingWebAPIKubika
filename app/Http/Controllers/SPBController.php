@@ -779,10 +779,14 @@ class SPBController extends Controller
             }
         }
     
-        $unknownSpb = SpbProject::whereNull('know_supervisor')
-            ->orWhereNull('know_kepalagudang')
-            ->orWhereNull('request_owner')
-            ->count();
+        $unknownSpb = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB)
+        ->whereIn('spbproject_category_id', [SpbProject_Category::FLASH_CASH, SpbProject_Category::INVOICE])
+        ->where(function ($query) {
+            $query->whereNull('know_supervisor')
+                ->orWhereNull('know_kepalagudang')
+                ->orWhereNull('request_owner');
+        })
+        ->count();
     
         // Respons JSON
         return response()->json([
