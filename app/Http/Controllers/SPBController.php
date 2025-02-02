@@ -422,9 +422,16 @@ class SPBController extends Controller
             }
         });
 
+        $unapprovedSpbBorongan = SpbProject::where('spbproject_category_id', SpbProject_Category::BORONGAN)
+        ->where(function ($q) {
+            $q->whereNull('request_owner');
+        })
+        ->count();
+
         // Respons JSON
         return response()->json([
             "received_total_spb_borongan" => $receivedTotalSpbBorongan,
+            "unapproved_spb_borongan" => $unapprovedSpbBorongan, 
             "subtotal_harga_pembayaran_borongan_spb" => $subtotalHargaTotalBorongan,
             "subtotal_harga_termin_spb" => $subtotalHargaTerminBorongan,
             "submit_harga_total_pembayaran_borongan_spb" => $submit,
