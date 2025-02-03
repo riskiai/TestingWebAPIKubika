@@ -82,8 +82,10 @@ class SPBprojectCollection extends ResourceCollection
                 'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                     ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
-                            $query->whereIn('role_name', ['Owner', 'Marketing', 'Supervisor']); // Filter role yang diinginkan
+                            // Filter berdasarkan role yang diinginkan
+                            $query->whereIn('role_name', ['Owner', 'Marketing', 'Supervisor']);
                         })
+                        ->get() // Menambahkan get() untuk mengambil koleksi
                         ->map(function ($user) {
                             return [
                                 'id' => $user->id ?? null,
@@ -94,7 +96,7 @@ class SPBprojectCollection extends ResourceCollection
                                 ],
                             ];
                         })
-                    : [], 
+                    : [], // Jika tenagaKerja kosong, return array kosong
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
