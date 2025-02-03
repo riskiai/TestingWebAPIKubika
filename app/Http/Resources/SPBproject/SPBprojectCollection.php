@@ -112,7 +112,8 @@ class SPBprojectCollection extends ResourceCollection
                 ]
                 : null,
             // Tukang tetap seperti sebelumnya
-            'tukang' => $spbProject->project->tenagaKerja()
+            'tukang' => $spbProject->project 
+            ? $spbProject->project->tenagaKerja()
                 ->get()
                 ->filter(function ($user) {
                     // Pastikan hanya user dengan role Marketing atau Supervisor yang diambil
@@ -130,7 +131,9 @@ class SPBprojectCollection extends ResourceCollection
                             'name' => optional($user->divisi)->name,
                         ],
                     ];
-                }),
+                })
+            : [],  // Jika $spbProject->project null, kembalikan array kosong
+
 
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
