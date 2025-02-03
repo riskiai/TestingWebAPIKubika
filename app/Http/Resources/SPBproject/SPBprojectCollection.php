@@ -65,44 +65,45 @@ class SPBprojectCollection extends ResourceCollection
                 })->values()->all(),
                 "type_spb_project" => $typeSpbProject,
               'supervisor' => $spbProject->project ? [
-                'id' => $spbProject->project->tenagaKerja()
-                    ->whereHas('role', function ($query) {
-                        $query->where('role_name', 'Supervisor');
-                    })
-                    ->first()?->id ?? null,
-                'name' => $spbProject->project->tenagaKerja()
-                    ->whereHas('role', function ($query) {
-                        $query->where('role_name', 'Supervisor');
-                    })
-                    ->first()?->name ?? null,
-                'daily_salary' => $spbProject->project->tenagaKerja()
-                    ->whereHas('role', function ($query) {
-                        $query->where('role_name', 'Supervisor');
-                    })
-                    ->first()?->salary->daily_salary ?? 0,
-                'hourly_salary' => $spbProject->project->tenagaKerja()
-                    ->whereHas('role', function ($query) {
-                        $query->where('role_name', 'Supervisor');
-                    })
-                    ->first()?->salary->hourly_salary ?? 0,
-                'hourly_overtime_salary' => $spbProject->project->tenagaKerja()
-                    ->whereHas('role', function ($query) {
-                        $query->where('role_name', 'Supervisor');
-                    })
-                    ->first()?->salary->hourly_overtime_salary ?? 0,
-                'divisi' => [
-                    'id' => $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
-                        })
-                        ->first()?->divisi->id ?? null,
-                    'name' => $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
-                        })
-                        ->first()?->divisi->name ?? null,
-                ]
-            ] : null,
+    'id' => optional($spbProject->project->tenagaKerja())
+        ->whereHas('role', function ($query) {
+            $query->where('role_name', 'Supervisor');
+        })
+        ->first()?->id ?? null,
+    'name' => optional($spbProject->project->tenagaKerja())
+        ->whereHas('role', function ($query) {
+            $query->where('role_name', 'Supervisor');
+        })
+        ->first()?->name ?? null,
+    'daily_salary' => optional($spbProject->project->tenagaKerja())
+        ->whereHas('role', function ($query) {
+            $query->where('role_name', 'Supervisor');
+        })
+        ->first()?->salary->daily_salary ?? 0,
+    'hourly_salary' => optional($spbProject->project->tenagaKerja())
+        ->whereHas('role', function ($query) {
+            $query->where('role_name', 'Supervisor');
+        })
+        ->first()?->salary->hourly_salary ?? 0,
+    'hourly_overtime_salary' => optional($spbProject->project->tenagaKerja())
+        ->whereHas('role', function ($query) {
+            $query->where('role_name', 'Supervisor');
+        })
+        ->first()?->salary->hourly_overtime_salary ?? 0,
+    'divisi' => [
+        'id' => optional($spbProject->project->tenagaKerja())
+            ->whereHas('role', function ($query) {
+                $query->where('role_name', 'Supervisor');
+            })
+            ->first()?->divisi->id ?? null,
+        'name' => optional($spbProject->project->tenagaKerja())
+            ->whereHas('role', function ($query) {
+                $query->where('role_name', 'Supervisor');
+            })
+            ->first()?->divisi->name ?? null,
+    ]
+] : null,
+
 
 
             // Tukang tetap seperti sebelumnya
