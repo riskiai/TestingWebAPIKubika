@@ -74,28 +74,23 @@ class SPBprojectCollection extends ResourceCollection
                 ] : null, */
             // Tukang tetap seperti sebelumnya
            'tukang' => $spbProject->project 
-                && $spbProject->project->tenagaKerja
-                && $spbProject->project->tenagaKerja
-                    ->whereHas('role', function ($query) {
-                        $query->whereIn('role_id', [Role::MARKETING, Role::SUPERVISOR]); // Filter langsung di query
-                    })
-                    ->exists() // Cek apakah ada data yang memenuhi syarat
-                ? $spbProject->project->tenagaKerja
-                    ->whereHas('role', function ($query) {
-                        $query->whereIn('role_id', [Role::MARKETING, Role::SUPERVISOR]); // Ambil hanya Marketing dan Supervisor
-                    })
-                    ->get()
-                    ->map(function ($user) {
-                        return [
-                            'id' => $user->id ?? null,
-                            'name' => $user->name ?? null,
-                            'divisi' => [
-                                'id' => optional($user->divisi)->id,
-                                'name' => optional($user->divisi)->name,
-                            ],
-                        ];
-                    })
-                : null, // Jika tenagaKerja kosong, return null
+    && $spbProject->project->tenagaKerja
+    && $spbProject->project->tenagaKerja->isNotEmpty()  // Memastikan tenagaKerja tidak kosong
+    ? $spbProject->project->tenagaKerja
+        ->whereHas('role', function ($query) {
+            $query->whereIn('role_id', [Role::MARKETING, Role::SUPERVISOR]); // Filter langsung di query
+        })
+        ->map(function ($user) {
+            return [
+                'id' => $user->id ?? null,
+                'name' => $user->name ?? null,
+                'divisi' => [
+                    'id' => optional($user->divisi)->id,
+                    'name' => optional($user->divisi)->name,
+                ],
+            ];
+        })
+    : [], 
 
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
