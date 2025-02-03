@@ -63,15 +63,15 @@ class SPBprojectCollection extends ResourceCollection
                         'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
                     ];
                 })->values()->all(),
-             /*    "type_spb_project" => $typeSpbProject,
-                 'supervisor' => $spbProject->project ? [
+                "type_spb_project" => $typeSpbProject,
+                /*  'supervisor' => $spbProject->project ? [
                     'id' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
                         $query->where('role_name', 'Supervisor');
                     })->first())->id ?? null,
                     'name' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
                         $query->where('role_name', 'Supervisor');
                     })->first())->name ?? null,
-                ] : null,
+                ] : null, */
             // Tukang tetap seperti sebelumnya
             'tukang' => optional($spbProject->project)->tenagaKerja()
                     ->get()
@@ -91,7 +91,7 @@ class SPBprojectCollection extends ResourceCollection
                                 'name' => optional($user->divisi)->name,
                             ],
                         ];
-                    }) ?? [],   */
+                    }) ?? [],  
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
