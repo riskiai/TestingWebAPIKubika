@@ -1791,7 +1791,6 @@ class SPBController extends Controller
                             ];
                         })
                     : [], 
-
             "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
