@@ -1488,75 +1488,39 @@ class SPBController extends Controller
                 ];
             })->values()->all(),
             "type_spb_project" => $typeSpbProject,
-            'supervisor' => $spbProject->project->tenagaKerja()
-                ->whereHas('role', function ($query) {
-                    $query->where('role_name', 'Supervisor');
-                })
-                ->first() // Mengambil hanya satu data
-                ?->loadMissing(['salary', 'divisi']) // Memastikan salary dan divisi dimuat
-                ? [
-                    'id' => $spbProject->project->tenagaKerja()
+            'supervisor' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+                    ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
+                            $query->where('role_name', 'Supervisor'); // Filter berdasarkan role 'Supervisor'
                         })
-                        ->first()?->id ?? null,
-                    'name' => $spbProject->project->tenagaKerja()
+                        ->first() // Ambil hanya supervisor pertama
+                        ? [
+                            'id' => optional($spbProject->project->tenagaKerja->first())->id ?? null,
+                            'name' => optional($spbProject->project->tenagaKerja->first())->name ?? null,
+                            'divisi' => [
+                                'id' => optional($spbProject->project->tenagaKerja->first()->divisi)->id,
+                                'name' => optional($spbProject->project->tenagaKerja->first()->divisi)->name,
+                            ],
+                        ] : null // Jika tidak ada supervisor, return null
+                    : null,
+                'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+                    ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
+                            // Filter berdasarkan role yang diinginkan
+                            $query->whereIn('role_name', ['Owner', 'Marketing', 'Supervisor']);
                         })
-                        ->first()?->name ?? null,
-                    'daily_salary' => $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
+                        ->get() // Menambahkan get() untuk mengambil koleksi
+                        ->map(function ($user) {
+                            return [
+                                'id' => $user->id ?? null,
+                                'name' => $user->name ?? null,
+                                'divisi' => [
+                                    'id' => optional($user->divisi)->id, // Pastikan divisi bisa null jika tidak ada
+                                    'name' => optional($user->divisi)->name,
+                                ],
+                            ];
                         })
-                        ->first()?->salary->daily_salary ?? 0,
-                    'hourly_salary' => $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
-                        })
-                        ->first()?->salary->hourly_salary ?? 0,
-                    'hourly_overtime_salary' => $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
-                        })
-                        ->first()?->salary->hourly_overtime_salary ?? 0,
-                    'divisi' => [
-                        'id' => $spbProject->project->tenagaKerja()
-                            ->whereHas('role', function ($query) {
-                                $query->where('role_name', 'Supervisor');
-                            })
-                            ->first()?->divisi->id ?? null,
-                        'name' => $spbProject->project->tenagaKerja()
-                            ->whereHas('role', function ($query) {
-                                $query->where('role_name', 'Supervisor');
-                            })
-                            ->first()?->divisi->name ?? null,
-                    ],
-                ]
-                : null,
-            // Tukang tetap seperti sebelumnya
-           'tukang' => $spbProject->project 
-    ? $spbProject->project->tenagaKerja()
-        ->get()
-        ->filter(function ($user) {
-            // Pastikan hanya user dengan role Marketing atau Supervisor yang diambil
-            return in_array($user->role_id, [Role::MARKETING, Role::SUPERVISOR]);
-        })
-        ->map(function ($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'daily_salary' => $user->salary ? $user->salary->daily_salary : 0,
-                'hourly_salary' => $user->salary ? $user->salary->hourly_salary : 0,
-                'hourly_overtime_salary' => $user->salary ? $user->salary->hourly_overtime_salary : 0,
-                'divisi' => [
-                    'id' => optional($user->divisi)->id,
-                    'name' => optional($user->divisi)->name,
-                ],
-            ];
-        })
-    : [],  // Jika $spbProject->project null, kembalikan array kosong
-
+                    : [], 
             "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
@@ -1794,74 +1758,39 @@ class SPBController extends Controller
                 ];
             })->values()->all(),
             "type_spb_project" => $typeSpbProject,
-            'supervisor' => $spbProject->project->tenagaKerja()
-                ->whereHas('role', function ($query) {
-                    $query->where('role_name', 'Supervisor');
-                })
-                ->first() // Mengambil hanya satu data
-                ?->loadMissing(['salary', 'divisi']) // Memastikan salary dan divisi dimuat
-                ? [
-                    'id' => $spbProject->project->tenagaKerja()
+            'supervisor' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+                    ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
+                            $query->where('role_name', 'Supervisor'); // Filter berdasarkan role 'Supervisor'
                         })
-                        ->first()?->id ?? null,
-                    'name' => $spbProject->project->tenagaKerja()
+                        ->first() // Ambil hanya supervisor pertama
+                        ? [
+                            'id' => optional($spbProject->project->tenagaKerja->first())->id ?? null,
+                            'name' => optional($spbProject->project->tenagaKerja->first())->name ?? null,
+                            'divisi' => [
+                                'id' => optional($spbProject->project->tenagaKerja->first()->divisi)->id,
+                                'name' => optional($spbProject->project->tenagaKerja->first()->divisi)->name,
+                            ],
+                        ] : null // Jika tidak ada supervisor, return null
+                    : null,
+                'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+                    ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
+                            // Filter berdasarkan role yang diinginkan
+                            $query->whereIn('role_name', ['Owner', 'Marketing', 'Supervisor']);
                         })
-                        ->first()?->name ?? null,
-                    'daily_salary' => $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
+                        ->get() // Menambahkan get() untuk mengambil koleksi
+                        ->map(function ($user) {
+                            return [
+                                'id' => $user->id ?? null,
+                                'name' => $user->name ?? null,
+                                'divisi' => [
+                                    'id' => optional($user->divisi)->id, // Pastikan divisi bisa null jika tidak ada
+                                    'name' => optional($user->divisi)->name,
+                                ],
+                            ];
                         })
-                        ->first()?->salary->daily_salary ?? 0,
-                    'hourly_salary' => $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
-                        })
-                        ->first()?->salary->hourly_salary ?? 0,
-                    'hourly_overtime_salary' => $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor');
-                        })
-                        ->first()?->salary->hourly_overtime_salary ?? 0,
-                    'divisi' => [
-                        'id' => $spbProject->project->tenagaKerja()
-                            ->whereHas('role', function ($query) {
-                                $query->where('role_name', 'Supervisor');
-                            })
-                            ->first()?->divisi->id ?? null,
-                        'name' => $spbProject->project->tenagaKerja()
-                            ->whereHas('role', function ($query) {
-                                $query->where('role_name', 'Supervisor');
-                            })
-                            ->first()?->divisi->name ?? null,
-                    ],
-                ]
-                : null,
-            // Tukang tetap seperti sebelumnya
-          'tukang' => $spbProject->project 
-    ? $spbProject->project->tenagaKerja()
-        ->get()
-        ->filter(function ($user) {
-            // Pastikan hanya user dengan role Marketing atau Supervisor yang diambil
-            return in_array($user->role_id, [Role::MARKETING, Role::SUPERVISOR]);
-        })
-        ->map(function ($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'daily_salary' => $user->salary ? $user->salary->daily_salary : 0,
-                'hourly_salary' => $user->salary ? $user->salary->hourly_salary : 0,
-                'hourly_overtime_salary' => $user->salary ? $user->salary->hourly_overtime_salary : 0,
-                'divisi' => [
-                    'id' => optional($user->divisi)->id,
-                    'name' => optional($user->divisi)->name,
-                ],
-            ];
-        })
-    : [],  // Jika $spbProject->project null, kembalikan array kosong
+                    : [], 
 
             "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,

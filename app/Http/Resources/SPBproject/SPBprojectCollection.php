@@ -96,7 +96,7 @@ class SPBprojectCollection extends ResourceCollection
                                 ],
                             ];
                         })
-                    : [], // Jika tenagaKerja kosong, return array kosong
+                    : [], 
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
