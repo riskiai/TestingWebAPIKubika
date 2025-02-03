@@ -69,16 +69,26 @@ class SPBprojectCollection extends ResourceCollection
                         ->whereHas('role', function ($query) {
                             $query->where('role_name', 'Supervisor'); // Filter berdasarkan role 'Supervisor'
                         })
-                        ->first() // Ambil hanya supervisor pertama
+                        ->first() // Ambil hanya supervisor pertama yang ada
                         ? [
-                            'id' => optional($spbProject->project->tenagaKerja->first())->id ?? null,
-                            'name' => optional($spbProject->project->tenagaKerja->first())->name ?? null,
+                            'id' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })->first())->id ?? null,
+                            'name' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })->first())->name ?? null,
                             'divisi' => [
-                                'id' => optional($spbProject->project->tenagaKerja->first()->divisi)->id,
-                                'name' => optional($spbProject->project->tenagaKerja->first()->divisi)->name,
+                                'id' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
+                                    $query->where('role_name', 'Supervisor');
+                                })->first()->divisi)->id,
+                                'name' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
+                                    $query->where('role_name', 'Supervisor');
+                                })->first()->divisi)->name,
                             ],
-                        ] : null // Jika tidak ada supervisor, return null
-                    : null,
+                        ]
+                        : null // Jika tidak ada supervisor, return null
+                    : null, // Jika tenagaKerja kosong, return null
+
                 'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                     ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
