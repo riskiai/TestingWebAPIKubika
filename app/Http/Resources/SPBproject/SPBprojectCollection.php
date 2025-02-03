@@ -79,19 +79,22 @@ class SPBprojectCollection extends ResourceCollection
                             ],
                         ] : null // Jika tidak ada supervisor, return null
                     : null,
-           'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
-                ? $spbProject->project->tenagaKerja
-                    ->map(function ($user) {
-                        return [
-                            'id' => $user->id ?? null,
-                            'name' => $user->name ?? null,
-                            'divisi' => [
-                                'id' => optional($user->divisi)->id, // Pastikan divisi bisa null jika tidak ada
-                                'name' => optional($user->divisi)->name,
-                            ],
-                        ];
-                    })
-                : [], 
+                'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+                    ? $spbProject->project->tenagaKerja()
+                        ->whereHas('role', function ($query) {
+                            $query->whereIn('role_name', ['Owner', 'Marketing', 'Supervisor']); // Filter role yang diinginkan
+                        })
+                        ->map(function ($user) {
+                            return [
+                                'id' => $user->id ?? null,
+                                'name' => $user->name ?? null,
+                                'divisi' => [
+                                    'id' => optional($user->divisi)->id, // Pastikan divisi bisa null jika tidak ada
+                                    'name' => optional($user->divisi)->name,
+                                ],
+                            ];
+                        })
+                    : [], 
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
