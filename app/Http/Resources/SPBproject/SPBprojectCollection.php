@@ -65,18 +65,22 @@ class SPBprojectCollection extends ResourceCollection
                 })->values()->all(),
                 "type_spb_project" => $typeSpbProject,
                 'supervisor' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
-                ? $spbProject->project->tenagaKerja
-                    ->filter(function ($user) {
-                        // Filter hanya yang memiliki role "Supervisor"
-                        return optional($user->role)->role_name === 'Supervisor';
-                    })
-                    ->map(function ($user) {
-                        return [
-                            'id' => $user->id ?? null,
-                            'name' => $user->name ?? null,
-                        ];
-                    })
-                : null,
+                    ? $spbProject->project->tenagaKerja
+                        ->filter(function ($user) {
+                            // Filter hanya yang memiliki role "Supervisor"
+                            return optional($user->role)->role_name === 'Supervisor';
+                        })
+                        ->map(function ($user) {
+                            return [
+                                'id' => $user->id ?? null,
+                                'name' => $user->name ?? null,
+                                'divisi' => [
+                                    'id' => optional($user->divisi)->id, // Pastikan divisi bisa null jika tidak ada
+                                    'name' => optional($user->divisi)->name,
+                                ],
+                            ];
+                        })
+                    : null,
            'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                 ? $spbProject->project->tenagaKerja
                     ->map(function ($user) {
