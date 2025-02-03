@@ -64,15 +64,19 @@ class SPBprojectCollection extends ResourceCollection
                     ];
                 })->values()->all(),
                 "type_spb_project" => $typeSpbProject,
-                /*  'supervisor' => $spbProject->project ? [
-                    'id' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
-                        $query->where('role_name', 'Supervisor');
-                    })->first())->id ?? null,
-                    'name' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
-                        $query->where('role_name', 'Supervisor');
-                    })->first())->name ?? null,
-                ] : null, */
-            // Tukang tetap seperti sebelumnya
+                'supervisor' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+                ? $spbProject->project->tenagaKerja
+                    ->filter(function ($user) {
+                        // Filter hanya yang memiliki role "Supervisor"
+                        return optional($user->role)->role_name === 'Supervisor';
+                    })
+                    ->map(function ($user) {
+                        return [
+                            'id' => $user->id ?? null,
+                            'name' => $user->name ?? null,
+                        ];
+                    })
+                : null,
            'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                 ? $spbProject->project->tenagaKerja
                     ->map(function ($user) {
