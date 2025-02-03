@@ -58,7 +58,14 @@ class SPBController extends Controller
             });
         }   
 
-        $query->with(['user', 'products', 'project', 'status', 'vendors']);
+        $query->with([
+            'user', 
+            'products', 
+            'project', 
+            'status', 
+            'vendors',
+            'project.tenagaKerja'  // Pastikan relasi tenagaKerja dimuat untuk setiap project
+        ]);
 
         // Filter pencarian berdasarkan SPB project
         if ($request->has('search')) {
