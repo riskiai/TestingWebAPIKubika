@@ -26,6 +26,7 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
          return [
+            'project_id' => 'required|exists:projects,id',
             'user_id' => 'required|numeric|exists:users,id',
             'work_type' => 'required|boolean',
             'project_type' => 'nullable|boolean',

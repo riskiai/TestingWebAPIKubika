@@ -342,11 +342,23 @@ class ManPowerController extends Controller
             ]);
         }
 
+        $project = null;
+        if ($request->has('project_id')) {
+            $project = Project::find($request->project_id);
+        } elseif ($manPower->project_id) {
+            $project = Project::find($manPower->project_id);
+        }
+    
+        // Jika project tidak ditemukan, gunakan NULL sebagai project_id
+        $projectId = $project ? $project->id : null;
+
         $sumSalary = $this->sumSalary($request);
 
         try {
             // Update data ManPower
             $manPower->update([
+                "project_id" => $projectId,
+                "project_type" => $request->project_type,
                 "work_type" => $request->work_type,
                 "hour_salary" => $request->hour_salary,
                 "hour_overtime" => $request->hour_overtime,
