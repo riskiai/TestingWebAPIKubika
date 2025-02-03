@@ -64,7 +64,7 @@ class SPBController extends Controller
             'project', 
             'status', 
             'vendors',
-            'project.tenagaKerja:id,name'  // Pastikan relasi tenagaKerja dimuat untuk setiap project
+            'project.tenagaKerja'  // Pastikan relasi tenagaKerja dimuat untuk setiap project
         ]);
 
         // Filter pencarian berdasarkan SPB project
