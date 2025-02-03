@@ -73,10 +73,11 @@ class SPBprojectCollection extends ResourceCollection
                     })->first())->name ?? null,
                 ] : null, */
             // Tukang tetap seperti sebelumnya
-           'tukang' => optional($spbProject->project) // Memastikan project ada
-                && optional($spbProject->project->tenagaKerja) // Memastikan tenagaKerja ada
-                ? $spbProject->project->tenagaKerja->pluck('name', 'id') // Jika tenagaKerja ada, pluck id dan name
-                : collect() // Jika tidak ada, kembalikan koleksi kosong
+                'tukang' => optional($spbProject->project) // Memastikan project ada
+                ? optional($spbProject->project->tenagaKerja) // Memastikan tenagaKerja ada
+                    ? $spbProject->project->tenagaKerja->pluck('name', 'id') // Jika tenagaKerja ada, pluck id dan name
+                    : collect() // Jika tenagaKerja tidak ada, kembalikan koleksi kosong
+                : collect() // Jika project tidak ada, kembalikan koleksi kosong
                 ->map(function ($name, $id) {
                     return [
                         'id' => $id, // Menampilkan id user
