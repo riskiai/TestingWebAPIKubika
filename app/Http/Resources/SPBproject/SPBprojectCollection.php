@@ -64,48 +64,14 @@ class SPBprojectCollection extends ResourceCollection
                     ];
                 })->values()->all(),
                 "type_spb_project" => $typeSpbProject,
-              'supervisor' => $spbProject->project ? [
-    'id' => optional($spbProject->project->tenagaKerja())
-        ->whereHas('role', function ($query) {
-            $query->where('role_name', 'Supervisor');
-        })
-        ->first()?->id ?? null,
-    'name' => optional($spbProject->project->tenagaKerja())
-        ->whereHas('role', function ($query) {
-            $query->where('role_name', 'Supervisor');
-        })
-        ->first()?->name ?? null,
-    'daily_salary' => optional($spbProject->project->tenagaKerja())
-        ->whereHas('role', function ($query) {
-            $query->where('role_name', 'Supervisor');
-        })
-        ->first()?->salary->daily_salary ?? 0,
-    'hourly_salary' => optional($spbProject->project->tenagaKerja())
-        ->whereHas('role', function ($query) {
-            $query->where('role_name', 'Supervisor');
-        })
-        ->first()?->salary->hourly_salary ?? 0,
-    'hourly_overtime_salary' => optional($spbProject->project->tenagaKerja())
-        ->whereHas('role', function ($query) {
-            $query->where('role_name', 'Supervisor');
-        })
-        ->first()?->salary->hourly_overtime_salary ?? 0,
-    'divisi' => [
-        'id' => optional($spbProject->project->tenagaKerja())
-            ->whereHas('role', function ($query) {
-                $query->where('role_name', 'Supervisor');
-            })
-            ->first()?->divisi->id ?? null,
-        'name' => optional($spbProject->project->tenagaKerja())
-            ->whereHas('role', function ($query) {
-                $query->where('role_name', 'Supervisor');
-            })
-            ->first()?->divisi->name ?? null,
-    ]
-] : null,
-
-
-
+                 'supervisor' => $spbProject->project ? [
+                    'id' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
+                        $query->where('role_name', 'Supervisor');
+                    })->first())->id ?? null,
+                    'name' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
+                        $query->where('role_name', 'Supervisor');
+                    })->first())->name ?? null,
+                ] : null,
             // Tukang tetap seperti sebelumnya
             'tukang' => optional($spbProject->project)->tenagaKerja()
                     ->get()
