@@ -160,12 +160,12 @@ class SPBController extends Controller
             $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
             $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
         }
-    
-        // Filter berdasarkan tanggal_berahir_spb
-        if ($request->has('tanggal_berahir_spb')) {
+        
+        // Modifikasi filter `tanggal_berahir_spb` agar tidak menghilangkan data yang cocok dengan `tanggal_dibuat_spb`
+        if ($request->filled('tanggal_berahir_spb')) {
             $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
-            $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
-        }
+            $query->orWhereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
+        }        
 
         // Pengurutan berdasarkan tab
         if ($request->has('tab')) {
@@ -204,13 +204,24 @@ class SPBController extends Controller
         // Query dasar untuk mengambil SPB Project berdasarkan filter
         $query = SpbProject::query();
 
-        if ($request->has('tanggal_dibuat_spb')) {
+        /* if ($request->has('tanggal_dibuat_spb')) {
             $query->whereDate('tanggal_dibuat_spb', Carbon::parse($request->tanggal_dibuat_spb));
         }
 
         if ($request->has('tanggal_berahir_spb')) {
             $query->whereDate('tanggal_berahir_spb', Carbon::parse($request->tanggal_berahir_spb));
+        } */
+
+        if ($request->has('tanggal_dibuat_spb')) {
+            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
+            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
         }
+        
+        // Modifikasi filter `tanggal_berahir_spb` agar tidak menghilangkan data yang cocok dengan `tanggal_dibuat_spb`
+        if ($request->filled('tanggal_berahir_spb')) {
+            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
+            $query->orWhereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
+        }     
 
         if ($request->has('project')) {
             $query->where('project_id', $request->project);
@@ -311,7 +322,7 @@ class SPBController extends Controller
             $query->where('project_id', $request->project);
         }
 
-        if ($request->has('tanggal_dibuat_spb')) {
+        /* if ($request->has('tanggal_dibuat_spb')) {
             $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
             $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
         }
@@ -320,7 +331,21 @@ class SPBController extends Controller
         if ($request->has('tanggal_berahir_spb')) {
             $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
             $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
+        } */
+
+        if ($request->has('tanggal_dibuat_spb')) {
+            $tanggalDibuatSpb = Carbon::parse($request->input('tanggal_dibuat_spb'));
+            $query->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb);
         }
+
+        // Filter berdasarkan tanggal berakhir, tetap menampilkan data dari tanggal dibuat
+        if ($request->filled('tanggal_berahir_spb')) {
+            $tanggalBerahirSpb = Carbon::parse($request->input('tanggal_berahir_spb'));
+            $query->where(function ($q) use ($tanggalDibuatSpb, $tanggalBerahirSpb) {
+                $q->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb)
+                ->orWhereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
+            });
+        }  
 
         $receivedTotalSpbBorongan = $query->count();
 
@@ -422,11 +447,12 @@ class SPBController extends Controller
             }
         });
 
-        $unapprovedSpbBorongan = SpbProject::where('spbproject_category_id', SpbProject_Category::BORONGAN)
-        ->where(function ($q) {
-            $q->whereNull('request_owner');
-        })
-        ->count();
+        $unapprovedSpbBorongan = (clone $query) // Gunakan clone agar tidak mengubah $query utama
+            ->whereNull('request_owner')
+            ->count();
+
+        // Hitung total SPB kategori Borongan setelah filter
+        $receivedTotalSpbBorongan = $query->count();
 
         // Respons JSON
         return response()->json([
@@ -467,16 +493,21 @@ class SPBController extends Controller
             });
         }
 
+        // Filter berdasarkan tanggal dibuat
         if ($request->has('tanggal_dibuat_spb')) {
-            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
-            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
+            $tanggalDibuatSpb = Carbon::parse($request->input('tanggal_dibuat_spb'));
+            $query->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb);
         }
-    
-        // Filter berdasarkan tanggal_berahir_spb
-        if ($request->has('tanggal_berahir_spb')) {
-            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
-            $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
+
+        // Filter berdasarkan tanggal berakhir, tetap menampilkan data dari tanggal dibuat
+        if ($request->filled('tanggal_berahir_spb')) {
+            $tanggalBerahirSpb = Carbon::parse($request->input('tanggal_berahir_spb'));
+            $query->where(function ($q) use ($tanggalDibuatSpb, $tanggalBerahirSpb) {
+                $q->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb)
+                ->orWhereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
+            });
         }
+
     
         if ($request->has('status')) {
             $status = $request->status;
@@ -582,11 +613,11 @@ class SPBController extends Controller
             }
         }
     
-        $unknownSpb = SpbProject::where('type_project', SpbProject::TYPE_NON_PROJECT_SPB)
-            ->where(function ($query) {
-                $query->whereNull('know_supervisor')
-                    ->orWhereNull('know_kepalagudang')
-                    ->orWhereNull('request_owner');
+        $unknownSpb = (clone $query)
+            ->where(function ($q) {
+                $q->whereNull('know_supervisor')
+                ->orWhereNull('know_kepalagudang')
+                ->orWhereNull('request_owner');
             })
             ->count();
     
@@ -594,8 +625,8 @@ class SPBController extends Controller
         return response()->json([
             'received' => $received, // Jumlah data
             'total_spb_yang_belum_diapprove' => $unknownSpb,
-            'submit' => $submit,
-            'verified' => $verified,
+            // 'submit' => $submit,
+            // 'verified' => $verified,
             'over_due' => $over_due,
             'open' => $open,
             'due_date' => $due_date,
@@ -684,15 +715,18 @@ class SPBController extends Controller
     
         // Filter berdasarkan tanggal_dibuat_spb
         if ($request->has('tanggal_dibuat_spb')) {
-            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
-            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
+            $tanggalDibuatSpb = Carbon::parse($request->input('tanggal_dibuat_spb'));
+            $query->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb);
         }
-    
-        // Filter berdasarkan tanggal_berahir_spb
-        if ($request->has('tanggal_berahir_spb')) {
-            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
-            $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
-        }
+
+        // Filter berdasarkan tanggal berakhir, tetap menampilkan data dari tanggal dibuat
+        if ($request->filled('tanggal_berahir_spb')) {
+            $tanggalBerahirSpb = Carbon::parse($request->input('tanggal_berahir_spb'));
+            $query->where(function ($q) use ($tanggalDibuatSpb, $tanggalBerahirSpb) {
+                $q->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb)
+                ->orWhereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
+            });
+        }  
     
         // Paginate atau get data
         if ($request->has('page') || $request->has('per_page')) {
@@ -779,12 +813,11 @@ class SPBController extends Controller
             }
         }
     
-        $unknownSpb = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB)
-        ->whereIn('spbproject_category_id', [SpbProject_Category::FLASH_CASH, SpbProject_Category::INVOICE])
-        ->where(function ($query) {
-            $query->whereNull('know_supervisor')
-                ->orWhereNull('know_kepalagudang')
-                ->orWhereNull('request_owner');
+        $unknownSpb = (clone $query)
+        ->where(function ($q) {
+            $q->whereNull('know_supervisor')
+              ->orWhereNull('know_kepalagudang')
+              ->orWhereNull('request_owner');
         })
         ->count();
     
