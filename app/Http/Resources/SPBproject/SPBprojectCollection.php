@@ -73,21 +73,18 @@ class SPBprojectCollection extends ResourceCollection
                     })->first())->name ?? null,
                 ] : null, */
             // Tukang tetap seperti sebelumnya
-            'tukang' => optional($spbProject->project)->tenagaKerja() // Memastikan relasi tenagaKerja ada
-                ->get() // Mendapatkan data tenagaKerja
-                ->filter(function ($user) { // Menyaring tenagaKerja yang hanya memiliki role Marketing atau Supervisor
-                    return in_array($user->role_id, [Role::MARKETING, Role::SUPERVISOR]);
-                })
-                ->map(function ($user) { // Menampilkan id dan name user
-                    return [
-                        'id' => $user->id ?? null,  // Menggunakan null jika id tidak ada
-                        'name' => $user->name ?? null, // Menggunakan null jika name tidak ada
-                    ];
-                })
-                ->whenEmpty(function () { // Jika tidak ada user yang sesuai, kembalikan array kosong
-                    return collect([]);
-                }) ?? [],
-
+            'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty() 
+                ? $spbProject->project->tenagaKerja
+                    ->filter(function ($user) {
+                        return in_array($user->role_id, [Role::MARKETING, Role::SUPERVISOR]);
+                    })
+                    ->map(function ($user) {
+                        return [
+                            'id' => $user->id ?? null,
+                            'name' => $user->name ?? null,
+                        ];
+                    })
+                : null,
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
