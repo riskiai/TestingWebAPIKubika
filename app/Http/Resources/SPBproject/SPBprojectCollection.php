@@ -73,11 +73,8 @@ class SPBprojectCollection extends ResourceCollection
                     })->first())->name ?? null,
                 ] : null, */
             // Tukang tetap seperti sebelumnya
-           'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty() 
+           'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                 ? $spbProject->project->tenagaKerja
-                    ->filter(function ($user) {
-                        return in_array($user->role_id, [Role::MARKETING, Role::SUPERVISOR]);
-                    })
                     ->map(function ($user) {
                         return [
                             'id' => $user->id ?? null,
@@ -88,7 +85,7 @@ class SPBprojectCollection extends ResourceCollection
                             ],
                         ];
                     })
-                : [], // Jika tenagaKerja kosong, return null
+                : [], 
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
