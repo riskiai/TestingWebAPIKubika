@@ -112,29 +112,25 @@ class SPBprojectCollection extends ResourceCollection
                 ]
                 : null,
             // Tukang tetap seperti sebelumnya
-            'tukang' => $spbProject->project 
-            ? $spbProject->project->tenagaKerja()
-                ->get()
-                ->filter(function ($user) {
-                    // Pastikan hanya user dengan role Marketing atau Supervisor yang diambil
-                    return in_array($user->role_id, [Role::MARKETING, Role::SUPERVISOR]);
-                })
-                ->map(function ($user) {
-                    return [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'daily_salary' => $user->salary ? $user->salary->daily_salary : 0,
-                        'hourly_salary' => $user->salary ? $user->salary->hourly_salary : 0,
-                        'hourly_overtime_salary' => $user->salary ? $user->salary->hourly_overtime_salary : 0,
-                        'divisi' => [
-                            'id' => optional($user->divisi)->id,
-                            'name' => optional($user->divisi)->name,
-                        ],
-                    ];
-                })
-            : [],  // Jika $spbProject->project null, kembalikan array kosong
-
-
+            'tukang' => optional($spbProject->project)->tenagaKerja()
+    ->get()
+    ->filter(function ($user) {
+        // Pastikan hanya user dengan role Marketing atau Supervisor yang diambil
+        return in_array($user->role_id, [Role::MARKETING, Role::SUPERVISOR]);
+    })
+    ->map(function ($user) {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'daily_salary' => $user->salary ? $user->salary->daily_salary : 0,
+            'hourly_salary' => $user->salary ? $user->salary->hourly_salary : 0,
+            'hourly_overtime_salary' => $user->salary ? $user->salary->hourly_overtime_salary : 0,
+            'divisi' => [
+                'id' => optional($user->divisi)->id,
+                'name' => optional($user->divisi)->name,
+            ],
+        ];
+    }) ?? [],  
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
