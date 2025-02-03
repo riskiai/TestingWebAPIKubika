@@ -316,21 +316,36 @@ class ManPowerController extends Controller
             return MessageActeeve::notFound('Man power not found!');
         }
 
+        // Ambil data user dari manPower
+        $user = User::find($manPower->user_id);
+
+        if ($user && $user->salary) {
+            // Jika salary ada di tabel users, gunakan data salary dari user
+            $request->merge([
+                'daily_salary_master' => $user->salary->daily_salary,
+                'hourly_salary_master' => $user->salary->hourly_salary,
+                'hourly_overtime_salary_master' => $user->salary->hourly_overtime_salary,
+            ]);
+        } else {
+            // Jika salary tidak ada, gunakan data yang sudah ada di ManPower
+            $request->merge([
+                'daily_salary_master' => $manPower->daily_salary_master,
+                'hourly_salary_master' => $manPower->hourly_salary_master,
+                'hourly_overtime_salary_master' => $manPower->hourly_overtime_salary_master,
+            ]);
+        }
+
+        // Menjaga entry_at agar tidak hilang jika tidak ada di request
         if (!$request->has("entry_at")) {
             $request->merge([
                 "entry_at" => $manPower->entry_at
             ]);
         }
 
-        $request->merge([
-            'daily_salary_master' => $manPower->daily_salary_master,
-            'hourly_salary_master' => $manPower->hourly_salary_master,
-            'hourly_overtime_salary_master' => $manPower->hourly_overtime_salary_master,
-        ]);
-
         $sumSalary = $this->sumSalary($request);
 
         try {
+            // Update data ManPower
             $manPower->update([
                 "work_type" => $request->work_type,
                 "hour_salary" => $request->hour_salary,
@@ -338,9 +353,13 @@ class ManPowerController extends Controller
                 "description" => $request->description,
                 "current_salary" => $sumSalary["currentSalary"],
                 "current_overtime_salary" => $sumSalary["currentOvertimeSalary"],
-                "entry_at"  => $request->entry_at
+                "entry_at"  => $request->entry_at,
+                "daily_salary_master" => $request->daily_salary_master,
+                "hourly_salary_master" => $request->hourly_salary_master,
+                "hourly_overtime_salary_master" => $request->hourly_overtime_salary_master,
             ]);
 
+            // Simpan log perubahan
             $manPower->logs()->create([
                 "created_by" => $request->user()->name ?? '-',
                 "message" => $request->description,
@@ -353,6 +372,7 @@ class ManPowerController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
+
 
     public function destroy(string $id)
     {

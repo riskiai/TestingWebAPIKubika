@@ -36,6 +36,11 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 
+    public function manPower(): HasOne {
+        return $this->hasOne(ManPower::class, 'user_id', 'id');
+    }
+    
+
     public function divisi(): BelongsTo
     {
         return $this->belongsTo(Divisi::class);

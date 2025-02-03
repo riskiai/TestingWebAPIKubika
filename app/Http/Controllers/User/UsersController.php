@@ -420,6 +420,14 @@ class UsersController extends Controller
                 ]);
             }
 
+           /*  if ($user->manPower) {
+                $user->manPower->update([
+                    "daily_salary_master" => $request->daily_salary,
+                    "hourly_salary_master" => $request->hourly_salary,
+                    "hourly_overtime_salary_master" => $request->hourly_overtime_salary,
+                ]);
+            }      */       
+
             DB::commit();
             return MessageActeeve::success("User $user->name has been updated");
         } catch (\Throwable $th) {
