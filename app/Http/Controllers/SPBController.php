@@ -32,6 +32,7 @@ use App\Http\Requests\SpbProject\RejectProdukRequest;
 use App\Http\Requests\SpbProject\UpdateProdukRequest;
 use App\Http\Requests\SpbProject\PaymentProdukRequest;
 use App\Http\Requests\SpbProject\ActivateProdukRequest;
+use App\Http\Requests\SpbProject\PaymentVendorRequest;
 use App\Http\Requests\SpbProject\UpdateTerminRequest;
 use App\Http\Resources\SPBproject\SPBprojectCollection;
 
@@ -227,14 +228,6 @@ class SPBController extends Controller
         // Query dasar untuk mengambil SPB Project berdasarkan filter
         $query = SpbProject::query();
 
-        /* if ($request->has('tanggal_dibuat_spb')) {
-            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($request->tanggal_dibuat_spb));
-        }
-
-        if ($request->has('tanggal_berahir_spb')) {
-            $query->whereDate('tanggal_berahir_spb', Carbon::parse($request->tanggal_berahir_spb));
-        } */
-
         if ($request->has('tanggal_dibuat_spb')) {
             $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
             $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
@@ -244,7 +237,7 @@ class SPBController extends Controller
         if ($request->filled('tanggal_berahir_spb')) {
             $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
             $query->orWhereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
-        }     
+        }
 
         if ($request->has('project')) {
             $query->where('project_id', $request->project);
@@ -266,6 +259,11 @@ class SPBController extends Controller
 
             case Role::OWNER:
                 $query->whereNull('request_owner');
+                break;
+
+            case Role::ADMIN:
+                // Admin bisa melihat semua data tanpa pembatasan apapun
+                // Tidak perlu menambahkan filter apapun di sini
                 break;
 
             default:
@@ -299,7 +297,30 @@ class SPBController extends Controller
             ];
         });
 
-        // Respons JSON
+        // Response untuk Admin
+        if ($role == Role::ADMIN || $role == Role::OWNER) {
+            // Hitung jumlah SPB yang belum disetujui berdasarkan status `know_kepalagudang`, `know_supervisor`, dan `request_owner`
+            $knowKepalagudangUnapproved = SpbProject::whereNull('know_kepalagudang')->count();
+            $knowSupervisorUnapproved = SpbProject::whereNull('know_supervisor')->count();
+            $requestOwnerUnapproved = SpbProject::whereNull('request_owner')->count();
+
+            return response()->json([
+                'total_spb' => $totalSpb,  // 🔥 Sekarang berubah sesuai filter
+                'unapprove_spb_total' => $unapprovedSpb,  // Menampilkan total SPB yang difilter
+                'detail_unapprove_spb' => $detailUnapprovedSpb,
+                'know_kepalagudang_spb__unapproved' => $knowKepalagudangUnapproved,
+                'know_supervisor_spb__unapproved' => $knowSupervisorUnapproved,
+                'request_owner_spb__unapproved' => $requestOwnerUnapproved,
+                'pagination' => [
+                    'current_page' => $paginatedData->currentPage(),
+                    'per_page' => $paginatedData->perPage(),
+                    'total' => $paginatedData->total(),
+                    'last_page' => $paginatedData->lastPage(),
+                ],
+            ]);
+        }
+
+        // Jika bukan Admin, hanya kirim data yang relevan
         return response()->json([
             'total_spb' => $totalSpb,  // 🔥 Sekarang berubah sesuai filter
             'unapprove_spb_total' => $unapprovedSpb,  // Menampilkan total SPB yang difilter
@@ -1491,9 +1512,9 @@ class SPBController extends Controller
             'supervisor' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                 ? $spbProject->project->tenagaKerja()
                     ->whereHas('role', function ($query) {
-                        $query->where('role_name', 'Supervisor'); // Filter berdasarkan role 'Supervisor'
+                        $query->where('role_name', 'Supervisor'); 
                     })
-                    ->first() // Ambil hanya supervisor pertama yang ada
+                    ->first() 
                     ? [
                         'id' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
                             $query->where('role_name', 'Supervisor');
@@ -1515,16 +1536,15 @@ class SPBController extends Controller
                 'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                     ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
-                            // Filter berdasarkan role yang diinginkan
                             $query->whereIn('role_name', ['Owner', 'Marketing', 'Supervisor']);
                         })
-                        ->get() // Menambahkan get() untuk mengambil koleksi
+                        ->get() 
                         ->map(function ($user) {
                             return [
                                 'id' => $user->id ?? null,
                                 'name' => $user->name ?? null,
                                 'divisi' => [
-                                    'id' => optional($user->divisi)->id, // Pastikan divisi bisa null jika tidak ada
+                                    'id' => optional($user->divisi)->id,
                                     'name' => optional($user->divisi)->name,
                                 ],
                             ];
@@ -1567,6 +1587,8 @@ class SPBController extends Controller
                             'harga' => $product->harga ?? 0,
                             'stok' => $product->stok ?? 0,
                             'subtotal_item' => $product->subtotal_produk,
+                            'payment_date' => $product->payment_date ?? null,  
+                            'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
                             /* 'pph' => [
                                 'pph_type' => $product->taxPph->name ?? 'Unknown',
                                 'pph_rate' => $product->taxPph->percent ?? 0,
@@ -1603,6 +1625,8 @@ class SPBController extends Controller
                             'harga' => $product->harga ?? 0,
                             'stok' => $product->stok ?? 0,
                             'subtotal_item' => $product->subtotal_produk,
+                            'payment_date' => $product->payment_date ?? null,  
+                            'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
                             /* 'pph' => [
                                 'pph_type' => $product->taxPph->name ?? 'Unknown',
                                 'pph_rate' => $product->taxPph->percent ?? 0,
@@ -1673,6 +1697,8 @@ class SPBController extends Controller
                     'harga' => $product->harga ?? 0,
                     'stok' => $product->stok ?? 0,
                     'subtotal_item' => $product->subtotal_produk,
+                    'payment_date' => $product->payment_date ?? null,  
+                    'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
                     /* 'pph' => [
                         'pph_type' => $product->taxPph->name ?? 'Unknown',
                         'pph_rate' => $product->taxPph->percent ?? 0,
@@ -1849,6 +1875,8 @@ class SPBController extends Controller
                         'harga' => $product->harga ?? 0,
                         'stok' => $product->stok ?? 0,
                         'subtotal_item' => $product->subtotal_produk,
+                        'payment_date' => $product->payment_date ?? null,  
+                        'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
                         /* 'pph' => [
                             'pph_type' => $product->taxPph->name ?? 'Unknown',
                             'pph_rate' => $product->taxPph->percent ?? 0,
@@ -1885,6 +1913,8 @@ class SPBController extends Controller
                         'harga' => $product->harga ?? 0,
                         'stok' => $product->stok ?? 0,
                         'subtotal_item' => $product->subtotal_produk,
+                        'payment_date' => $product->payment_date ?? null,  
+                        'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
                         /* 'pph' => [
                             'pph_type' => $product->taxPph->name ?? 'Unknown',
                             'pph_rate' => $product->taxPph->percent ?? 0,
@@ -1955,6 +1985,8 @@ class SPBController extends Controller
                 'harga' => $product->harga ?? 0,
                 'stok' => $product->stok ?? 0,
                 'subtotal_item' => $product->subtotal_produk,
+                'payment_date' => $product->payment_date ?? null,  
+                'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
                 /* 'pph' => [
                     'pph_type' => $product->taxPph->name ?? 'Unknown',
                     'pph_rate' => $product->taxPph->percent ?? 0,
@@ -2773,7 +2805,7 @@ class SPBController extends Controller
                 ], 404);
             }
 
-             // Validasi persetujuan berdasarkan kategori SPB
+             
             if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
                 // Jika kategori BORONGAN, hanya perlu persetujuan request_owner
                 if (!$spbProject->request_owner) {
@@ -3549,6 +3581,103 @@ class SPBController extends Controller
         }
     }
 
+    public function paymentVendor(PaymentVendorRequest $request, $docNo)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Cari SpbProject berdasarkan doc_no_spb
+            $spbProject = SpbProject::where('doc_no_spb', $docNo)->first();
+            if (!$spbProject) {
+                return MessageActeeve::notFound('SPB Project not found!');
+            }
+
+            // Validasi dan ambil tanggal pembayaran dari request (input manual)
+            $paymentDate = $request->input('payment_date');
+            if (!$paymentDate) {
+                return MessageActeeve::error('Payment date is required!');
+            }
+
+            // Menyimpan file pembayaran jika ada
+            $filePaymentPath = null;
+            if ($request->hasFile('file_payment')) {
+                // Pastikan file disimpan di storage yang benar
+                $filePaymentPath = $request->file('file_payment')->store(ProductCompanySpbProject::FILE_PEMBAYARAN_VENDOR, 'public');
+            }
+
+            // Update SPB Project (jika ada perubahan pada payment_date dan file_payment)
+            $spbProject->update([
+                'payment_date' => $paymentDate,
+                'file_payment' => $filePaymentPath, // Jika ada file pembayaran
+                'updated_at' => $paymentDate, // Menggunakan payment_date untuk updated_at
+            ]);
+
+            // Ambil vendor_id dari request dan anggap itu adalah company_id
+            $companyId = $request->input('vendor_id'); // Menganggap vendor_id merujuk ke company_id
+
+            // Update status produk menjadi "Paid" dan simpan payment_date serta file_payment
+            $spbProject->productCompanySpbprojects()
+                ->where('company_id', $companyId)  // Menggunakan company_id
+                ->whereNotIn('status_produk', [
+                    ProductCompanySpbProject::TEXT_PAID_PRODUCT,
+                    ProductCompanySpbProject::TEXT_REJECTED_PRODUCT,
+                ])  // Pastikan hanya produk yang belum dibayar atau ditolak
+                ->update([
+                    'status_produk' => ProductCompanySpbProject::TEXT_PAID_PRODUCT,
+                    'payment_date' => $paymentDate,
+                    'file_payment' => $filePaymentPath,  // Jika ada file pembayaran
+                ]);
+
+            // Cek jumlah vendor yang masih ada dalam SPB project
+            $remainingVendors = $spbProject->productCompanySpbprojects()
+                ->whereNotIn('status_produk', [
+                    ProductCompanySpbProject::TEXT_PAID_PRODUCT,
+                    ProductCompanySpbProject::TEXT_REJECTED_PRODUCT,
+                ])
+                ->count();
+
+            // Jika sisa vendor hanya 1 dan vendor sudah melakukan payment request
+            if ($remainingVendors == 0) {
+                $spbProject->update([
+                    'spbproject_status_id' => SpbProject_Status::PAID,
+                    'tab_spb' => SpbProject::TAB_PAID, 
+                    'updated_at' => $paymentDate, 
+                ]);
+
+                // Menyimpan log dengan tab 'PAID'
+                $logMessage = 'SPB Project payment completed, all products are paid.';
+                $existingLog = $spbProject->logs()
+                    ->where('tab_spb', SpbProject::TAB_PAYMENT_REQUEST)
+                    ->where('name', auth()->user()->name)
+                    ->first();
+
+                if ($existingLog) {
+                    $existingLog->update([
+                        'message' => $logMessage,
+                        'tab_spb' => SpbProject::TAB_PAID,  // Ganti tab menjadi PAID
+                        'updated_at' => $paymentDate, // Menggunakan payment_date untuk updated_at
+                    ]);
+                } else {
+                    $spbProject->logs()->create([
+                        'tab_spb' => SpbProject::TAB_PAID,  // Ganti tab menjadi PAID
+                        'name' => auth()->user()->name,
+                        'message' => $logMessage,
+                        'created_at' => $paymentDate, // Menggunakan payment_date untuk created_at
+                        'updated_at' => $paymentDate, // Menggunakan payment_date untuk updated_at
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return MessageActeeve::success("SPB Project $docNo payment processed successfully, status updated to 'Paid'.");
+
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    }
+
+
     public function updatepayment(PaymentRequest $request, $docNo)
     {
         DB::beginTransaction();
@@ -3691,9 +3820,20 @@ class SPBController extends Controller
                 ]);
 
                 // Update status produk
-                $spbProject->productCompanySpbprojects()->update([
+                /* $spbProject->productCompanySpbprojects()->update([
                     'status_produk' => ProductCompanySpbProject::TEXT_PAID_PRODUCT,
-                ]);
+                    'payment_date' => $request->updated_at,
+                ]); */
+
+                $spbProject->productCompanySpbprojects()->each(function($productCompanySpbProject) use ($request) {
+                    if ($productCompanySpbProject->status_produk != ProductCompanySpbProject::TEXT_PAID_PRODUCT) {
+                        // Jika status produk belum paid, update payment_date dan status_produk
+                        $productCompanySpbProject->update([
+                            'status_produk' => ProductCompanySpbProject::TEXT_PAID_PRODUCT,
+                            'payment_date' => $request->updated_at,  // Set payment_date ke updated_at
+                        ]);
+                    }
+                });
 
                     // Menyimpan file attachment jika ada
                 if ($request->hasFile('attachment_file_spb')) {

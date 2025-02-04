@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Project;
 
 use Carbon\Carbon;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\Project;
 use App\Models\SpbProject;
@@ -19,9 +20,39 @@ class ProjectCollection extends ResourceCollection
      */
     public function toArray(Request $request): array
     {
+        $user = auth()->user();
+        $role = $user->role_id;
         $data = [];
 
         foreach ($this as $key => $project) {
+            // Menyediakan variabel untuk total SPB yang belum disetujui
+            $totalUnapprovedSpb = 0;
+
+            // Hitung jumlah SPB yang belum disetujui berdasarkan role yang relevan
+            switch ($role) {
+                case Role::GUDANG:
+                    $totalUnapprovedSpb = $project->spbProjects()
+                        ->whereNull('know_kepalagudang') // Belum disetujui oleh GUDANG
+                        ->count(); // Hitung jumlah SPB yang belum disetujui GUDANG
+                    break;
+
+                case Role::SUPERVISOR:
+                    $totalUnapprovedSpb = $project->spbProjects()
+                        ->whereNull('know_supervisor') // Belum disetujui oleh SUPERVISOR
+                        ->count(); // Hitung jumlah SPB yang belum disetujui SUPERVISOR
+                    break;
+
+                case Role::OWNER:
+                    $totalUnapprovedSpb = $project->spbProjects()
+                        ->whereNull('request_owner') // Belum disetujui oleh OWNER
+                        ->count(); // Hitung jumlah SPB yang belum disetujui OWNER
+                    break;
+
+                default:
+                    // Jika role tidak dikenali, tidak ada data SPB yang dihitung
+                    break;
+            }
+            
             $data[] = [
                 'id' => $project->id,
                 'no_dokumen_project' => $project->no_dokumen_project,
@@ -41,7 +72,7 @@ class ProjectCollection extends ResourceCollection
                             'kode_produk' => $product->kode_produk,
                         ];
                     }), */
-              'marketing' => $project->tenagaKerja()
+                'marketing' => $project->tenagaKerja()
                     ->whereHas('role', function ($query) {
                         $query->where('role_name', 'Marketing');
                     })
@@ -107,6 +138,7 @@ class ProjectCollection extends ResourceCollection
                     'tukang_borongan' => $this->tukangBoronganSalary($project->manPowers()),
                     'total' => $this->tukangHarianSalary($project->manPowers()) + $this->tukangBoronganSalary($project->manPowers()),
                 ],
+                'total_spb_unapproved_for_role' => $totalUnapprovedSpb,
                 // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
                 'spb_projects' => $project->spbProjects->map(function ($spbProject) {
                     // Memeriksa kategori SPB, jika kategori BORONGAN maka ambil nilai harga_total_pembayaran_borongan_spb

@@ -159,13 +159,13 @@ class SpbProject extends Model
     public function vendors()
     {
         return $this->belongsToMany(Company::class, 'product_company_spbproject', 'spb_project_id', 'company_id')
-                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description']);
+                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description', 'payment_date', 'file_payment']);
     }
 
     public function products()
     {
         return $this->belongsToMany(Product::class, 'product_company_spbproject', 'spb_project_id', 'produk_id')
-                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description']);
+                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description', 'payment_date', 'file_payment']);
     }
 
     public function taxPpn(): HasOne

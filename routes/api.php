@@ -160,6 +160,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('spbproject/undo/{id}', [SPBController::class, 'undo']);
     Route::put('spbproject/request/{id}', [SPBController::class, 'request']);
     Route::put('spbproject/payment/{id}', [SPBController::class, 'payment']);
+    Route::put('spbproject/payment-vendor/{id}', [SPBController::class, 'paymentVendor']);
     Route::put('spbproject/update-payment/{id}', [SPBController::class, 'updatepayment']);
     Route::put('spbproject/accSpbProject/{id}', [SPBController::class, 'accSpbProject']);
     Route::delete('spbproject/delete-document/{id}', [SPBController::class, 'deleteDocument']);

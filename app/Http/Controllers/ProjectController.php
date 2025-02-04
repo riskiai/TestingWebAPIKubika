@@ -875,6 +875,36 @@ class ProjectController extends Controller
             return MessageActeeve::notFound('Data not found!');
         }
 
+        // Ambil role user yang sedang login
+        $user = auth()->user();
+        $role = $user->role_id;
+        $totalUnapprovedSpb = 0;
+
+        // Hitung jumlah SPB yang belum disetujui berdasarkan role yang relevan
+        switch ($role) {
+            case Role::GUDANG:
+                $totalUnapprovedSpb = $project->spbProjects()
+                    ->whereNull('know_kepalagudang') // Belum disetujui oleh GUDANG
+                    ->count(); // Hitung jumlah SPB yang belum disetujui GUDANG
+                break;
+
+            case Role::SUPERVISOR:
+                $totalUnapprovedSpb = $project->spbProjects()
+                    ->whereNull('know_supervisor') // Belum disetujui oleh SUPERVISOR
+                    ->count(); // Hitung jumlah SPB yang belum disetujui SUPERVISOR
+                break;
+
+            case Role::OWNER:
+                $totalUnapprovedSpb = $project->spbProjects()
+                    ->whereNull('request_owner') // Belum disetujui oleh OWNER
+                    ->count(); // Hitung jumlah SPB yang belum disetujui OWNER
+                break;
+
+            default:
+                // Jika role tidak dikenali, tidak ada data SPB yang dihitung
+                break;
+        }
+
         // Siapkan file attachment jika ada
         $file_attachment = null;
         if ($project->file) {
@@ -893,17 +923,6 @@ class ProjectController extends Controller
                 'name' => optional($project->company)->name,
                 'contact_type' => optional($project->company->contactType)->name,
             ],
-            /* 'produk' => optional($project->product)->map(function ($product) {
-                    return [
-                        'id' => $product->id,
-                        'nama' => $product->nama,
-                        'deskripsi' => $product->deskripsi,
-                        'stok' => $product->stok,
-                        'harga' => $product->harga,
-                        'type_pembelian' => $product->type_pembelian,
-                        'kode_produk' => $product->kode_produk,
-                    ];
-                }), */
                 'marketing' => $project->tenagaKerja()
                     ->whereHas('role', function ($query) {
                         $query->where('role_name', 'Marketing');
@@ -965,8 +984,7 @@ class ProjectController extends Controller
                         ],
                     ];
                 }),
-             // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
-              // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
+                'total_spb_unapproved_for_role' => $totalUnapprovedSpb,
               'spb_projects' => $project->spbProjects->map(function ($spbProject) {
                 // Memeriksa kategori SPB, jika kategori BORONGAN maka ambil nilai harga_total_pembayaran_borongan_spb
                 $spbCategory = $spbProject->spbproject_category_id;

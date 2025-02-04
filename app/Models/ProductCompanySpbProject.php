@@ -13,6 +13,8 @@ class ProductCompanySpbProject extends Model
     // Tentukan nama tabel pivot
     protected $table = 'product_company_spbproject';
 
+    const FILE_PEMBAYARAN_VENDOR = 'attachment/spbproject/vendor/file';
+
     // Buat Status Produk
     const AWAITING_PRODUCT = 1;
     const VERIFIED_PRODUCT = 2;
@@ -47,6 +49,8 @@ class ProductCompanySpbProject extends Model
         'due_date',
         'note_reject_produk',
         'description',
+        'payment_date',
+        'file_payment',
         // 'type_pembelian_produk',
     ];
 
