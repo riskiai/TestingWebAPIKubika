@@ -2817,7 +2817,7 @@ class SPBController extends Controller
             }
 
              
-            /* if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
+            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
                 // Jika kategori BORONGAN, hanya perlu persetujuan request_owner
                 if (!$spbProject->request_owner) {
                     return response()->json([
@@ -2833,7 +2833,7 @@ class SPBController extends Controller
                         'message' => 'Cannot accept SPB Project. All approvals must be completed first.',
                     ], 400);
                 }
-            } */
+            }
 
              // Validasi apakah user memiliki peran Finance, Owner, atau Admin
             if (!auth()->user()->hasRole(Role::FINANCE) && !auth()->user()->hasRole(Role::OWNER) && !auth()->user()->hasRole(Role::ADMIN)) {
