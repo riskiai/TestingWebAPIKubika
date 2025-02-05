@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\ProductCompanySpbProject;
 use App\Http\Requests\Project\StoreRequest;
 use App\Http\Requests\Project\UpdateRequest;
+use App\Models\SpbProject_Category;
 use App\Http\Resources\Project\ProjectCollection;
 use App\Http\Requests\Project\UpdatePengunaMuatanRequest;
 
@@ -1069,18 +1070,21 @@ class ProjectController extends Controller
         $status = Project::STATUS_OPEN;
         $totalSpbCost = 0;
         $totalManPowerCost = 0;
-        $totalSpbBoronganCost = 0; // Menambahkan variabel untuk spb_borongan_cost
+        $totalSpbBoronganCost = 0;
 
-        // Ambil semua SPB Project dengan status 'PAID'
-        $spbProjects = $project->spbProjects()->where('tab_spb', SpbProject::TAB_PAID)->get();
-
-        // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
+        // Ambil SPB projects berdasarkan kondisi kategori
+        $spbProjects = $project->spbProjects()->get(); // Ambil semua SPB Projects
+        
         foreach ($spbProjects as $spbProject) {
-            // Total biaya produk SPB
-            $totalSpbCost += $spbProject->getTotalProdukAttribute();
-
-            // Total biaya borongan SPB
-            $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0; // Ambil harga borongan jika ada
+            // Jika kategori adalah Borongan, tampilkan meskipun belum di tab 'paid'
+            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
+                $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
+            } else {
+                // Jika kategori bukan Borongan, hanya ambil yang sudah di tab 'paid'
+                if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
+                    $totalSpbCost += $spbProject->getTotalProdukAttribute();
+                }
+            }
         }
 
         // Hitung total salary dari ManPower terkait proyek
@@ -1090,13 +1094,12 @@ class ProjectController extends Controller
         }
 
         // Total biaya aktual (real cost)
-        $totalCost = $totalSpbCost + $totalManPowerCost + $totalSpbBoronganCost; // Menambahkan spb_borongan_cost
+        $totalCost = $totalSpbCost + $totalManPowerCost + $totalSpbBoronganCost;
 
-        // Cek jika cost_estimate lebih besar dari 0 sebelum melakukan pembagian
+        // Percent Itu didapat dari cost estimate project dibagi dengan total cost * 100
         if ($project->cost_estimate > 0) {
             $costEstimate = round(($totalCost / $project->cost_estimate) * 100, 2);
         } else {
-            // Default value jika cost_estimate adalah 0
             $costEstimate = 0;
         }
 
@@ -1118,7 +1121,7 @@ class ProjectController extends Controller
             'percent' => $costEstimate . '%',
             'real_cost' => $totalCost,
             'spb_produk_cost' => $totalSpbCost,
-            'spb_borongan_cost' => $totalSpbBoronganCost, // Menambahkan spb_borongan_cost
+            'spb_borongan_cost' => $totalSpbBoronganCost, 
             'man_power_cost' => $totalManPowerCost,
         ];
     }

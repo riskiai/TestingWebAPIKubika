@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\SpbProject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\SpbProject_Category;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ProjectCollection extends ResourceCollection
@@ -258,23 +259,21 @@ class ProjectCollection extends ResourceCollection
         ];
     } */
 
-    protected function costProgress($project)
+    /* protected function costProgress($project)
     {
         $status = Project::STATUS_OPEN;
         $totalSpbCost = 0;
         $totalManPowerCost = 0;
-        $totalSpbBoronganCost = 0; // Menambahkan variabel untuk spb_borongan_cost
+        $totalSpbBoronganCost = 0; 
 
-        // Ambil semua SPB Project dengan status 'PAID'
+       
         $spbProjects = $project->spbProjects()->where('tab_spb', SpbProject::TAB_PAID)->get();
 
-        // Hitung total cost dari semua SPB Projects yang statusnya 'PAID'
+   
         foreach ($spbProjects as $spbProject) {
-            // Total biaya produk SPB
             $totalSpbCost += $spbProject->getTotalProdukAttribute();
 
-            // Total biaya borongan SPB
-            $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0; // Ambil harga borongan jika ada
+            $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0; 
         }
 
         // Hitung total salary dari ManPower terkait proyek
@@ -284,7 +283,7 @@ class ProjectCollection extends ResourceCollection
         }
 
         // Total biaya aktual (real cost)
-        $totalCost = $totalSpbCost + $totalManPowerCost + $totalSpbBoronganCost; // Menambahkan spb_borongan_cost
+        $totalCost = $totalSpbCost + $totalManPowerCost + $totalSpbBoronganCost; 
 
         // Percent Itu didapat dari cost estimate project dibagi dengan total cost * 100
         // Cek jika cost_estimate lebih besar dari 0 sebelum melakukan pembagian
@@ -313,10 +312,72 @@ class ProjectCollection extends ResourceCollection
             'percent' => $costEstimate . '%',
             'real_cost' => $totalCost,
             'spb_produk_cost' => $totalSpbCost,
-            'spb_borongan_cost' => $totalSpbBoronganCost, // Menambahkan spb_borongan_cost
+            'spb_borongan_cost' => $totalSpbBoronganCost, 
+            'man_power_cost' => $totalManPowerCost,
+        ];
+    } */
+
+    protected function costProgress($project)
+    {
+        $status = Project::STATUS_OPEN;
+        $totalSpbCost = 0;
+        $totalManPowerCost = 0;
+        $totalSpbBoronganCost = 0;
+
+        // Ambil SPB projects berdasarkan kondisi kategori
+        $spbProjects = $project->spbProjects()->get(); // Ambil semua SPB Projects
+        
+        foreach ($spbProjects as $spbProject) {
+            // Jika kategori adalah Borongan, tampilkan meskipun belum di tab 'paid'
+            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
+                $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
+            } else {
+                // Jika kategori bukan Borongan, hanya ambil yang sudah di tab 'paid'
+                if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
+                    $totalSpbCost += $spbProject->getTotalProdukAttribute();
+                }
+            }
+        }
+
+        // Hitung total salary dari ManPower terkait proyek
+        $manPowers = $project->manPowers()->get();
+        foreach ($manPowers as $manPower) {
+            $totalManPowerCost += $manPower->current_salary + $manPower->current_overtime_salary;
+        }
+
+        // Total biaya aktual (real cost)
+        $totalCost = $totalSpbCost + $totalManPowerCost + $totalSpbBoronganCost;
+
+        // Percent Itu didapat dari cost estimate project dibagi dengan total cost * 100
+        if ($project->cost_estimate > 0) {
+            $costEstimate = round(($totalCost / $project->cost_estimate) * 100, 2);
+        } else {
+            $costEstimate = 0;
+        }
+
+        // Tentukan status berdasarkan progres biaya
+        if ($costEstimate > 90) {
+            $status = Project::STATUS_NEED_TO_CHECK;
+        }
+
+        if ($costEstimate == 100) {
+            $status = Project::STATUS_CLOSED;
+        }
+
+        // Update status proyek di database
+        $project->update(['status_cost_progres' => $status]);
+
+        // Kembalikan data progres biaya
+        return [
+            'status_cost_progres' => $status,
+            'percent' => $costEstimate . '%',
+            'real_cost' => $totalCost,
+            'spb_produk_cost' => $totalSpbCost,
+            'spb_borongan_cost' => $totalSpbBoronganCost, 
             'man_power_cost' => $totalManPowerCost,
         ];
     }
+
 
     protected function tukangHarianSalary($query) {
         return (int) $query->selectRaw("SUM(current_salary + current_overtime_salary) as total")->where("work_type", true)->first()->total;
