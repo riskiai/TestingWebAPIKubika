@@ -225,15 +225,23 @@ class SPBController extends Controller
         $user = auth()->user();
         $role = $user->role_id;
 
-        // Query dasar untuk mengambil SPB Project berdasarkan filter
         $query = SpbProject::query();
+
+        $query->whereHas('category', function ($q) {
+            $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+        });
+
+        if ($role == Role::SUPERVISOR) {
+            $query->whereHas('project.tenagaKerja', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
 
         if ($request->has('tanggal_dibuat_spb')) {
             $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
             $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
         }
         
-        // Modifikasi filter `tanggal_berahir_spb` agar tidak menghilangkan data yang cocok dengan `tanggal_dibuat_spb`
         if ($request->filled('tanggal_berahir_spb')) {
             $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
             $query->orWhereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
@@ -247,7 +255,6 @@ class SPBController extends Controller
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
 
-        // Filter berdasarkan role user yang login
         switch ($role) {
             case Role::GUDANG:
                 $query->whereNull('know_kepalagudang');
@@ -262,8 +269,6 @@ class SPBController extends Controller
                 break;
 
             case Role::ADMIN:
-                // Admin bisa melihat semua data tanpa pembatasan apapun
-                // Tidak perlu menambahkan filter apapun di sini
                 break;
 
             default:
@@ -273,20 +278,16 @@ class SPBController extends Controller
                 ], 403);
         }
 
-        // Ambil data dengan pagination (hanya yang difilter)
         $perPage = $request->get('per_page', 10);
         $currentPage = $request->get('page', 1);
         $paginatedData = $query->paginate($perPage, ['*'], 'page', $currentPage);
 
-        // Hitung total SPB yang belum di-approve (berdasarkan filter)
         $unapprovedSpb = $query->count();
 
-        // 🔥 Perbaikan totalSpb agar berubah sesuai filter
         $totalSpb = $request->hasAny(['tanggal_dibuat_spb', 'tanggal_berahir_spb', 'project', 'doc_no_spb'])
-            ? $query->count() // Jika ada filter, gunakan query yang sama
-            : SpbProject::count(); // Jika tidak ada filter, ambil semua data
+            ? $query->count() 
+            : SpbProject::count();
 
-        // Map data untuk detail unapproved SPB
         $detailUnapprovedSpb = $paginatedData->map(function ($spb) {
             return [
                 'docNo' => $spb->doc_no_spb,
@@ -299,14 +300,13 @@ class SPBController extends Controller
 
         // Response untuk Admin
         if ($role == Role::ADMIN || $role == Role::OWNER) {
-            // Hitung jumlah SPB yang belum disetujui berdasarkan status `know_kepalagudang`, `know_supervisor`, dan `request_owner`
             $knowKepalagudangUnapproved = SpbProject::whereNull('know_kepalagudang')->count();
             $knowSupervisorUnapproved = SpbProject::whereNull('know_supervisor')->count();
             $requestOwnerUnapproved = SpbProject::whereNull('request_owner')->count();
 
             return response()->json([
-                'total_spb' => $totalSpb,  // 🔥 Sekarang berubah sesuai filter
-                'unapprove_spb_total' => $unapprovedSpb,  // Menampilkan total SPB yang difilter
+                'total_spb' => $totalSpb, 
+                'unapprove_spb_total' => $unapprovedSpb,  
                 'detail_unapprove_spb' => $detailUnapprovedSpb,
                 'know_kepalagudang_spb__unapproved' => $knowKepalagudangUnapproved,
                 'know_supervisor_spb__unapproved' => $knowSupervisorUnapproved,
@@ -320,10 +320,9 @@ class SPBController extends Controller
             ]);
         }
 
-        // Jika bukan Admin, hanya kirim data yang relevan
         return response()->json([
-            'total_spb' => $totalSpb,  // 🔥 Sekarang berubah sesuai filter
-            'unapprove_spb_total' => $unapprovedSpb,  // Menampilkan total SPB yang difilter
+            'total_spb' => $totalSpb, 
+            'unapprove_spb_total' => $unapprovedSpb, 
             'detail_unapprove_spb' => $detailUnapprovedSpb,
             'pagination' => [
                 'current_page' => $paginatedData->currentPage(),
