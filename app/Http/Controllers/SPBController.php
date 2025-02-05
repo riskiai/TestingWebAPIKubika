@@ -300,13 +300,25 @@ class SPBController extends Controller
 
         // Response untuk Admin
         if ($role == Role::ADMIN || $role == Role::OWNER) {
-            $knowKepalagudangUnapproved = SpbProject::whereNull('know_kepalagudang')->count();
-            $knowSupervisorUnapproved = SpbProject::whereNull('know_supervisor')->count();
-            $requestOwnerUnapproved = SpbProject::whereNull('request_owner')->count();
-
+            // **Hindari menghitung Flash Cash dalam notifikasi**
+            $knowKepalagudangUnapproved = SpbProject::whereNull('know_kepalagudang')
+                ->whereHas('category', function ($q) {
+                    $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+                })->count();
+    
+            $knowSupervisorUnapproved = SpbProject::whereNull('know_supervisor')
+                ->whereHas('category', function ($q) {
+                    $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+                })->count();
+    
+            $requestOwnerUnapproved = SpbProject::whereNull('request_owner')
+                ->whereHas('category', function ($q) {
+                    $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+                })->count();
+    
             return response()->json([
-                'total_spb' => $totalSpb, 
-                'unapprove_spb_total' => $unapprovedSpb,  
+                'total_spb' => $totalSpb,
+                'unapprove_spb_total' => $unapprovedSpb,
                 'detail_unapprove_spb' => $detailUnapprovedSpb,
                 'know_kepalagudang_spb__unapproved' => $knowKepalagudangUnapproved,
                 'know_supervisor_spb__unapproved' => $knowSupervisorUnapproved,
