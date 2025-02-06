@@ -366,10 +366,10 @@ class ProjectController extends Controller
             });
         }
 
-        if ($request->has('year')) {
+       /*  if ($request->has('year')) {
             $year = $request->year;
             $query->whereYear('date', $year);
-        }
+        } */
 
           // Terapkan filter berdasarkan peran pengguna
           if ($request->has('role_id')) {
@@ -433,11 +433,23 @@ class ProjectController extends Controller
             });
         }
 
-        if ($request->has('date')) {
+        /* if ($request->has('date')) {
             $date = str_replace(['[', ']'], '', $request->date);
             $date = explode(", ", $date);
             $query->whereBetween('created_at', $date);
-        }
+        } */
+
+        if ($request->has('date')) {
+            $date = str_replace(['[', ']'], '', $request->date);
+            $date = explode(", ", $date);
+        
+            $query->whereRaw('STR_TO_DATE(created_at, "%Y-%m-%d") BETWEEN ? AND ?', [$date[0], $date[1]]);
+        }        
+
+        if ($request->has('year')) {
+            $year = $request->year;
+            $query->whereRaw('YEAR(STR_TO_DATE(date, "%Y-%m-%d")) = ?', [$year]);
+        }        
 
         // Ambil seluruh data tanpa paginasi
         $collection = $query->get();
