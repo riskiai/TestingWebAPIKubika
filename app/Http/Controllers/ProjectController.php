@@ -218,7 +218,7 @@ class ProjectController extends Controller
             $query->where('company_id', $request->contact);
         }
 
-        if ($request->has('date')) {
+       /*  if ($request->has('date')) {
             $date = str_replace(['[', ']'], '', $request->date);
             $date = explode(", ", $date);
         
@@ -228,7 +228,19 @@ class ProjectController extends Controller
         if ($request->has('year')) {
             $year = $request->year;
             $query->whereYear('date', $year);
+        } */
+
+        if ($request->has('date')) {
+            $date = str_replace(['[', ']'], '', $request->date); 
+            $date = explode(", ", $date); 
+            
+            $query->whereRaw('STR_TO_DATE(date, "%Y-%m-%d") BETWEEN ? AND ?', [$date[0], $date[1]]);
         }
+
+        if ($request->has('year')) {
+            $year = $request->year;
+            $query->whereRaw('YEAR(STR_TO_DATE(date, "%Y-%m-%d")) = ?', [$year]);
+        }     
 
        // Filter berdasarkan tenaga kerja (tukang)
         if ($request->has('tukang')) {
@@ -447,11 +459,9 @@ class ProjectController extends Controller
         }        */ 
 
         if ($request->has('date')) {
-            $date = str_replace(['[', ']'], '', $request->date); // Hapus tanda kurung
-            $date = explode(", ", $date); // Pisahkan tanggal berdasarkan koma
+            $date = str_replace(['[', ']'], '', $request->date); 
+            $date = explode(", ", $date); 
             
-            // Pastikan format tanggal yang digunakan di STR_TO_DATE sesuai dengan format yang ada di database
-            // Misalnya, format tanggal Anda adalah "Y-m-d" seperti "2025-01-01"
             $query->whereRaw('STR_TO_DATE(date, "%Y-%m-%d") BETWEEN ? AND ?', [$date[0], $date[1]]);
         }
 
