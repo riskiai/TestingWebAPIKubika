@@ -453,6 +453,8 @@ class ProjectController extends Controller
 
         $totalHargaType = (float) $query->sum('harga_type_project');
 
+        $totalProjects = $collection->count();
+
         // Response data
         return response()->json([
             "billing" => $totalBilling,
@@ -460,6 +462,7 @@ class ProjectController extends Controller
             "margin" => $totalMargin,
             "percent" => $percent,
             "harga_type_project_total_borongan" => $totalHargaType,
+            "total_projects" => $totalProjects,
         ]);
     }
 
