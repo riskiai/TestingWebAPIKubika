@@ -25,28 +25,37 @@ class ProjectCollection extends ResourceCollection
         $role = $user->role_id;
         $data = [];
 
-        foreach ($this as $key => $project) {
-            // Menyediakan variabel untuk total SPB yang belum disetujui
+        foreach ($this as $key => $project) {   
+                
             $totalUnapprovedSpb = 0;
 
-            // Hitung jumlah SPB yang belum disetujui berdasarkan role yang relevan
+            // Hitung jumlah SPB yang belum disetujui berdasarkan role yang relevan, dengan mengecualikan kategori Flash Cash
             switch ($role) {
                 case Role::GUDANG:
                     $totalUnapprovedSpb = $project->spbProjects()
+                        ->whereHas('category', function ($q) {
+                            $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+                        })
                         ->whereNull('know_kepalagudang') // Belum disetujui oleh GUDANG
-                        ->count(); // Hitung jumlah SPB yang belum disetujui GUDANG
+                        ->count();
                     break;
 
                 case Role::SUPERVISOR:
                     $totalUnapprovedSpb = $project->spbProjects()
+                        ->whereHas('category', function ($q) {
+                            $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+                        })
                         ->whereNull('know_supervisor') // Belum disetujui oleh SUPERVISOR
-                        ->count(); // Hitung jumlah SPB yang belum disetujui SUPERVISOR
+                        ->count();
                     break;
 
                 case Role::OWNER:
                     $totalUnapprovedSpb = $project->spbProjects()
+                        ->whereHas('category', function ($q) {
+                            $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+                        })
                         ->whereNull('request_owner') // Belum disetujui oleh OWNER
-                        ->count(); // Hitung jumlah SPB yang belum disetujui OWNER
+                        ->count();
                     break;
 
                 default:
