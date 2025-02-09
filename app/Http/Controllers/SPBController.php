@@ -35,6 +35,7 @@ use App\Http\Requests\SpbProject\ActivateProdukRequest;
 use App\Http\Requests\SpbProject\PaymentVendorRequest;
 use App\Http\Requests\SpbProject\UpdateTerminRequest;
 use App\Http\Resources\SPBproject\SPBprojectCollection;
+use App\Http\Resources\SPBproject\SpbProjectPrintCollection;
 
 class SPBController extends Controller
 {
@@ -245,6 +246,117 @@ class SPBController extends Controller
         // Return data dalam bentuk koleksi
         return new SPBprojectCollection($spbProjects);
     }
+
+    public function indexall(Request $request) {
+        $query = SpbProject::query();
+    
+        // Filter berdasarkan role user
+        if (auth()->user()->role_id == Role::MARKETING) {
+            $query->whereHas('project', function ($q) {
+                $q->where('user_id', auth()->user()->id) 
+                  ->orWhereHas('tenagaKerja', function ($q) {
+                      $q->where('user_id', auth()->user()->id); 
+                  });
+            });
+        }
+    
+        $query->with([
+            'user', 
+            'products', 
+            'project', 
+            'status', 
+            'vendors',
+            'project.tenagaKerja'  
+        ]);
+    
+        // Filter berdasarkan doc_no_spb
+        if ($request->has('doc_no_spb')) {
+            $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
+        }
+    
+        // Filter berdasarkan status
+        if ($request->has('status')) {
+            $status = $request->status;
+            // Pastikan status valid dan cocok dengan ID status
+            if (in_array($status, [
+                SpbProject_Status::AWAITING,
+                SpbProject_Status::VERIFIED,
+                SpbProject_Status::OPEN,
+                SpbProject_Status::OVERDUE,
+                SpbProject_Status::DUEDATE,
+                SpbProject_Status::REJECTED,
+                SpbProject_Status::PAID
+            ])) {
+                $query->whereHas('status', function ($query) use ($status) {
+                    $query->where('id', $status);
+                });
+            }
+        }
+    
+        // Filter berdasarkan type_project
+        if ($request->has('type_project')) {
+            $typeProject = $request->type_project;
+            if (in_array($typeProject, [SpbProject::TYPE_PROJECT_SPB, SpbProject::TYPE_NON_PROJECT_SPB])) {
+                $query->where('type_project', $typeProject);
+            }
+        }  
+    
+        // Filter berdasarkan tab_spb
+        if ($request->has('tab_spb')) {
+            $tab = $request->get('tab_spb');
+            if (in_array($tab, [
+                SpbProject::TAB_SUBMIT,
+                SpbProject::TAB_VERIFIED,
+                SpbProject::TAB_PAYMENT_REQUEST,
+                SpbProject::TAB_PAID
+            ])) {
+                $query->where('tab_spb', $tab);
+            }
+        }
+    
+        // Filter berdasarkan project ID
+        if ($request->has('project')) {
+            $query->whereHas('project', function ($query) use ($request) {
+                // Tentukan nama tabel untuk kolom 'id'
+                $query->where('projects.id', $request->project);
+            });
+        }
+    
+        // Filter berdasarkan tanggal dibuat SPB
+        if ($request->has('tanggal_dibuat_spb')) {
+            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
+            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
+        }
+    
+        // Pengurutan berdasarkan tab
+        if ($request->has('tab')) {
+            switch ($request->get('tab')) {
+                case SpbProject::TAB_SUBMIT:
+                    $query->orderBy('tanggal_dibuat_spb', 'desc')->orderBy('doc_no_spb', 'desc');
+                    break;
+                case SpbProject::TAB_VERIFIED:
+                case SpbProject::TAB_PAYMENT_REQUEST:
+                    $query->orderBy('tanggal_berahir_spb', 'asc')->orderBy('doc_no_spb', 'asc');
+                    break;
+                case SpbProject::TAB_PAID:
+                    $query->orderBy('updated_at', 'desc')->orderBy('doc_no_spb', 'desc');
+                    break;
+                default:
+                    $query->orderBy('tanggal_dibuat_spb', 'desc')->orderBy('doc_no_spb', 'desc');
+                    break;
+            }
+        } else {
+            // Jika tidak ada tab yang dipilih, urutkan berdasarkan tanggal dibuat secara descending
+            $query->orderBy('tanggal_dibuat_spb', 'desc')->orderBy('doc_no_spb', 'desc');
+        }
+    
+        // Ambil semua data tanpa pagination
+        $spbProjects = $query->get();
+    
+        // Return data dalam bentuk koleksi
+        return new SpbProjectPrintCollection($spbProjects);
+    }
+    
 
     public function countingspbusers(Request $request)
     {
@@ -1875,7 +1987,8 @@ class SPBController extends Controller
                     "bank_name" => $company->bank_name,
                     "account_name" => $company->account_name,
                 ] : null,
-            "harga_total_termin_spb" => $spbProject->harga_termin_spb ?? null,
+            'sisa_pembayaran_termin_spb' => $this->getDataSisaPemabayaranTerminSpb($spbProject),
+            "harga_total_termin_spb" => $this->getHargaTerminSpb($spbProject),
             "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
             "riwayat_termin" => $this->getRiwayatTermin($spbProject),
             "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
@@ -2163,7 +2276,8 @@ class SPBController extends Controller
                     "bank_name" => $company->bank_name,
                     "account_name" => $company->account_name,
                 ] : null,
-            "harga_total_termin_spb" => $spbProject->harga_termin_spb ?? null,
+            'sisa_pembayaran_termin_spb' => $this->getDataSisaPemabayaranTerminSpb($spbProject),
+            "harga_total_termin_spb" => $this->getHargaTerminSpb($spbProject),
             "deskripsi_termin_spb" => $spbProject->deskripsi_termin_spb ?? null,
             "type_termin_spb" => $this->getDataTypetermin($spbProject->type_termin_spb),
             "riwayat_termin" => $this->getRiwayatTermin($spbProject),
@@ -2187,6 +2301,30 @@ class SPBController extends Controller
 
         // Kembalikan data dalam format yang sudah ditentukan
         return MessageActeeve::render($data);
+    }
+
+    protected function getDataSisaPemabayaranTerminSpb($spbProject)
+    {
+        // Ambil total harga termin yang sudah dibayar (total harga termin yang ada di SPB project)
+        $totalHargaTermin = $this->getHargaTerminSpb($spbProject);
+
+        // Jika total harga termin adalah 0, berarti belum ada pembayaran, maka kembalikan 0
+        if ($totalHargaTermin == 0) {
+            return 0;
+        }
+
+        // Ambil total harga pembayaran borongan
+        $hargaPembayaranBorongan = $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
+
+        // Sisa pembayaran = Pembayaran borongan - Total harga termin
+        $sisaPembayaran = $hargaPembayaranBorongan - $totalHargaTermin;
+
+        return $sisaPembayaran; // Mengembalikan sisa pembayaran
+    }
+
+    protected function getHargaTerminSpb($spbProject)
+    {
+        return $spbProject->harga_termin_spb ?? 0;
     }
 
     protected function getRiwayatTermin($spbProject)

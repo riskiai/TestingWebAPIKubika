@@ -202,6 +202,7 @@ class ProjectCollection extends ResourceCollection
                 'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
                 'status_bonus_project' => $this->getRequestStatusBonus($project->status_bonus_project),
                 'type_projects' => $this->getDataTypeProject($project->type_projects),
+                'sisa_pembayaran_termin' => $this->getDataSisaPemabayaranTerminProyek($project),
                 "harga_total_termin_proyek" => $this->getHargaTerminProyek($project),
                 "deskripsi_termin_proyek" => $this->getDeskripsiTerminProyek($project),
                 "type_termin_proyek" => $this->convertTypeTermin($this->decodeJson($project->type_termin_proyek)),
@@ -232,6 +233,26 @@ class ProjectCollection extends ResourceCollection
 
         return $data;
     }
+
+    protected function getDataSisaPemabayaranTerminProyek(Project $project)
+    {
+        // Ambil total billing proyek
+        $billing = $project->billing;
+    
+        // Hitung total harga termin yang sudah dibayar (total harga termin yang ada di proyek)
+        $totalHargaTermin = $this->getHargaTerminProyek($project);
+    
+        // Jika total harga termin adalah 0, berarti belum ada pembayaran, maka kembalikan 0
+        if ($totalHargaTermin == 0) {
+            return 0;
+        }
+    
+        // Sisa pembayaran = Billing - Total harga termin
+        $sisaPembayaran = $billing - $totalHargaTermin;
+    
+        return $sisaPembayaran; // Mengembalikan sisa pembayaran
+    }
+    
 
     protected function getLatestPaymentFile(Project $project)
     {

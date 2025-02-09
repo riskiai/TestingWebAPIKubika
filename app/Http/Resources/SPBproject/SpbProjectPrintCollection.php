@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\ProductCompanySpbProject;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
-class SPBprojectCollection extends ResourceCollection
+class SpbProjectPrintCollection extends ResourceCollection
 {
     /**
      * Transform the resource collection into an array.
@@ -47,66 +47,7 @@ class SPBprojectCollection extends ResourceCollection
                 "doc_no_spb" => $spbProject->doc_no_spb,
                 "doc_type_spb" => $spbProject->doc_type_spb,
                 "status_spb" => $this->getStatus($spbProject),
-                // Menambahkan logs ke dalam data proyek
-                'logs_spb' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
-                    // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
-                    $lastLog = $logsByUser->sortByDesc('created_at')->first();
-
-                    // Ambil reject_note dari spbProject
-                    $rejectNote = $spbProject->reject_note;  // Ambil reject_note langsung dari spbProject
-
-                    return [
-                        'tab_spb' => $lastLog->tab_spb, // Ambil tab dari log terakhir
-                        'name' => $lastLog->name, // Ambil nama pengguna
-                        'created_at' => $lastLog->created_at, // Ambil waktu terakhir log
-                        'message' => $lastLog->message, // Ambil pesan dari log terakhir
-                        'reject_note' => $rejectNote, // Tambahkan reject_note dari spbProject
-                    ];
-                })->values()->all(),
                 "type_spb_project" => $typeSpbProject,
-                'supervisor' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
-                    ? $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            $query->where('role_name', 'Supervisor'); // Filter berdasarkan role 'Supervisor'
-                        })
-                        ->first() // Ambil hanya supervisor pertama yang ada
-                        ? [
-                            'id' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
-                                $query->where('role_name', 'Supervisor');
-                            })->first())->id ?? null,
-                            'name' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
-                                $query->where('role_name', 'Supervisor');
-                            })->first())->name ?? null,
-                            'divisi' => [
-                                'id' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
-                                    $query->where('role_name', 'Supervisor');
-                                })->first()->divisi)->id,
-                                'name' => optional($spbProject->project->tenagaKerja()->whereHas('role', function ($query) {
-                                    $query->where('role_name', 'Supervisor');
-                                })->first()->divisi)->name,
-                            ],
-                        ]
-                        : null 
-                    : null, 
-
-                'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
-                    ? $spbProject->project->tenagaKerja()
-                        ->whereHas('role', function ($query) {
-                            // Filter berdasarkan role yang diinginkan
-                            $query->whereIn('role_name', ['Owner', 'Marketing', 'Supervisor']);
-                        })
-                        ->get() // Menambahkan get() untuk mengambil koleksi
-                        ->map(function ($user) {
-                            return [
-                                'id' => $user->id ?? null,
-                                'name' => $user->name ?? null,
-                                'divisi' => [
-                                    'id' => optional($user->divisi)->id, // Pastikan divisi bisa null jika tidak ada
-                                    'name' => optional($user->divisi)->name,
-                                ],
-                            ];
-                        })
-                    : [], 
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
@@ -185,36 +126,6 @@ class SPBprojectCollection extends ResourceCollection
                                 ];
                             }
 
-                            // Periksa apakah status produk bukan open, overdue, atau duedate
-                           /*  if (!in_array($status, [
-                                ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
-                                ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
-                                ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT
-                            ])) {
-                                // Jika status produk bukan open, overdue, atau duedate, set status ke Awaiting
-                                $status = ProductCompanySpbProject::TEXT_AWAITING_PRODUCT;
-                            } else {
-                                // Jika status produk valid, periksa status berdasarkan due_date dan tab_spb
-                                $dueDateDayYear = $dueDate->format('d-Y'); // Format tanggal hanya hari dan tahun
-                                $nowDateDayYear = $nowDate->format('d-Y'); // Tanggal sekarang (hari dan tahun)
-
-                                // Periksa status berdasarkan due_date dan tab_spb hanya jika status belum "Awaiting"
-                                if ($status !== ProductCompanySpbProject::TEXT_AWAITING_PRODUCT) {
-                                    if ($spbProject->tab_spb == SpbProject::TAB_VERIFIED || $spbProject->tab_spb == SpbProject::TAB_PAYMENT_REQUEST) {
-                                        if ($nowDateDayYear > $dueDateDayYear) {
-                                            // Jika tanggal sekarang lebih besar dari due_date (terlambat), set status ke OVERDUE
-                                            $status = ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT;
-                                        } elseif ($nowDateDayYear == $dueDateDayYear) {
-                                            // Jika tanggal sekarang sama dengan due_date (tepat waktu), set status ke DUEDATE
-                                            $status = ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT;
-                                        } elseif ($nowDateDayYear < $dueDateDayYear) {
-                                            // Jika tanggal sekarang lebih kecil dari due_date (belum lewat), set status ke OPEN
-                                            $status = ProductCompanySpbProject::TEXT_OPEN_PRODUCT;
-                                        }
-                                    }
-                                }
-                            } */
-
                             // Menangani status "Rejected" jika tidak ditemukan sebelumnya
                             if ($status === ProductCompanySpbProject::TEXT_REJECTED_PRODUCT) {
                                 $noteReject = $product->note_reject_produk;
@@ -291,11 +202,6 @@ class SPBprojectCollection extends ResourceCollection
                     "created_at" => Carbon::parse($spbProject->created_at)->timezone('Asia/Jakarta')->toDateTimeString(),
                 ];
             }
-
-            // Jika ada PPH, tambahkan data PPH
-            /* if ($spbProject->pph) {
-            $data[$key]['pph'] = $this->getPph($spbProject);
-            } */
         }
 
         return $data;
@@ -654,3 +560,4 @@ class SPBprojectCollection extends ResourceCollection
     }
 
 }
+
