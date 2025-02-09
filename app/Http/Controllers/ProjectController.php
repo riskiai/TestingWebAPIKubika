@@ -11,18 +11,22 @@ use App\Models\Project;
 use App\Models\SpbProject;
 use App\Models\ContactType;
 use Illuminate\Http\Request;
+use App\Models\ProjectTermin;
 use App\Facades\MessageActeeve;
 use App\Models\ProjectUserProduk;
 use App\Models\SpbProject_Status;
 use Illuminate\Support\Facades\DB;
+use App\Models\SpbProject_Category;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ProductCompanySpbProject;
 use App\Http\Requests\Project\StoreRequest;
 use App\Http\Requests\Project\UpdateRequest;
-use App\Models\SpbProject_Category;
 use App\Http\Resources\Project\ProjectCollection;
+use App\Http\Requests\Project\PaymentTerminRequest;
+use App\Http\Requests\Project\UpdatePaymentTerminRequest;
 use App\Http\Requests\Project\UpdatePengunaMuatanRequest;
+use App\Http\Requests\SpbProject\UpdateTerminRequest;
 
 class ProjectController extends Controller
 {
@@ -579,7 +583,374 @@ class ProjectController extends Controller
             return MessageActeeve::error("Error creating project.");
         }
     }
-    
+
+    /* public function paymentTermin(PaymentTerminRequest $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $project = Project::findOrFail($id);
+
+            // Periksa apakah ada file yang diunggah
+            $fileAttachment = null;
+            if ($request->hasFile('attachment_file_termin_proyek')) {
+                $file = $request->file('attachment_file_termin_proyek');
+
+                // Pastikan hanya ada satu file yang diunggah
+                if (is_array($file)) {
+                    throw new \Exception("Hanya satu file yang diperbolehkan untuk attachment_file_termin_proyek");
+                }
+
+                $fileAttachment = $file->store(Project::ATTACHMENT_FILE_TERMIN_PROYEK, 'public');
+            }
+
+            // Pastikan `type_termin_proyek` bukan array
+            $typeTermin = $request->input('type_termin_proyek');
+            if (is_array($typeTermin)) {
+                throw new \Exception("Field type_termin_proyek harus berupa string atau integer, bukan array.");
+            }
+
+            // Konversi jika perlu
+            $typeTermin = (string) $typeTermin;
+
+            $termin = ProjectTermin::create([
+                'project_id' => $project->id,
+                'harga_termin' => $request->harga_termin_proyek,
+                'deskripsi_termin' => $request->deskripsi_termin_proyek,
+                'type_termin' => $typeTermin,
+                'tanggal_payment' => $request->payment_date_termin_proyek,
+                'file_attachment_pembayaran' => $fileAttachment ?? '', // Pastikan tidak menyimpan array
+            ]);
+
+            // Ambil termin terbaru setelah penyimpanan
+            $latestTermin = $project->projectTermins()->first();
+
+            if ($latestTermin) {
+                $project->update([
+                    'file_pembayaran_termin' => $latestTermin->file_attachment_pembayaran,
+                    'deskripsi_termin_proyek' => $latestTermin->deskripsi_termin,
+                    'type_termin_proyek' => $latestTermin->type_termin,
+                    'harga_termin_proyek' => $latestTermin->harga_termin,
+                    'payment_date_termin_proyek' => $latestTermin->tanggal_payment,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'SUCCESS',
+                'message' => 'Termin pembayaran berhasil ditambahkan!',
+            ], 200);
+
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'ERROR',
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    } */
+   
+    public function paymentTermin(PaymentTerminRequest $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $project = Project::findOrFail($id);
+
+            // Periksa apakah ada file yang diunggah
+            $fileAttachment = null;
+            if ($request->hasFile('attachment_file_termin_proyek')) {
+                $file = $request->file('attachment_file_termin_proyek');
+
+                // Pastikan hanya ada satu file yang diunggah
+                if (is_array($file)) {
+                    throw new \Exception("Hanya satu file yang diperbolehkan untuk attachment_file_termin_proyek");
+                }
+
+                $fileAttachment = $file->store(Project::ATTACHMENT_FILE_TERMIN_PROYEK, 'public');
+            }
+
+            // Pastikan `type_termin_proyek` bukan array dan konversi ke string
+            $typeTermin = $request->input('type_termin_proyek');
+            if (is_array($typeTermin)) {
+                throw new \Exception("Field type_termin_proyek harus berupa string atau integer, bukan array.");
+            }
+            $typeTermin = (string) $typeTermin;
+
+            // Simpan data termin baru
+            $termin = ProjectTermin::create([
+                'project_id' => $project->id,
+                'harga_termin' => (float) $request->harga_termin_proyek, // Pastikan harga dalam format angka
+                'deskripsi_termin' => $request->deskripsi_termin_proyek,
+                'type_termin' => $typeTermin,
+                'tanggal_payment' => $request->payment_date_termin_proyek,
+                'file_attachment_pembayaran' => is_string($fileAttachment) ? $fileAttachment : null, // Pastikan string
+            ]);
+
+            // **Ambil termin terbaru berdasarkan `created_at` (untuk menangani banyak pembayaran dalam satu hari)**
+            $latestTermin = $project->projectTermins()
+                ->orderBy('tanggal_payment', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            // **Hitung total harga_termin dari semua termin terkait proyek ini**
+            $totalHargaTermin = $project->projectTermins()->sum('harga_termin');
+
+            if ($latestTermin) {
+                $typeTerminData = is_array($latestTermin->type_termin) ? $latestTermin->type_termin : json_decode($latestTermin->type_termin, true);
+
+                if (!is_array($typeTerminData)) {
+                    $typeTerminData = [
+                        "id" => (string) ($latestTermin->type_termin ?? ""),
+                        "name" => ($latestTermin->type_termin == Project::TYPE_TERMIN_PROYEK_LUNAS) ? "Lunas" : "Belum Lunas",
+                    ];
+                }
+
+                $project->update([
+                    'file_pembayaran_termin' => is_string($latestTermin->file_attachment_pembayaran) ? $latestTermin->file_attachment_pembayaran : null,
+                    'deskripsi_termin_proyek' => $latestTermin->deskripsi_termin,
+                    'type_termin_proyek' => json_encode($typeTerminData, JSON_UNESCAPED_UNICODE), // Pastikan disimpan sebagai JSON
+                    'harga_termin_proyek' => (float) $totalHargaTermin, // Pastikan total harga adalah angka
+                    'payment_date_termin_proyek' => $latestTermin->tanggal_payment,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'SUCCESS',
+                'message' => 'Termin pembayaran berhasil ditambahkan!',
+            ], 200);
+
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'ERROR',
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateTermin(UpdatePaymentTerminRequest $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $project = Project::with(['projectTermins'])->findOrFail($id);
+
+            if (!$project) {
+                return response()->json([
+                    'status' => 'ERROR',
+                    'message' => 'Project not found!',
+                ], 404);
+            }
+
+            // Variabel untuk menyimpan data termin terakhir yang diupdate
+            $lastUpdatedTerminData = null;
+
+            // Loop untuk memperbarui setiap termin dalam request
+            foreach ($request->riwayat_termin as $terminData) {
+                $termin = $project->projectTermins->where('id', $terminData['id'])->first();
+
+                if (!$termin) {
+                    return response()->json([
+                        'status' => 'ERROR',
+                        'message' => "Termin with ID {$terminData['id']} not found!",
+                    ], 404);
+                }
+
+                // **Cek dan Update File Attachment**
+                $fileAttachmentPath = $termin->file_attachment_pembayaran;
+
+                if ($request->hasFile("riwayat_termin.{$terminData['id']}.attachment_file_termin_proyek")) {
+                    $file = $request->file("riwayat_termin.{$terminData['id']}.attachment_file_termin_proyek");
+
+                    if ($file->isValid()) {
+                        // Hapus file lama jika ada
+                        if ($fileAttachmentPath && Storage::disk('public')->exists($fileAttachmentPath)) {
+                            Storage::disk('public')->delete($fileAttachmentPath);
+                        }
+
+                        // Simpan file baru
+                        $fileAttachmentPath = $file->store(Project::ATTACHMENT_FILE_TERMIN_PROYEK, 'public');
+                    } else {
+                        return response()->json([
+                            'status' => 'ERROR',
+                            'message' => 'File upload failed',
+                        ], 400);
+                    }
+                }
+
+                // **Update Data Termin**
+                $termin->update([
+                    'harga_termin' => (float) $terminData['harga_termin_proyek'],
+                    'deskripsi_termin' => $terminData['deskripsi_termin_proyek'],
+                    'type_termin' => (string) $terminData['type_termin_proyek'],
+                    'tanggal_payment' => $terminData['payment_date_termin_proyek'],
+                    'file_attachment_pembayaran' => $fileAttachmentPath, // Simpan string path file
+                ]);
+
+                // Simpan data termin terakhir yang diupdate
+                $lastUpdatedTerminData = $terminData;
+            }
+
+            // **Update Deskripsi & Type Termin di Project**
+            if ($lastUpdatedTerminData) {
+                $project->update([
+                    'deskripsi_termin_proyek' => $lastUpdatedTerminData['deskripsi_termin_proyek'],
+                    'type_termin_proyek' => json_encode([
+                        "id" => (string) $lastUpdatedTerminData['type_termin_proyek'],
+                        "name" => $lastUpdatedTerminData['type_termin_proyek'] == Project::TYPE_TERMIN_PROYEK_LUNAS ? "Lunas" : "Belum Lunas",
+                    ], JSON_UNESCAPED_UNICODE),
+                ]);
+            }
+
+            // **Hitung ulang total harga_termin**
+            $totalHargaTermin = $project->projectTermins()->sum('harga_termin');
+            $project->update([
+                'harga_termin_proyek' => (float) $totalHargaTermin,
+            ]);
+
+            // **Ambil termin terbaru berdasarkan `tanggal_payment` & `created_at`**
+            $latestTermin = $project->projectTermins()
+                ->orderBy('tanggal_payment', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($latestTermin) {
+                $project->update([
+                    'file_pembayaran_termin' => is_string($latestTermin->file_attachment_pembayaran) ? $latestTermin->file_attachment_pembayaran : null,
+                    'payment_date_termin_proyek' => $latestTermin->tanggal_payment,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'SUCCESS',
+                'message' => 'Termin updated successfully!',
+            ]);
+
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => 'ERROR',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+    public function deleteTermin(Request $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Validasi input JSON
+            if (!$request->has('riwayat_termin') || !is_array($request->riwayat_termin)) {
+                return response()->json([
+                    'status' => 'ERROR',
+                    'message' => 'Invalid JSON format. "riwayat_termin" must be an array of IDs.',
+                ], 400);
+            }
+
+            // Ambil ID termin yang akan dihapus
+            $terminIdsToDelete = $request->riwayat_termin;
+
+            // Cari termin yang sesuai dengan ID yang diberikan
+            $terminsToDelete = ProjectTermin::where('project_id', $id)
+                ->whereIn('id', $terminIdsToDelete)
+                ->get();
+
+            if ($terminsToDelete->isEmpty()) {
+                return response()->json([
+                    'status' => 'ERROR',
+                    'message' => 'No valid termin IDs found for deletion!',
+                ], 404);
+            }
+
+            // Hanya hapus termin yang belum lunas
+            $terminsToDelete = $terminsToDelete->filter(function ($termin) {
+                return $termin->type_termin != Project::TYPE_TERMIN_PROYEK_LUNAS;
+            });
+
+            if ($terminsToDelete->isEmpty()) {
+                return response()->json([
+                    'status' => 'ERROR',
+                    'message' => 'All selected termin(s) are marked as "Lunas" and cannot be deleted.',
+                ], 400);
+            }
+
+            // Loop untuk menghapus setiap termin
+            foreach ($terminsToDelete as $termin) {
+                // Hapus file attachment jika ada
+                if (!empty($termin->file_attachment_pembayaran)) {
+                    if (Storage::disk('public')->exists($termin->file_attachment_pembayaran)) {
+                        Storage::disk('public')->delete($termin->file_attachment_pembayaran);
+                    }
+                }
+
+                // Hapus termin dari database
+                $termin->delete();
+            }
+
+            // Hitung ulang total harga termin
+            $totalHargaTermin = ProjectTermin::where('project_id', $id)->sum('harga_termin');
+
+            // Jika tidak ada termin yang tersisa
+            if ($totalHargaTermin == 0) {
+                Project::where('id', $id)->update([
+                    'deskripsi_termin_proyek' => null,
+                    'type_termin_proyek' => json_encode([
+                        "id" => null,
+                        "name" => null,
+                    ], JSON_UNESCAPED_UNICODE),
+                    'harga_termin_proyek' => 0,
+                    'file_pembayaran_termin' => null,
+                    'payment_date_termin_proyek' => null,
+                ]);
+            } else {
+                // Jika masih ada termin, ambil termin terakhir untuk update deskripsi dan type
+                $latestTermin = ProjectTermin::where('project_id', $id)
+                    ->orderBy('tanggal_payment', 'desc')
+                    ->first();
+
+                // Pastikan `type_termin_proyek` tidak menyebabkan array-to-string conversion
+                $typeTerminFormatted = is_array($latestTermin->type_termin) ? $latestTermin->type_termin['id'] : (string) $latestTermin->type_termin;
+
+                Project::where('id', $id)->update([
+                    'deskripsi_termin_proyek' => $latestTermin->deskripsi_termin,
+                    'type_termin_proyek' => json_encode([
+                        "id" => (string) $typeTerminFormatted,
+                        "name" => ($typeTerminFormatted == Project::TYPE_TERMIN_PROYEK_LUNAS) ? "Lunas" : "Belum Lunas",
+                    ], JSON_UNESCAPED_UNICODE),
+                    'harga_termin_proyek' => (float) $totalHargaTermin,
+                    'file_pembayaran_termin' => $latestTermin->file_attachment_pembayaran ?? null,
+                    'payment_date_termin_proyek' => $latestTermin->tanggal_payment,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'SUCCESS',
+                'message' => 'Selected termin(s) deleted successfully!',
+                'remaining_total_termin' => $totalHargaTermin,
+            ]);
+
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'ERROR',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
+
+ 
 
     public function UpdatePenggunaMuatan(UpdatePengunaMuatanRequest $request, $id)
     {

@@ -110,6 +110,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
      Route::get('project/{id}', [ProjectController::class, 'show']);
      Route::get('project/invoice/{id}', [ProjectController::class, 'invoice']);
      Route::post('project/create-informasi', [ProjectController::class, 'createInformasi']);
+     Route::post('project/payment-termin/{id}', [ProjectController::class, 'paymentTermin']);
+     Route::put('project/update-termin/{id}', [ProjectController::class, 'updateTermin']);
+     Route::delete('project/delete-termin/{id}', [ProjectController::class, 'deleteTermin']);
+
      Route::put('project/accept/{id}', [ProjectController::class, 'accept']);
      Route::put('project/closed/{id}', [ProjectController::class, 'closed']);
      Route::put('project/bonus/{id}', [ProjectController::class, 'bonus']);

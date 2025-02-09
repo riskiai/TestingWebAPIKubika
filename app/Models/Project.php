@@ -16,6 +16,7 @@ class Project extends Model
 
     const ATTACHMENT_FILE = 'attachment/project/file';
     const ATTACHMENT_FILE_SPB = 'attachment/project/spb_file';
+    const ATTACHMENT_FILE_TERMIN_PROYEK = 'attachment/project/terminproyek_file';
 
     // Status Cost Progress
     const STATUS_OPEN = 'OPEN';
@@ -44,7 +45,10 @@ class Project extends Model
     const DEFAULT_STATUS = self::PENDING;
     const DEFAULT_STATUS_PROJECT = self::INFORMASI_PROYEK;
 
-    protected $primaryKey = 'id'; // Set doc_no as the primary key
+    const TYPE_TERMIN_PROYEK_BELUM_LUNAS = 1;
+    const TYPE_TERMIN_PROYEK_LUNAS = 2;
+
+    protected $primaryKey = 'id'; 
     // public $incrementing = false;
     protected $table = 'projects';
     protected $keyType = 'string';
@@ -66,10 +70,14 @@ class Project extends Model
         'date',
         'request_status_owner',
         'status_bonus_project',
-        // 'status_step_project',
         'harga_type_project',
         'type_projects',
         'no_dokumen_project',
+        'file_pembayaran_termin',
+        'deskripsi_termin_proyek',
+        'type_termin_proyek',
+        'harga_termin_proyek',
+        'payment_date_termin_proyek'
     ];
 
     public static function getTypeProjectsOptions()
@@ -162,10 +170,8 @@ class Project extends Model
         return $generatedId;
     } */
 
-    /**
-     * Perbarui status proyek berdasarkan kondisi.
-     */
-    public function updateStepStatus()
+  
+    /* public function updateStepStatus()
     {
         if (empty($this->id) || $this->id === "0") {
             Log::error("Invalid Project ID detected during updateStepStatus. ID: {$this->id}");
@@ -202,21 +208,21 @@ class Project extends Model
         }
 
         // Kondisi untuk Pratinjau (Jika sudah ada informasi proyek dan pengguna muatan)
-        /* if (
-            $this->company_id &&
-            $this->name &&
-            $this->billing &&
-            $this->cost_estimate &&
-            $this->margin &&
-            $this->percent &&
-            $this->file &&
-            $this->date &&
-            $this->tenagaKerja->isNotEmpty() &&
-            $this->product->isNotEmpty()
-        ) {
-            $status = self::PRATINJAU;
-            Log::info("Status set to PRATINJAU for Project ID: {$this->id}");
-        } */
+        // if (
+        //     $this->company_id &&
+        //     $this->name &&
+        //     $this->billing &&
+        //     $this->cost_estimate &&
+        //     $this->margin &&
+        //     $this->percent &&
+        //     $this->file &&
+        //     $this->date &&
+        //     $this->tenagaKerja->isNotEmpty() &&
+        //     $this->product->isNotEmpty()
+        // ) {
+        //     $status = self::PRATINJAU;
+        //     Log::info("Status set to PRATINJAU for Project ID: {$this->id}");
+        // }
 
         if ($status !== null) {
             $this->status_step_project = $status;
@@ -225,7 +231,28 @@ class Project extends Model
         } else {
             Log::error("Failed to update status_step_project. No conditions met for Project ID: {$this->id}");
         }
+    } */
+
+    protected $appends = ['latest_payment_date'];
+
+    /* public function projectTermins(): HasMany
+    {
+        return $this->hasMany(ProjectTermin::class, 'project_id', 'id')->orderBy('tanggal_payment', 'desc');
+    } */
+
+    public function projectTermins(): HasMany
+    {
+        return $this->hasMany(ProjectTermin::class, 'project_id', 'id')
+            ->orderBy('tanggal_payment', 'desc') // Urutkan berdasarkan tanggal pembayaran
+            ->orderBy('created_at', 'desc'); // Jika tanggal sama, ambil yang terbaru berdasarkan waktu input
     }
+
+
+    public function getLatestPaymentDateAttribute()
+    {
+        return optional($this->projectTermins()->first())->tanggal_payment;
+    }
+    
 
     // Pada model Project
     public function user(): BelongsTo

@@ -2715,7 +2715,6 @@ class SPBController extends Controller
         }
     }
 
-
     public function updateTermin(UpdateTerminRequest $request, $docNo)
     {
         DB::beginTransaction();

@@ -202,6 +202,13 @@ class ProjectCollection extends ResourceCollection
                 'request_status_owner' => $this->getRequestStatus($project->request_status_owner),
                 'status_bonus_project' => $this->getRequestStatusBonus($project->status_bonus_project),
                 'type_projects' => $this->getDataTypeProject($project->type_projects),
+                "harga_total_termin_proyek" => $this->getHargaTerminProyek($project),
+                "deskripsi_termin_proyek" => $this->getDeskripsiTerminProyek($project),
+                "type_termin_proyek" => $this->convertTypeTermin($this->decodeJson($project->type_termin_proyek)),
+                "payment_date_termin_proyek" => $project->latest_payment_date, 
+                // "file_payment_termin_proyek" => $project->file_pembayaran_termin ? asset("storage/{$project->file_pembayaran_termin}") : null,
+                "file_payment_termin_proyek" => $this->getLatestPaymentFile($project), 
+                "riwayat_termin" => $this->getRiwayatTermin($project),
                 'created_at' => $project->created_at,
                 'updated_at' => $project->updated_at,
             ];
@@ -225,6 +232,74 @@ class ProjectCollection extends ResourceCollection
 
         return $data;
     }
+
+    protected function getLatestPaymentFile(Project $project)
+    {
+        // Ambil termin terbaru yang memiliki bukti pembayaran
+        $terminWithFile = $project->projectTermins()
+            ->whereNotNull('file_attachment_pembayaran')
+            ->orderBy('tanggal_payment', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        return $terminWithFile ? asset("storage/{$terminWithFile->file_attachment_pembayaran}") : null;
+    }
+
+    protected function getHargaTerminProyek(Project $project)
+    {
+        return $project->projectTermins->sum('harga_termin') ?? null;
+    }
+
+    protected function getDeskripsiTerminProyek(Project $project)
+    {
+        return $project->deskripsi_termin_proyek ?? null;
+    }
+
+    protected function getRiwayatTermin(Project $project)
+    {
+        return $project->projectTermins->map(function ($termin) {
+            return [
+                'id' => $termin->id,
+                'harga_termin' => $termin->harga_termin,
+                'deskripsi_termin' => $termin->deskripsi_termin,
+                'type_termin_spb' => $this->convertTypeTermin($this->decodeJson($termin->type_termin)),
+                'tanggal' => $termin->tanggal_payment,
+                'file_attachment' => $termin->file_attachment_pembayaran
+                    ? [
+                        'name' => pathinfo($termin->file_attachment_pembayaran, PATHINFO_FILENAME),
+                        'link' => asset("storage/{$termin->file_attachment_pembayaran}"),
+                    ]
+                    : null,
+            ];
+        })->toArray();
+    }
+
+    protected function convertTypeTermin($status)
+    {
+        if (is_array($status)) {
+            $id = $status['id'] ?? null;
+        } else {
+            $id = (string) $status;
+        }
+
+        return [
+            "id" => $id,
+            "name" => is_null($id) ? "Unknown" : ($id == Project::TYPE_TERMIN_PROYEK_LUNAS ? "Lunas" : "Belum Lunas"),
+        ];
+    }
+
+    protected function decodeJson($json)
+    {
+        if (is_array($json)) {
+            return $json;
+        }
+    
+        $decoded = json_decode($json, true);
+    
+        return $decoded ?? ["id" => null, "name" => "Unknown"];
+    }
+    
+
 
     /* protected function costProgress($project)
     {
