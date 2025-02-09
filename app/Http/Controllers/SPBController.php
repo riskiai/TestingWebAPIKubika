@@ -362,19 +362,23 @@ class SPBController extends Controller
     {
         $user = auth()->user();
         $role = $user->role_id;
-
+    
+        // Query utama untuk SPB Project
         $query = SpbProject::query();
-
+    
+        // Filter berdasarkan kategori
         $query->whereHas('category', function ($q) {
             $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
         });
-
+    
+        // Filter berdasarkan role jika supervisor
         if ($role == Role::SUPERVISOR) {
             $query->whereHas('project.tenagaKerja', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });
         }
-
+    
+        // Filter berdasarkan tanggal jika ada
         if ($request->has('tanggal_dibuat_spb') || $request->has('tanggal_berahir_spb')) {
             $query->where(function ($q) use ($request) {
                 if ($request->has('tanggal_dibuat_spb')) {
@@ -387,116 +391,93 @@ class SPBController extends Controller
                 }
             });
         }
-
+    
         if ($request->has('project')) {
             $query->where('project_id', $request->project);
         }
-
+    
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
-
+    
+        // Clone query sebelum pagination diterapkan
+        $unapprovedQuery = clone $query;
+    
+        // Perhitungan sesuai dengan role
         switch ($role) {
             case Role::GUDANG:
-                $query->whereNull('know_kepalagudang');
+                $unapprovedSpb = $query->whereNull('know_kepalagudang')->count();
                 break;
-
+        
             case Role::SUPERVISOR:
-                $query->whereNull('know_supervisor');
+                $unapprovedSpb = $query->whereNull('know_supervisor')->count();
                 break;
-
+        
             case Role::OWNER:
-                $query->whereNull('request_owner');
+                $unapprovedSpb = $query->whereNull('request_owner')->count();
                 break;
-
+        
             case Role::ADMIN:
+                $unapprovedSpb = $query->count(); // Admin bisa melihat semuanya
                 break;
-
+        
             default:
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Role not authorized for this action.'
                 ], 403);
         }
-
+    
+        // Pagination setup (Pagination hanya untuk tampilan data, bukan perhitungan)
         $perPage = $request->get('per_page', 10);
         $currentPage = $request->get('page', 1);
         $paginatedData = $query->paginate($perPage, ['*'], 'page', $currentPage);
-
-        $unapprovedSpb = $query->count();
-
+    
+        // Hitung jumlah SPB unapproved berdasarkan role tertentu, tanpa pagination
+        if ($role == Role::ADMIN || $role == Role::OWNER) {
+            $knowKepalagudangUnapproved = (clone $unapprovedQuery)->whereNull('know_kepalagudang')->count();
+            $knowSupervisorUnapproved = (clone $unapprovedQuery)->whereNull('know_supervisor')->count();
+            $requestOwnerUnapproved = (clone $unapprovedQuery)->whereNull('request_owner')->count();
+        } else {
+            // Jika bukan ADMIN atau OWNER, data diatur ke null atau tidak terlihat
+            $knowKepalagudangUnapproved = null;
+            $knowSupervisorUnapproved = null;
+            $requestOwnerUnapproved = null;
+        }
+    
+        // Hitung jumlah total SPB sesuai dengan filter yang diterapkan
         $totalSpb = $request->hasAny(['tanggal_dibuat_spb', 'tanggal_berahir_spb', 'project', 'doc_no_spb'])
-            ? $query->count() 
+            ? $unapprovedQuery->count() 
             : SpbProject::count();
-
-        $detailUnapprovedSpb = $paginatedData->map(function ($spb) {
+    
+        // Nama tab untuk SPB
+        $tabNames = [
+            SpbProject::TAB_SUBMIT => 'Submit',
+            SpbProject::TAB_VERIFIED => 'Verified',
+            SpbProject::TAB_PAYMENT_REQUEST => 'Payment Request',
+            SpbProject::TAB_PAID => 'Paid',
+        ];
+    
+        // Detail SPB yang belum disetujui (sesuai dengan pagination)
+        $detailUnapprovedSpb = $paginatedData->map(function ($spb) use ($tabNames) {
             return [
                 'docNo' => $spb->doc_no_spb,
+                'tabSpb' => isset($tabNames[$spb->tab_spb]) ? $tabNames[$spb->tab_spb] : 'Unknown', 
                 'projectId' => $spb->project ? $spb->project->id : null,
                 'unapprove_spb' => 1,
                 'createdAt' => $spb->created_at,
                 'updatedAt' => $spb->updated_at,
             ];
         });
-
-        /* // Response untuk Admin
-        if ($role == Role::ADMIN || $role == Role::OWNER) {
-            $knowKepalagudangUnapproved = SpbProject::whereNull('know_kepalagudang')
-                ->whereHas('category', function ($q) {
-                    $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
-                })->count();
     
-            $knowSupervisorUnapproved = SpbProject::whereNull('know_supervisor')
-                ->whereHas('category', function ($q) {
-                    $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
-                })->count();
-    
-            $requestOwnerUnapproved = SpbProject::whereNull('request_owner')
-                ->whereHas('category', function ($q) {
-                    $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
-                })->count();
-    
-            return response()->json([
-                'total_spb' => $totalSpb,
-                'unapprove_spb_total' => $unapprovedSpb,
-                'detail_unapprove_spb' => $detailUnapprovedSpb,
-                'know_kepalagudang_spb__unapproved' => $knowKepalagudangUnapproved,
-                'know_supervisor_spb__unapproved' => $knowSupervisorUnapproved,
-                'request_owner_spb__unapproved' => $requestOwnerUnapproved,
-                'pagination' => [
-                    'current_page' => $paginatedData->currentPage(),
-                    'per_page' => $paginatedData->perPage(),
-                    'total' => $paginatedData->total(),
-                    'last_page' => $paginatedData->lastPage(),
-                ],
-            ]);
-        } */
-
-        if ($role == Role::ADMIN || $role == Role::OWNER) {
-            $knowKepalagudangUnapproved = (clone $query)->whereNull('know_kepalagudang')->count();
-            $knowSupervisorUnapproved = (clone $query)->whereNull('know_supervisor')->count();
-            $requestOwnerUnapproved = (clone $query)->whereNull('request_owner')->count();
-    
-            return response()->json([
-                'total_spb' => $totalSpb,
-                'unapprove_spb_total' => $unapprovedSpb,
-                'detail_unapprove_spb' => $detailUnapprovedSpb,
-                'know_kepalagudang_spb_unapproved' => $knowKepalagudangUnapproved,
-                'know_supervisor_spb_unapproved' => $knowSupervisorUnapproved,
-                'request_owner_spb_unapproved' => $requestOwnerUnapproved,
-                'pagination' => [
-                    'current_page' => $paginatedData->currentPage(),
-                    'per_page' => $paginatedData->perPage(),
-                    'total' => $paginatedData->total(),
-                    'last_page' => $paginatedData->lastPage(),
-                ],
-            ]);
-        }
-
+        // Mengembalikan response JSON
         return response()->json([
             'total_spb' => $totalSpb, 
-            'unapprove_spb_total' => $unapprovedSpb, 
+            'unapprove_spb_total' => $unapprovedSpb,  // Tidak terpengaruh pagination
             'detail_unapprove_spb' => $detailUnapprovedSpb,
+            'know_kepalagudang_spb_unapproved' => $knowKepalagudangUnapproved, 
+            'know_supervisor_spb_unapproved' => $knowSupervisorUnapproved,
+            'request_owner_spb_unapproved' => $requestOwnerUnapproved,
             'pagination' => [
                 'current_page' => $paginatedData->currentPage(),
                 'per_page' => $paginatedData->perPage(),
@@ -504,7 +485,7 @@ class SPBController extends Controller
                 'last_page' => $paginatedData->lastPage(),
             ],
         ]);
-    }
+    }    
 
     public function countingspb(Request $request)
     {
