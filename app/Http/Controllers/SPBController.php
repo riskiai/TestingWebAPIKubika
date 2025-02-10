@@ -1608,7 +1608,7 @@ class SPBController extends Controller
     public function updateproduk(UpdateProdukRequest $request, $id)
     {
         DB::beginTransaction();
-
+    
         try {
             // Cari SPB Project berdasarkan ID
             $spbProject = SpbProject::with(['productCompanySpbprojects'])->find($id);
@@ -1618,79 +1618,44 @@ class SPBController extends Controller
                     'message' => 'SPB Project not found!',
                 ], 404);
             }
-
+    
             // Ambil produk baru dari request
             $produkData = $request->input('produk', []);
-
-            // Ambil ID produk dari request
-            $newProductIds = collect($produkData)->pluck('produk_id')->toArray();
-
-            // Proses produk baru dari request
+    
+            // Hapus semua data lama yang ada di tabel productCompanySpbprojects untuk SPB Project ini
+            $spbProject->productCompanySpbprojects()->delete();
+    
+            // Tambahkan data baru berdasarkan request
             foreach ($produkData as $item) {
-                $vendorId = $item['vendor_id'];
-                $productId = $item['produk_id'];
-
-                // Periksa apakah produk sudah ada untuk vendor tertentu
-                $existingProduct = $spbProject->productCompanySpbprojects()
-                    ->where('company_id', $vendorId)
-                    ->where('produk_id', $productId)
-                    ->first();
-
-                if ($existingProduct) {
-                    // Update produk yang ada
-                    $existingProduct->update([
-                        'harga' => $item['harga'] ?? 0,  // Default 0 jika tidak ada harga
-                        'stok' => $item['stok'],
-                        'ppn' => $item['tax_ppn'] ?? 0,
-                        'description' => $item['description'],
-                        'ongkir' => $item['ongkir'] ?? 0,
-                        'date' => $item['date'],
-                        'due_date' => $item['due_date'],
-                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
-                        'updated_at' => now(),
-                    ]);
-                } else {
-                    // Jika produk tidak ditemukan, maka buat produk baru
-                    $spbProject->productCompanySpbprojects()->create([
-                        'company_id' => $vendorId,
-                        'produk_id' => $productId,
-                        'harga' => $item['harga'] ?? 0,
-                        'stok' => $item['stok'],
-                        'ppn' => $item['tax_ppn'] ?? 0,
-                        'description' => $item['description'],
-                        'ongkir' => $item['ongkir'] ?? 0,
-                        'date' => $item['date'],
-                        'due_date' => $item['due_date'],
-                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
-                    ]);
-                }
+                $spbProject->productCompanySpbprojects()->create([
+                    'company_id' => $item['vendor_id'],
+                    'produk_id' => $item['produk_id'],
+                    'harga' => $item['harga'] ?? 0,
+                    'stok' => $item['stok'],
+                    'ppn' => $item['tax_ppn'] ?? 0,
+                    'description' => $item['description'],
+                    'ongkir' => $item['ongkir'] ?? 0,
+                    'date' => $item['date'],
+                    'due_date' => $item['due_date'],
+                    'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
+                ]);
             }
-
-            // Hapus produk lama yang tidak ada di request baru
-            $existingProducts = $spbProject->productCompanySpbprojects()->pluck('produk_id')->toArray();
-            $productsToDelete = array_diff($existingProducts, $newProductIds);
-
-            if (!empty($productsToDelete)) {
-                $spbProject->productCompanySpbprojects()
-                    ->whereIn('produk_id', $productsToDelete)
-                    ->delete();
-            }
-
+    
             DB::commit();
-
+    
             return response()->json([
                 'status' => 'success',
-                'message' => "SPB Project {$id} has been updated successfully.",
+                'message' => "SPB Project {$id} has been updated successfully. All old products and vendors were removed.",
             ]);
         } catch (\Throwable $th) {
             DB::rollBack();
-
+    
             return response()->json([
                 'status' => 'error',
                 'message' => $th->getMessage(),
             ], 500);
         }
-    }
+    }    
 
     public function addspbtoproject(Request $request, $id)
     {
