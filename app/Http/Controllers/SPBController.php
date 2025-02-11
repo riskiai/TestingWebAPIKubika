@@ -677,16 +677,18 @@ class SPBController extends Controller
             }
         });
 
-        $unapprovedSpbBorongan = (clone $query) // Gunakan clone agar tidak mengubah $query utama
+        $unapprovedSpbBorongan = (clone $query)
             ->whereNull('request_owner')
             ->count();
 
-        // Hitung total SPB kategori Borongan setelah filter
         $receivedTotalSpbBorongan = $query->count();
+
+        $unpaidSpbBorongan = $open + $over_due + $due_date;
 
         // Respons JSON
         return response()->json([
             "received_total_spb_borongan" => $receivedTotalSpbBorongan,
+            "unpaid_spb_borongan" => $unpaidSpbBorongan, 
             "unapproved_spb_borongan" => $unapprovedSpbBorongan, 
             "subtotal_harga_pembayaran_borongan_spb" => $subtotalHargaTotalBorongan,
             "subtotal_harga_termin_spb" => $subtotalHargaTerminBorongan,
