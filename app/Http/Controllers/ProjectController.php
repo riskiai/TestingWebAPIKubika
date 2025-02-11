@@ -490,6 +490,23 @@ class ProjectController extends Controller
 
         $totalProjects = $collection->count();
 
+        $totalHargaBorongan = SpbProject::where('spbproject_category_id', SpbProject_Category::BORONGAN)
+        ->whereHas('project', function ($q) use ($request) {
+            // Filter berdasarkan proyek yang dipilih
+            if ($request->has('project')) {
+                $q->where('id', $request->project);
+            }
+            // Filter berdasarkan vendor jika ada
+            if ($request->has('vendor')) {
+                $q->where('company_id', $request->vendor);
+            }
+            // Filter berdasarkan tahun jika ada
+            if ($request->has('year')) {
+                $q->whereRaw('YEAR(STR_TO_DATE(date, "%Y-%m-%d")) = ?', [$request->year]);
+            }
+        })
+        ->sum('harga_total_pembayaran_borongan_spb');
+
         // Response data
         return response()->json([
             "billing" => $totalBilling,
@@ -498,6 +515,7 @@ class ProjectController extends Controller
             "percent" => $percent,
             "harga_type_project_total_borongan" => $totalHargaType,
             "total_projects" => $totalProjects,
+            "total_harga_borongan_spb" => $totalHargaBorongan,
         ]);
     }
 
@@ -1589,7 +1607,12 @@ class ProjectController extends Controller
                 $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
             } else {
                 // Jika kategori bukan Borongan, hanya ambil yang sudah di tab 'paid'
-                if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
+                if (in_array($spbProject->tab_spb, [
+                    SpbProject::TAB_SUBMIT,
+                    SpbProject::TAB_VERIFIED,
+                    SpbProject::TAB_PAYMENT_REQUEST,
+                    SpbProject::TAB_PAID
+                ])) {
                     $totalSpbCost += $spbProject->getTotalProdukAttribute();
                 }
             }

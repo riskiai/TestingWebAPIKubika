@@ -438,7 +438,15 @@ class ProjectCollection extends ResourceCollection
                 $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
             } else {
                 // Jika kategori bukan Borongan, hanya ambil yang sudah di tab 'paid'
-                if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
+                /* if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
+                    $totalSpbCost += $spbProject->getTotalProdukAttribute();
+                } */
+                if (in_array($spbProject->tab_spb, [
+                    SpbProject::TAB_SUBMIT,
+                    SpbProject::TAB_VERIFIED,
+                    SpbProject::TAB_PAYMENT_REQUEST,
+                    SpbProject::TAB_PAID
+                ])) {
                     $totalSpbCost += $spbProject->getTotalProdukAttribute();
                 }
             }

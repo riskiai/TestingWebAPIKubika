@@ -116,6 +116,10 @@ class SPBController extends Controller
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
+
+        if ($request->has('doc_type_spb')) {
+            $query->where('doc_type_spb', 'like', '%' . $request->doc_type_spb . '%');
+        }
         
 
         if ($request->has('status')) {
@@ -883,8 +887,8 @@ class SPBController extends Controller
         $role = auth()->user()->role_id;
     
         // Ambil semua data SPB (filter default untuk type_project = TYPE_PROJECT_SPB)
-       $query = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB)
-        ->whereIn('spbproject_category_id', [SpbProject_Category::FLASH_CASH, SpbProject_Category::INVOICE]);
+        $query = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB)
+        ->where('spbproject_category_id', SpbProject_Category::INVOICE);    
     
         if (auth()->user()->role_id == Role::MARKETING) {
             $query->whereHas('project', function ($q) {
@@ -1333,6 +1337,21 @@ class SPBController extends Controller
         $nextNumber = sprintf('%03d', $maxNumericPart + 1);
         return "{$spbCategory->short}-$nextNumber";
     }
+
+    /* protected function generateDocNo($maxNumericPart, $spbCategory)
+    {
+        // Pastikan kategori SPB memiliki format yang benar
+        if (!$spbCategory || !isset($spbCategory->short)) {
+            throw new \Exception("Kategori SPB tidak valid atau tidak ditemukan.");
+        }
+
+        if ($maxNumericPart === 0) {
+            return "{$spbCategory->short}-0001";
+        }
+
+        $nextNumber = sprintf('%04d', $maxNumericPart + 1);
+        return "{$spbCategory->short}-$nextNumber";
+    } */
 
     public function update(UpdateRequest $request, $docNoSpb)
     {

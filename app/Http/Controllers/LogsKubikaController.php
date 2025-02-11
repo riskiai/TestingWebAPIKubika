@@ -63,12 +63,65 @@ class LogsKubikaController extends Controller
             )
             ->addSelect(DB::raw("'spb_project' as type"))
             ->get();
+        
+            $logsProductCompanySpb = DB::table('product_company_spbproject')
+            ->join('spb_projects', 'product_company_spbproject.spb_project_id', '=', 'spb_projects.doc_no_spb')
+            ->join('users', 'spb_projects.user_id', '=', 'users.id')
+            ->select(
+                DB::raw('NULL as id'),
+                'product_company_spbproject.id as reference_id',
+                'users.name as created_by',
+                DB::raw("'Updated product in SPB project' as message"),
+                'product_company_spbproject.created_at',
+                'product_company_spbproject.updated_at'
+            )
+            ->addSelect(DB::raw("'product spb project' as type"))
+            ->get();
+
+            $logsSpbProjectTermins = DB::table('spb_project_termins')
+            ->join('spb_projects', 'spb_project_termins.doc_no_spb', '=', 'spb_projects.doc_no_spb')
+            ->join('users', 'spb_projects.user_id', '=', 'users.id')
+            ->select(
+                DB::raw('NULL as id'),
+                'spb_project_termins.id as reference_id',
+                'users.name as created_by',
+                DB::raw("CASE 
+                            WHEN spb_project_termins.file_attachment_id IS NOT NULL 
+                            THEN 'Paid termin in SPB project' 
+                            ELSE 'Updated termin in SPB project' 
+                         END as message"),
+                'spb_project_termins.created_at',
+                'spb_project_termins.updated_at'
+            )
+            ->addSelect(DB::raw("'spb project termin' as type"))
+            ->get();
+
+            $logsProjectTermins = DB::table('project_termins')
+            ->join('projects', 'project_termins.project_id', '=', 'projects.id')
+            ->join('users', 'projects.user_id', '=', 'users.id')
+            ->select(
+                DB::raw('NULL as id'),
+                'project_termins.id as reference_id',
+                'users.name as created_by',
+                DB::raw("CASE 
+                            WHEN project_termins.file_attachment_pembayaran IS NOT NULL 
+                            THEN 'Paid termin in project' 
+                            ELSE 'Updated termin in project' 
+                         END as message"),
+                'project_termins.created_at',
+                'project_termins.updated_at'
+            )
+            ->addSelect(DB::raw("'project termin' as type"))
+            ->get();
 
         // Gabungkan semua data
         $combinedLogs = $logManPowers
             ->concat($logsSpbProjects)
             ->concat($logsProjects)
-            ->concat($createdSpbs);
+            ->concat($createdSpbs)
+            ->concat($logsProductCompanySpb)
+            ->concat($logsSpbProjectTermins)
+            ->concat($logsProjectTermins);
 
         // Urutkan berdasarkan created_at secara descending
         $sortedLogs = $combinedLogs->sortByDesc('created_at');
