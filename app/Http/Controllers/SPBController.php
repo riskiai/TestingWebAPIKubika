@@ -887,8 +887,11 @@ class SPBController extends Controller
         $role = auth()->user()->role_id;
     
         // Ambil semua data SPB (filter default untuk type_project = TYPE_PROJECT_SPB)
+       /*  $query = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB)
+        ->where('spbproject_category_id', SpbProject_Category::INVOICE);     */
         $query = SpbProject::where('type_project', SpbProject::TYPE_PROJECT_SPB)
-        ->where('spbproject_category_id', SpbProject_Category::INVOICE);    
+        ->whereIn('spbproject_category_id', [SpbProject_Category::FLASH_CASH, SpbProject_Category::INVOICE]);
+
     
         if (auth()->user()->role_id == Role::MARKETING) {
             $query->whereHas('project', function ($q) {
@@ -1089,9 +1092,12 @@ class SPBController extends Controller
     
         $unknownSpb = (clone $query)
         ->where(function ($q) {
-            $q->whereNull('know_supervisor')
-              ->orWhereNull('know_kepalagudang')
-              ->orWhereNull('request_owner');
+            $q->where('spbproject_category_id', SpbProject_Category::INVOICE)  
+              ->where(function ($q2) {
+                  $q2->whereNull('know_supervisor')
+                      ->orWhereNull('know_kepalagudang')
+                      ->orWhereNull('request_owner');
+              });
         })
         ->count();
     
