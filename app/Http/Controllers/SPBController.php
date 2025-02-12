@@ -181,14 +181,14 @@ class SPBController extends Controller
             $tanggalDibuatSpb = $request->tanggal_dibuat_spb;
             $tanggalBerahirSpb = $request->tanggal_berahir_spb;
     
-            // Pastikan format tanggal valid (YYYY-MM-DD)
-            $query->whereBetween('tanggal_dibuat_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb])
+            // Memastikan bahwa filter tanggal hanya berlaku pada kategori "Borongan"
+            $query->where(function ($q) use ($tanggalDibuatSpb, $tanggalBerahirSpb) {
+                $q->whereBetween('tanggal_dibuat_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb])
                   ->orWhereBetween('tanggal_berahir_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb]);
+            });
         } elseif ($request->has('tanggal_dibuat_spb')) {
-            // Jika hanya tanggal_dibuat_spb yang diberikan
             $query->whereDate('tanggal_dibuat_spb', '=', $request->tanggal_dibuat_spb);
         } elseif ($request->has('tanggal_berahir_spb')) {
-            // Jika hanya tanggal_berahir_spb yang diberikan
             $query->whereDate('tanggal_berahir_spb', '=', $request->tanggal_berahir_spb);
         }
 
@@ -509,42 +509,19 @@ class SPBController extends Controller
             $query->where('project_id', $request->project);
         }
 
-        /* if ($request->has('tanggal_dibuat_spb')) {
-            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
-            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
-        }
+        if ($request->has('tanggal_dibuat_spb') && $request->has('tanggal_berahir_spb')) {
+            $tanggalDibuatSpb = $request->tanggal_dibuat_spb;
+            $tanggalBerahirSpb = $request->tanggal_berahir_spb;
     
-        // Filter berdasarkan tanggal_berahir_spb
-        if ($request->has('tanggal_berahir_spb')) {
-            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
-            $query->whereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
-        } */
-
-        /* if ($request->has('tanggal_dibuat_spb')) {
-            $tanggalDibuatSpb = Carbon::parse($request->input('tanggal_dibuat_spb'));
-            $query->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb);
-        }
-
-        // Filter berdasarkan tanggal berakhir, tetap menampilkan data dari tanggal dibuat
-        if ($request->filled('tanggal_berahir_spb')) {
-            $tanggalBerahirSpb = Carbon::parse($request->input('tanggal_berahir_spb'));
+            // Memastikan bahwa filter tanggal hanya berlaku pada kategori "Borongan"
             $query->where(function ($q) use ($tanggalDibuatSpb, $tanggalBerahirSpb) {
-                $q->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb)
-                ->orWhereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
+                $q->whereBetween('tanggal_dibuat_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb])
+                  ->orWhereBetween('tanggal_berahir_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb]);
             });
-        }   */
-
-        if ($request->has('tanggal_dibuat_spb') || $request->has('tanggal_berahir_spb')) {
-            $query->where(function ($q) use ($request) {
-                if ($request->has('tanggal_dibuat_spb')) {
-                    $tanggalDibuatSpb = Carbon::parse($request->tanggal_dibuat_spb);
-                    $q->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb);
-                }
-                if ($request->has('tanggal_berahir_spb')) {
-                    $tanggalBerahirSpb = Carbon::parse($request->tanggal_berahir_spb);
-                    $q->whereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
-                }
-            });
+        } elseif ($request->has('tanggal_dibuat_spb')) {
+            $query->whereDate('tanggal_dibuat_spb', '=', $request->tanggal_dibuat_spb);
+        } elseif ($request->has('tanggal_berahir_spb')) {
+            $query->whereDate('tanggal_berahir_spb', '=', $request->tanggal_berahir_spb);
         }
 
         $receivedTotalSpbBorongan = $query->count();
@@ -712,17 +689,19 @@ class SPBController extends Controller
         }  
 
         // Filter berdasarkan tanggal dibuat
-        if ($request->has('tanggal_dibuat_spb') || $request->has('tanggal_berahir_spb')) {
-            $query->where(function ($q) use ($request) {
-                if ($request->has('tanggal_dibuat_spb')) {
-                    $tanggalDibuatSpb = Carbon::parse($request->tanggal_dibuat_spb);
-                    $q->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb);
-                }
-                if ($request->has('tanggal_berahir_spb')) {
-                    $tanggalBerahirSpb = Carbon::parse($request->tanggal_berahir_spb);
-                    $q->whereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
-                }
+        if ($request->has('tanggal_dibuat_spb') && $request->has('tanggal_berahir_spb')) {
+            $tanggalDibuatSpb = $request->tanggal_dibuat_spb;
+            $tanggalBerahirSpb = $request->tanggal_berahir_spb;
+    
+            // Memastikan bahwa filter tanggal hanya berlaku pada kategori "Borongan"
+            $query->where(function ($q) use ($tanggalDibuatSpb, $tanggalBerahirSpb) {
+                $q->whereBetween('tanggal_dibuat_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb])
+                  ->orWhereBetween('tanggal_berahir_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb]);
             });
+        } elseif ($request->has('tanggal_dibuat_spb')) {
+            $query->whereDate('tanggal_dibuat_spb', '=', $request->tanggal_dibuat_spb);
+        } elseif ($request->has('tanggal_berahir_spb')) {
+            $query->whereDate('tanggal_berahir_spb', '=', $request->tanggal_berahir_spb);
         }
 
     
@@ -964,17 +943,19 @@ class SPBController extends Controller
             });
         }   */
 
-        if ($request->has('tanggal_dibuat_spb') || $request->has('tanggal_berahir_spb')) {
-            $query->where(function ($q) use ($request) {
-                if ($request->has('tanggal_dibuat_spb')) {
-                    $tanggalDibuatSpb = Carbon::parse($request->tanggal_dibuat_spb);
-                    $q->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb);
-                }
-                if ($request->has('tanggal_berahir_spb')) {
-                    $tanggalBerahirSpb = Carbon::parse($request->tanggal_berahir_spb);
-                    $q->whereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
-                }
+        if ($request->has('tanggal_dibuat_spb') && $request->has('tanggal_berahir_spb')) {
+            $tanggalDibuatSpb = $request->tanggal_dibuat_spb;
+            $tanggalBerahirSpb = $request->tanggal_berahir_spb;
+    
+            // Memastikan bahwa filter tanggal hanya berlaku pada kategori "Borongan"
+            $query->where(function ($q) use ($tanggalDibuatSpb, $tanggalBerahirSpb) {
+                $q->whereBetween('tanggal_dibuat_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb])
+                  ->orWhereBetween('tanggal_berahir_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb]);
             });
+        } elseif ($request->has('tanggal_dibuat_spb')) {
+            $query->whereDate('tanggal_dibuat_spb', '=', $request->tanggal_dibuat_spb);
+        } elseif ($request->has('tanggal_berahir_spb')) {
+            $query->whereDate('tanggal_berahir_spb', '=', $request->tanggal_berahir_spb);
         }
     
         // Paginate atau get data
