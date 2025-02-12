@@ -638,7 +638,6 @@ class SPBController extends Controller
                     break;
 
                 default:
-                    // Jika tab_spb tidak dikenali, abaikan
                     break;
             }
 
@@ -683,7 +682,7 @@ class SPBController extends Controller
 
         $receivedTotalSpbBorongan = $query->count();
 
-        $unpaidSpbBorongan = $open + $over_due + $due_date;
+        $unpaidSpbBorongan = $open + $over_due + $due_date + $submit + $payment_request_hargatotalborongaspb; 
 
         // Respons JSON
         return response()->json([
@@ -1141,6 +1140,10 @@ class SPBController extends Controller
             $tanggalBerahirSpb = Carbon::parse($request->tanggal_berahir_spb);
             $nowDate = Carbon::now();
 
+            /* $tanggalBerahirSpb = Carbon::parse($request->tanggal_berahir_spb)->timezone('Asia/Jakarta');
+            $nowDate = Carbon::now('Asia/Jakarta');   */
+
+
             /* $spbStatus = match (true) {
                 $spbCategory->id == SpbProject_Category::BORONGAN => SpbProject_Status::AWAITING,
                 $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $nowDate->isSameDay($tanggalBerahirSpb) => SpbProject_Status::DUEDATE,
@@ -1366,7 +1369,6 @@ class SPBController extends Controller
         DB::beginTransaction();
 
         try {
-            // Validasi kategori SPB yang dipilih
             $spbCategory = SpbProject_Category::find($request->spbproject_category_id);
             if (!$spbCategory) {
                 throw new \Exception("Kategori SPB tidak ditemukan.");
@@ -3185,7 +3187,7 @@ class SPBController extends Controller
             }
 
             // Periksa tanggal berakhir SPB
-            $dueDate = Carbon::parse($spbProject->tanggal_berahir_spb);
+            /* $dueDate = Carbon::parse($spbProject->tanggal_berahir_spb);
             $nowDate = Carbon::now();
 
             $spbStatus = null;
@@ -3197,7 +3199,22 @@ class SPBController extends Controller
                 $spbStatus = SpbProject_Status::OVERDUE; 
             } elseif ($nowDate->lt($dueDate)) {
                 $spbStatus = SpbProject_Status::OPEN; 
+            } */
+
+            $dueDate = Carbon::parse($spbProject->tanggal_berahir_spb)->timezone('Asia/Jakarta');
+            $nowDate = Carbon::now('Asia/Jakarta');  
+
+            $spbStatus = null;
+
+            // Logika pembaruan status berdasarkan tanggal akhir SPB
+            if ($nowDate->isSameDay($dueDate)) {
+                $spbStatus = SpbProject_Status::DUEDATE; 
+            } elseif ($nowDate->gt($dueDate)) {
+                $spbStatus = SpbProject_Status::OVERDUE; 
+            } elseif ($nowDate->lt($dueDate)) {
+                $spbStatus = SpbProject_Status::OPEN; 
             }
+
 
             // Iterasi semua produk yang terkait dengan SPB Project
             foreach ($spbProject->productCompanySpbprojects as $product) {
