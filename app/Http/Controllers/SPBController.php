@@ -891,11 +891,14 @@ class SPBController extends Controller
                 ->orWhereNull('request_owner');
             })
             ->count();
+
+        $totalproduknon = $payment_request + $paid;
     
         // Respons JSON
         return response()->json([
             'received' => $received, // Jumlah data
             'total_spb_yang_belum_diapprove' => $unknownSpb,
+            'total_produk_non' => $totalproduknon,
             // 'submit' => $submit,
             // 'verified' => $verified,
             'over_due' => $over_due,
@@ -946,6 +949,10 @@ class SPBController extends Controller
                       $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
                   });
             });
+        }
+
+        if ($request->has('doc_type_spb')) {
+            $query->where('doc_type_spb', 'like', '%' . $request->doc_type_spb . '%');
         }
 
         if ($request->has('tukang')) {
@@ -1140,11 +1147,14 @@ class SPBController extends Controller
               });
         })
         ->count();
+
+        $totalproduk = $submit + $verified + $payment_request + $paid;
     
         // Respons JSON
         return response()->json([
             'received' => $received, // Jumlah data (per halaman atau semua)
             'total_spb_yang_belum_diapprove' => $unknownSpb,
+            'total_produk_project_aktif' => $totalproduk,
             'submit' => $submit,
             'verified' => $verified,
             'over_due' => $over_due,
