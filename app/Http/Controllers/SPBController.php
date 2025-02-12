@@ -2932,6 +2932,12 @@ class SPBController extends Controller
 
                 // Hapus termin dari database
                 DB::table('spb_project_termins')->where('id', $termin->id)->delete();
+
+                $spbProject = SpbProject::where('doc_no_spb', $docNoSpb)->first();
+                if ($spbProject) {
+                    $spbProject->harga_total_pembayaran_borongan_spb += $termin->harga_termin;
+                    $spbProject->save();
+                }
             }
 
             // Hitung ulang total harga termin
@@ -4169,7 +4175,7 @@ class SPBController extends Controller
             
                     $totalHargaTermin = $spbProject->termins->sum('harga_termin');
                     $updateFields['harga_termin_spb'] = $totalHargaTermin;  // Update field harga total termin
-                    $spbProject->harga_total_pembayaran_borongan_spb = $spbProject->harga_total_pembayaran_borongan_spb - $totalHargaTermin;
+                    $spbProject->harga_total_pembayaran_borongan_spb -= $request->harga_termin_spb;
 
                     $updateFields['deskripsi_termin_spb'] = $request->deskripsi_termin_spb;
                 }
