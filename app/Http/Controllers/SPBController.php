@@ -3049,8 +3049,7 @@ class SPBController extends Controller
     
             // Menghitung ulang harga total termin setelah update termin
             $totalHargaTermin = $spbProject->termins->sum('harga_termin');
-    
-            // Update harga_total_termin_spb di SPB Project
+            $spbProject->harga_total_pembayaran_borongan_spb = $spbProject->harga_total_pembayaran_borongan_spb - $totalHargaTermin;
             $spbProject->update([
                 'harga_termin_spb' => $totalHargaTermin,
             ]);
@@ -4145,10 +4144,10 @@ class SPBController extends Controller
             
                     $totalHargaTermin = $spbProject->termins->sum('harga_termin');
                     $updateFields['harga_termin_spb'] = $totalHargaTermin;  // Update field harga total termin
+                    $spbProject->harga_total_pembayaran_borongan_spb = $spbProject->harga_total_pembayaran_borongan_spb - $totalHargaTermin;
 
                     $updateFields['deskripsi_termin_spb'] = $request->deskripsi_termin_spb;
                 }
-
 
                 if ($request->has('type_termin_spb')) {
                     $updateFields['type_termin_spb'] = $request->type_termin_spb;
@@ -4263,7 +4262,6 @@ class SPBController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
-
 
     protected function saveDocument($spbProject, $file, $iteration)
     {

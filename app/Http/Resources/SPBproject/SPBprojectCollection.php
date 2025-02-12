@@ -24,6 +24,7 @@ class SPBprojectCollection extends ResourceCollection
 
         foreach ($this as $key => $spbProject) {
             $company = $spbProject->company;
+            $hargaTotalPembayaranBorongan = $spbProject->harga_total_pembayaran_borongan_spb;
 
               // Determine the tab name
             $tabNames = [
@@ -260,13 +261,15 @@ class SPBprojectCollection extends ResourceCollection
                 "total" => $spbProject->total_produk,
                 'file_attachement' => $this->getDocument($spbProject),
                 "unit_kerja" => $spbProject->unit_kerja,
-                "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
+                
                 "vendor_borongan" => $company ? [
                         "id" => $company->id,
                         "name" => $company->name,
                         "bank_name" => $company->bank_name,
                         "account_name" => $company->account_name,
                     ] : null,
+                // "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
+              "harga_total_pembayaran_borongan_spb" => $hargaTotalPembayaranBorongan, 
                 'sisa_pembayaran_termin_spb' => $this->getDataSisaPemabayaranTerminSpb($spbProject),
                 "harga_total_termin_spb" => $this->getHargaTerminSpb($spbProject),
                 "deskripsi_termin_spb" => $this->getDeskripsiTerminSpb($spbProject),
@@ -300,6 +303,7 @@ class SPBprojectCollection extends ResourceCollection
 
         return $data;
     }
+    
 
     protected function getDataSisaPemabayaranTerminSpb($spbProject)
     {
