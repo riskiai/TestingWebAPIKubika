@@ -42,16 +42,8 @@ class SPBController extends Controller
     public function index(Request $request)
     {
         $query = SpbProject::query();
-        
-        /* if (auth()->user()->role_id == Role::MARKETING) {
-            // Tampilkan hanya SPB yang terkait dengan proyek yang dibuat oleh user
-            $query->whereHas('project', function ($q) {
-                $q->where('user_id', auth()->user()->id); 
-            });
-        } */
 
          if (auth()->user()->role_id == Role::MARKETING) {
-            // Tampilkan SPB yang terkait dengan proyek yang dibuat oleh Marketing
             $query->whereHas('project', function ($q) {
                 $q->where('user_id', auth()->user()->id) 
                   ->orWhereHas('tenagaKerja', function ($q) {
@@ -66,22 +58,8 @@ class SPBController extends Controller
             'project', 
             'status', 
             'vendors',
-            'project.tenagaKerja'  // Pastikan relasi tenagaKerja dimuat untuk setiap project
+            'project.tenagaKerja'  
         ]);
-
-        // Filter pencarian berdasarkan SPB project
-        /* if ($request->has('search')) {
-            $query->where(function ($query) use ($request) {
-                $query->where('doc_no_spb', 'like', '%' . $request->search . '%')
-                      ->orWhere('doc_type_spb', 'like', '%' . $request->search . '%')
-                      ->orWhereHas('company', function ($query) use ($request) {
-                          $query->where('name', 'like', '%' . $request->search . '%');
-                      })
-                      ->orWhereHas('vendors', function ($query) use ($request) {
-                          $query->where('name', 'like', '%' . $request->search . '%'); // Filter vendor
-                      });
-            });
-        } */
 
         // 🔹 **Pencarian (SEARCH)**
         if ($request->has('search')) {
@@ -98,9 +76,9 @@ class SPBController extends Controller
 
 
         if ($request->has('tukang')) {
-            $tukangIds = explode(',', $request->tukang); // Mengambil ID tukang dari parameter yang dipisah dengan koma
+            $tukangIds = explode(',', $request->tukang);
             $query->whereHas('project.tenagaKerja', function ($query) use ($tukangIds) {
-                $query->whereIn('users.id', $tukangIds); // Pastikan menggunakan 'users.id'
+                $query->whereIn('users.id', $tukangIds); 
             });
         }
 
@@ -186,30 +164,7 @@ class SPBController extends Controller
             }
         }
 
-        // Filter berdasarkan range date (tanggal_dibuat_spb atau tanggal tertentu dari SPB Project)
-        /* if ($request->has('tanggal_dibuat_spb')) {
-            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_dibuat_spb)); 
-            $query->whereBetween('tanggal_dibuat_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
-        } */
-
-
-        // Filter berdasarkan due_date (tanggal_berahir_spb)
-       /*  if ($request->has('tanggal_berahir_spb')) {
-            $dateRange = explode(",", str_replace(['[', ']'], '', $request->tanggal_berahir_spb)); 
-            $query->whereBetween('tanggal_berahir_spb', [Carbon::parse($dateRange[0]), Carbon::parse($dateRange[1])]);
-        } */
-
-        /* if ($request->has('tanggal_dibuat_spb')) {
-            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
-            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
-        }
-        
-        if ($request->filled('tanggal_berahir_spb')) {
-            $tanggalBerahirSpb = $request->input('tanggal_berahir_spb');
-            $query->orWhereDate('tanggal_berahir_spb', Carbon::parse($tanggalBerahirSpb));
-        }      */   
-
-        if ($request->has('tanggal_dibuat_spb') || $request->has('tanggal_berahir_spb')) {
+        /* if ($request->has('tanggal_dibuat_spb') || $request->has('tanggal_berahir_spb')) {
             $query->where(function ($q) use ($request) {
                 if ($request->has('tanggal_dibuat_spb')) {
                     $tanggalDibuatSpb = Carbon::parse($request->tanggal_dibuat_spb);
@@ -220,6 +175,21 @@ class SPBController extends Controller
                     $q->whereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
                 }
             });
+        } */
+
+        if ($request->has('tanggal_dibuat_spb') && $request->has('tanggal_berahir_spb')) {
+            $tanggalDibuatSpb = $request->tanggal_dibuat_spb;
+            $tanggalBerahirSpb = $request->tanggal_berahir_spb;
+    
+            // Pastikan format tanggal valid (YYYY-MM-DD)
+            $query->whereBetween('tanggal_dibuat_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb])
+                  ->orWhereBetween('tanggal_berahir_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb]);
+        } elseif ($request->has('tanggal_dibuat_spb')) {
+            // Jika hanya tanggal_dibuat_spb yang diberikan
+            $query->whereDate('tanggal_dibuat_spb', '=', $request->tanggal_dibuat_spb);
+        } elseif ($request->has('tanggal_berahir_spb')) {
+            // Jika hanya tanggal_berahir_spb yang diberikan
+            $query->whereDate('tanggal_berahir_spb', '=', $request->tanggal_berahir_spb);
         }
 
         // Pengurutan berdasarkan tab
