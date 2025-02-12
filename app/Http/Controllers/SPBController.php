@@ -682,7 +682,8 @@ class SPBController extends Controller
 
         $receivedTotalSpbBorongan = $query->count();
 
-        $unpaidSpbBorongan = $open + $over_due + $due_date + $submit + $payment_request_hargatotalborongaspb; 
+        // $unpaidSpbBorongan = $open + $over_due + $due_date + $submit + $payment_request_hargatotalborongaspb; 
+        $unpaidSpbBorongan = $open + $over_due + $due_date;
 
         // Respons JSON
         return response()->json([
