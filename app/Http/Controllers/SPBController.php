@@ -1381,7 +1381,7 @@ class SPBController extends Controller
     }
 
 
-    protected function generateDocNo($maxNumericPart, $spbCategory)
+    /* protected function generateDocNo($maxNumericPart, $spbCategory)
     {
         // Pastikan kategori SPB memiliki format yang benar
         if (!$spbCategory || !isset($spbCategory->short)) {
@@ -1396,9 +1396,9 @@ class SPBController extends Controller
         // Tambahkan 1 pada bagian numerik dan format menjadi 3 digit
         $nextNumber = sprintf('%03d', $maxNumericPart + 1);
         return "{$spbCategory->short}-$nextNumber";
-    }
+    } */
 
-    /* protected function generateDocNo($maxNumericPart, $spbCategory)
+    protected function generateDocNo($maxNumericPart, $spbCategory)
     {
         // Pastikan kategori SPB memiliki format yang benar
         if (!$spbCategory || !isset($spbCategory->short)) {
@@ -1411,7 +1411,7 @@ class SPBController extends Controller
 
         $nextNumber = sprintf('%04d', $maxNumericPart + 1);
         return "{$spbCategory->short}-$nextNumber";
-    } */
+    }
 
     public function update(UpdateRequest $request, $docNoSpb)
     {
