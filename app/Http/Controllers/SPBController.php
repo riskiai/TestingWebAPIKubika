@@ -62,7 +62,7 @@ class SPBController extends Controller
         ]);
 
         // 🔹 **Pencarian (SEARCH)**
-        if ($request->has('search')) {
+       /*  if ($request->has('search')) {
             $searchTerm = $request->search;
 
             $query->where(function ($q) use ($searchTerm) {
@@ -72,8 +72,47 @@ class SPBController extends Controller
                     $q->where('name', 'like', '%' . $searchTerm . '%'); // Nama kategori SPB
                 });
             });
+        } */
+
+        // 🔹 **Pencarian (SEARCH)**
+        if ($request->has('search')) {
+            $searchTerm = $request->search;
+
+            $query->where(function ($q) use ($searchTerm) {
+                // Pencarian berdasarkan doc_no_spb dan doc_type_spb
+                $q->where('doc_no_spb', 'like', '%' . $searchTerm . '%') // Nomor SPB
+                ->orWhere('doc_type_spb', 'like', '%' . $searchTerm . '%') // Tipe SPB
+
+                // Pencarian berdasarkan kategori
+                ->orWhereHas('category', function ($q) use ($searchTerm) { 
+                    $q->where('name', 'like', '%' . $searchTerm . '%'); // Nama kategori SPB
+                })
+
+                // Pencarian berdasarkan nama perusahaan langsung di tabel companies
+                ->orWhereHas('company', function ($q) use ($searchTerm) { 
+                    $q->where('name', 'like', '%' . $searchTerm . '%'); // Nama perusahaan (company name)
+                })
+                
+                // Pencarian berdasarkan nama perusahaan yang terhubung melalui pivot table product_company_spbproject
+                ->orWhereHas('productCompanySpbprojects', function ($q) use ($searchTerm) {
+                    $q->whereHas('company', function ($q) use ($searchTerm) {
+                        $q->where('name', 'like', '%' . $searchTerm . '%'); // Nama perusahaan yang terhubung via pivot table
+                    });
+                });
+            });
         }
 
+        if ($request->has('vendor_id')) {
+            $vendorId = $request->vendor_id;
+    
+            // Filter berdasarkan company_id di SPB Project langsung dan melalui pivot table product_company_spbproject
+            $query->where(function ($q) use ($vendorId) {
+                $q->where('company_id', $vendorId) // Filter berdasarkan company_id di SPB Project
+                  ->orWhereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
+                      $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
+                  });
+            });
+        }
 
         if ($request->has('tukang')) {
             $tukangIds = explode(',', $request->tukang);
@@ -351,6 +390,18 @@ class SPBController extends Controller
                 $q->where('users.id', $user->id);
             });
         }
+
+        if ($request->has('vendor_id')) {
+            $vendorId = $request->vendor_id;
+    
+            // Filter berdasarkan company_id di SPB Project langsung dan melalui pivot table product_company_spbproject
+            $query->where(function ($q) use ($vendorId) {
+                $q->where('company_id', $vendorId) // Filter berdasarkan company_id di SPB Project
+                  ->orWhereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
+                      $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
+                  });
+            });
+        }
     
         // Filter berdasarkan tanggal jika ada
         if ($request->has('tanggal_dibuat_spb') || $request->has('tanggal_berahir_spb')) {
@@ -492,6 +543,18 @@ class SPBController extends Controller
             });
         }  
 
+        if ($request->has('vendor_id')) {
+            $vendorId = $request->vendor_id;
+    
+            // Filter berdasarkan company_id di SPB Project langsung dan melalui pivot table product_company_spbproject
+            $query->where(function ($q) use ($vendorId) {
+                $q->where('company_id', $vendorId) // Filter berdasarkan company_id di SPB Project
+                  ->orWhereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
+                      $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
+                  });
+            });
+        }
+
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
@@ -629,8 +692,8 @@ class SPBController extends Controller
 
         $receivedTotalSpbBorongan = $query->count();
 
-        // $unpaidSpbBorongan = $open + $over_due + $due_date + $submit + $payment_request_hargatotalborongaspb; 
-        $unpaidSpbBorongan = $open + $over_due + $due_date;
+        // $unpaidSpbBorongan = $open + $over_due + $due_date;
+        $unpaidSpbBorongan = $subtotalHargaTerminBorongan - $subtotalHargaTotalBorongan;
 
         // Respons JSON
         return response()->json([
@@ -676,6 +739,18 @@ class SPBController extends Controller
             $tukangIds = explode(',', $request->tukang); // Mengambil ID tukang dari parameter yang dipisah dengan koma
             $query->whereHas('project.tenagaKerja', function ($query) use ($tukangIds) {
                 $query->whereIn('users.id', $tukangIds); // Pastikan menggunakan 'users.id'
+            });
+        }
+
+        if ($request->has('vendor_id')) {
+            $vendorId = $request->vendor_id;
+    
+            // Filter berdasarkan company_id di SPB Project langsung dan melalui pivot table product_company_spbproject
+            $query->where(function ($q) use ($vendorId) {
+                $q->where('company_id', $vendorId) // Filter berdasarkan company_id di SPB Project
+                  ->orWhereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
+                      $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
+                  });
             });
         }
 
@@ -859,6 +934,18 @@ class SPBController extends Controller
             if (in_array($typeProject, [SpbProject::TYPE_PROJECT_SPB, SpbProject::TYPE_NON_PROJECT_SPB])) {
                 $query->where('type_project', $typeProject);
             }
+        }
+
+        if ($request->has('vendor_id')) {
+            $vendorId = $request->vendor_id;
+    
+            // Filter berdasarkan company_id di SPB Project langsung dan melalui pivot table product_company_spbproject
+            $query->where(function ($q) use ($vendorId) {
+                $q->where('company_id', $vendorId) // Filter berdasarkan company_id di SPB Project
+                  ->orWhereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
+                      $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
+                  });
+            });
         }
 
         if ($request->has('tukang')) {
