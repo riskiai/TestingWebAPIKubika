@@ -693,7 +693,7 @@ class SPBController extends Controller
         $receivedTotalSpbBorongan = $query->count();
 
         // $unpaidSpbBorongan = $open + $over_due + $due_date;
-        $unpaidSpbBorongan = $subtotalHargaTerminBorongan - $subtotalHargaTotalBorongan;
+        $unpaidSpbBorongan = $subtotalHargaTotalBorongan - $subtotalHargaTerminBorongan;
 
         // Respons JSON
         return response()->json([
