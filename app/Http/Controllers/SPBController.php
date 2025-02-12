@@ -1380,7 +1380,6 @@ class SPBController extends Controller
         }
     }
 
-
     /* protected function generateDocNo($maxNumericPart, $spbCategory)
     {
         // Pastikan kategori SPB memiliki format yang benar
@@ -1397,6 +1396,7 @@ class SPBController extends Controller
         $nextNumber = sprintf('%03d', $maxNumericPart + 1);
         return "{$spbCategory->short}-$nextNumber";
     } */
+    
 
     protected function generateDocNo($maxNumericPart, $spbCategory)
     {
@@ -1405,12 +1405,27 @@ class SPBController extends Controller
             throw new \Exception("Kategori SPB tidak valid atau tidak ditemukan.");
         }
 
+        // Jika tidak ada doc_no_spb sebelumnya, mulai dari nomor 0001
         if ($maxNumericPart === 0) {
             return "{$spbCategory->short}-0001";
         }
 
-        $nextNumber = sprintf('%04d', $maxNumericPart + 1);
-        return "{$spbCategory->short}-$nextNumber";
+        // Tambahkan 1 pada bagian numerik dan format menjadi 4 digit
+        $nextNumber = sprintf('%04d', $maxNumericPart + 1);  // Pastikan ini menghasilkan 4 digit
+        $docNo = "{$spbCategory->short}-$nextNumber";
+
+        // Periksa apakah doc_no_spb sudah ada di database
+        $exists = SpbProject::where('doc_no_spb', $docNo)->exists();
+        
+        // Jika ada duplikasi, teruskan pencarian hingga nomor yang unik ditemukan
+        while ($exists) {
+            $nextNumber = sprintf('%04d', $maxNumericPart + 1); // Tambah nomor lagi jika ada duplikasi
+            $docNo = "{$spbCategory->short}-$nextNumber";
+            $exists = SpbProject::where('doc_no_spb', $docNo)->exists();
+            $maxNumericPart++;
+        }
+
+        return $docNo;
     }
 
     public function update(UpdateRequest $request, $docNoSpb)
