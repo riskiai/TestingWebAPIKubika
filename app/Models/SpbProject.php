@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductCompanySpbProject;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\ProductCompanySpbProject;
 
 
 class SpbProject extends Model
@@ -134,6 +135,41 @@ class SpbProject extends Model
 
         return round($grandTotal); // Membulatkan hasil total ke bilangan bulat
     }
+
+   /*  public function getTotalProdukAttribute()
+    {
+        // Ambil semua produk terkait dengan SPB Project ini
+        $products = $this->productCompanySpbprojects;
+
+        // Mendapatkan tanggal filter dari request, jika ada
+        $tanggalDateProduk = $this->tanggal_date_produk ?? null;
+        $tanggalDueDateProduk = $this->tanggal_due_date_produk ?? null;
+
+        // Jika ada filter tanggal diterima, sesuaikan produk yang dihitung
+        if ($tanggalDateProduk && $tanggalDueDateProduk) {
+            $products = $products->filter(function ($product) use ($tanggalDateProduk, $tanggalDueDateProduk) {
+                return Carbon::parse($product->date)->between($tanggalDateProduk, $tanggalDueDateProduk) ||
+                    Carbon::parse($product->due_date)->between($tanggalDateProduk, $tanggalDueDateProduk);
+            });
+        } elseif ($tanggalDateProduk) {
+            $products = $products->filter(function ($product) use ($tanggalDateProduk) {
+                return Carbon::parse($product->date)->isSameDay($tanggalDateProduk) ||
+                    Carbon::parse($product->due_date)->isSameDay($tanggalDateProduk);
+            });
+        } elseif ($tanggalDueDateProduk) {
+            $products = $products->filter(function ($product) use ($tanggalDueDateProduk) {
+                return Carbon::parse($product->due_date)->isSameDay($tanggalDueDateProduk);
+            });
+        }
+
+        // Hitung total dari produk yang sudah difilter
+        $grandTotal = $products->sum(function ($product) {
+            return $product->subtotal_produk;
+        });
+
+        return round($grandTotal); // Membulatkan hasil total ke bilangan bulat
+    } */
+
 
 
     public function category(): BelongsTo

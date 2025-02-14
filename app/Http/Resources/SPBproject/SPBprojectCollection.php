@@ -21,10 +21,30 @@ class SPBprojectCollection extends ResourceCollection
     public function toArray(Request $request): array
     {
         $data = [];
+        $tanggalDateProduk = $request->tanggal_date_produk ?? null;
+        $tanggalDueDateProduk = $request->tanggal_due_date_produk ?? null;
 
         foreach ($this as $key => $spbProject) {
             $company = $spbProject->company;
             $hargaTotalPembayaranBorongan = $spbProject->harga_total_pembayaran_borongan_spb;
+
+            // Filter produk berdasarkan tanggal yang diterima di request
+            $filteredProducts = $spbProject->productCompanySpbprojects->filter(function ($product) use ($tanggalDateProduk, $tanggalDueDateProduk) {
+                if ($tanggalDateProduk && $tanggalDueDateProduk) {
+                    return (Carbon::parse($product->date)->between($tanggalDateProduk, $tanggalDueDateProduk) &&
+                            Carbon::parse($product->due_date)->between($tanggalDateProduk, $tanggalDueDateProduk));
+                } elseif ($tanggalDateProduk) {
+                    return Carbon::parse($product->date)->isSameDay($tanggalDateProduk);
+                } elseif ($tanggalDueDateProduk) {
+                    return Carbon::parse($product->due_date)->isSameDay($tanggalDueDateProduk);
+                }
+                return true; // Jika tidak ada filter tanggal, masukkan semua produk
+            });
+
+            // Hitung total produk yang sesuai dengan filter
+            $totalProduk = $filteredProducts->sum(function ($product) {
+                return $product->subtotal_produk;
+            });
 
               // Determine the tab name
             $tabNames = [
@@ -258,10 +278,9 @@ class SPBprojectCollection extends ResourceCollection
                             // 'total_item' => $product->total_produk,
                         ];
                     }),
-                "total" => $spbProject->total_produk,
+                'total' => $totalProduk,
                 'file_attachement' => $this->getDocument($spbProject),
                 "unit_kerja" => $spbProject->unit_kerja,
-                
                 "vendor_borongan" => $company ? [
                         "id" => $company->id,
                         "name" => $company->name,
@@ -269,7 +288,7 @@ class SPBprojectCollection extends ResourceCollection
                         "account_name" => $company->account_name,
                     ] : null,
                 // "harga_total_pembayaran_borongan_spb" => $spbProject->harga_total_pembayaran_borongan_spb ?? null,
-              "harga_total_pembayaran_borongan_spb" => $hargaTotalPembayaranBorongan, 
+                "harga_total_pembayaran_borongan_spb" => $hargaTotalPembayaranBorongan, 
                 'sisa_pembayaran_termin_spb' => $this->getDataSisaPemabayaranTerminSpb($spbProject),
                 "harga_total_termin_spb" => $this->getHargaTerminSpb($spbProject),
                 "deskripsi_termin_spb" => $this->getDeskripsiTerminSpb($spbProject),
@@ -309,20 +328,22 @@ class SPBprojectCollection extends ResourceCollection
     {
         // Ambil total harga termin yang sudah dibayar (total harga termin yang ada di SPB project)
         $totalHargaTermin = $this->getHargaTerminSpb($spbProject);
-
-        // Jika total harga termin adalah 0, berarti belum ada pembayaran, maka kembalikan 0
+    
+        // Pastikan harga_total_pembayaran_borongan_spb dalam bentuk angka
+        $hargaPembayaranBorongan = floatval($spbProject->harga_total_pembayaran_borongan_spb ?? 0);
+    
+        // Jika belum ada pembayaran termin (totalHargaTermin adalah 0), kembalikan harga total borongan SPB
         if ($totalHargaTermin == 0) {
-            return 0;
+            return $hargaPembayaranBorongan; // Mengembalikan harga borongan SPB sebagai angka
         }
-
-        // Ambil total harga pembayaran borongan
-        $hargaPembayaranBorongan = $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
-
-        // Sisa pembayaran = Pembayaran borongan - Total harga termin
+    
+        // Jika sudah ada pembayaran termin, hitung sisa pembayaran
         $sisaPembayaran = $hargaPembayaranBorongan - $totalHargaTermin;
-
-        return $sisaPembayaran; // Mengembalikan sisa pembayaran
+    
+        return $sisaPembayaran; // Mengembalikan sisa pembayaran dalam bentuk angka
     }
+    
+
 
 
     protected function getHargaTerminSpb($spbProject)

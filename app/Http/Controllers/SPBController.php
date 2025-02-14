@@ -203,19 +203,6 @@ class SPBController extends Controller
             }
         }
 
-        /* if ($request->has('tanggal_dibuat_spb') || $request->has('tanggal_berahir_spb')) {
-            $query->where(function ($q) use ($request) {
-                if ($request->has('tanggal_dibuat_spb')) {
-                    $tanggalDibuatSpb = Carbon::parse($request->tanggal_dibuat_spb);
-                    $q->whereDate('tanggal_dibuat_spb', $tanggalDibuatSpb);
-                }
-                if ($request->has('tanggal_berahir_spb')) {
-                    $tanggalBerahirSpb = Carbon::parse($request->tanggal_berahir_spb);
-                    $q->whereDate('tanggal_berahir_spb', $tanggalBerahirSpb);
-                }
-            });
-        } */
-
         if ($request->has('tanggal_dibuat_spb') && $request->has('tanggal_berahir_spb')) {
             $tanggalDibuatSpb = $request->tanggal_dibuat_spb;
             $tanggalBerahirSpb = $request->tanggal_berahir_spb;
@@ -229,6 +216,27 @@ class SPBController extends Controller
             $query->whereDate('tanggal_dibuat_spb', '=', $request->tanggal_dibuat_spb);
         } elseif ($request->has('tanggal_berahir_spb')) {
             $query->whereDate('tanggal_berahir_spb', '=', $request->tanggal_berahir_spb);
+        }
+
+        // Filter produk berdasarkan tanggal 'date' atau 'due_date' pada produk
+        if ($request->has('tanggal_date_produk') && $request->has('tanggal_due_date_produk')) {
+            $tanggalDateProduk = $request->tanggal_date_produk;
+            $tanggalDueDateProduk = $request->tanggal_due_date_produk;
+            
+            $query->whereHas('productCompanySpbprojects', function ($q) use ($tanggalDateProduk, $tanggalDueDateProduk) {
+                $q->whereBetween('date', [$tanggalDateProduk, $tanggalDueDateProduk])
+                ->orWhereBetween('due_date', [$tanggalDateProduk, $tanggalDueDateProduk]);
+            });
+        } elseif ($request->has('tanggal_date_produk')) {
+            $tanggalDateProduk = $request->tanggal_date_produk;
+            $query->whereHas('productCompanySpbprojects', function ($q) use ($tanggalDateProduk) {
+                $q->whereDate('date', '=', $tanggalDateProduk);
+            });
+        } elseif ($request->has('tanggal_due_date_produk')) {
+            $tanggalDueDateProduk = $request->tanggal_due_date_produk;
+            $query->whereHas('productCompanySpbprojects', function ($q) use ($tanggalDueDateProduk) {
+                $q->whereDate('due_date', '=', $tanggalDueDateProduk);
+            });
         }
 
         // Pengurutan berdasarkan tab
@@ -2432,19 +2440,19 @@ class SPBController extends Controller
     {
         // Ambil total harga termin yang sudah dibayar (total harga termin yang ada di SPB project)
         $totalHargaTermin = $this->getHargaTerminSpb($spbProject);
-
-        // Jika total harga termin adalah 0, berarti belum ada pembayaran, maka kembalikan 0
+    
+        // Pastikan harga_total_pembayaran_borongan_spb dalam bentuk angka
+        $hargaPembayaranBorongan = floatval($spbProject->harga_total_pembayaran_borongan_spb ?? 0);
+    
+        // Jika belum ada pembayaran termin (totalHargaTermin adalah 0), kembalikan harga total borongan SPB
         if ($totalHargaTermin == 0) {
-            return 0;
+            return $hargaPembayaranBorongan; // Mengembalikan harga borongan SPB sebagai angka
         }
-
-        // Ambil total harga pembayaran borongan
-        $hargaPembayaranBorongan = $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
-
-        // Sisa pembayaran = Pembayaran borongan - Total harga termin
+    
+        // Jika sudah ada pembayaran termin, hitung sisa pembayaran
         $sisaPembayaran = $hargaPembayaranBorongan - $totalHargaTermin;
-
-        return $sisaPembayaran; // Mengembalikan sisa pembayaran
+    
+        return $sisaPembayaran; // Mengembalikan sisa pembayaran dalam bentuk angka
     }
 
     protected function getHargaTerminSpb($spbProject)
@@ -2933,11 +2941,11 @@ class SPBController extends Controller
                 // Hapus termin dari database
                 DB::table('spb_project_termins')->where('id', $termin->id)->delete();
 
-                $spbProject = SpbProject::where('doc_no_spb', $docNoSpb)->first();
+                /* $spbProject = SpbProject::where('doc_no_spb', $docNoSpb)->first();
                 if ($spbProject) {
                     $spbProject->harga_total_pembayaran_borongan_spb += $termin->harga_termin;
                     $spbProject->save();
-                }
+                } */
             }
 
             // Hitung ulang total harga termin
@@ -3080,7 +3088,7 @@ class SPBController extends Controller
     
             // Menghitung ulang harga total termin setelah update termin
             $totalHargaTermin = $spbProject->termins->sum('harga_termin');
-            $spbProject->harga_total_pembayaran_borongan_spb = $spbProject->harga_total_pembayaran_borongan_spb - $totalHargaTermin;
+           /*  $spbProject->harga_total_pembayaran_borongan_spb = $spbProject->harga_total_pembayaran_borongan_spb - $totalHargaTermin; */
             $spbProject->update([
                 'harga_termin_spb' => $totalHargaTermin,
             ]);
@@ -3522,7 +3530,7 @@ class SPBController extends Controller
 
     public function reject($docNoSpb, Request $request)
     {
-        
+
         if (!auth()->user()->hasRole(Role::OWNER) && !auth()->user()->hasRole(Role::SUPERVISOR)) {
             return response()->json([
                 'status' => 'error',
@@ -4181,7 +4189,7 @@ class SPBController extends Controller
             
                     $totalHargaTermin = $spbProject->termins->sum('harga_termin');
                     $updateFields['harga_termin_spb'] = $totalHargaTermin;  // Update field harga total termin
-                    $spbProject->harga_total_pembayaran_borongan_spb -= $request->harga_termin_spb;
+                    // $spbProject->harga_total_pembayaran_borongan_spb -= $request->harga_termin_spb;
 
                     $updateFields['deskripsi_termin_spb'] = $request->deskripsi_termin_spb;
                 }
