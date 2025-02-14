@@ -3519,11 +3519,17 @@ class SPBController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
-    
-    
 
     public function reject($docNoSpb, Request $request)
     {
+        
+        if (!auth()->user()->hasRole(Role::OWNER) && !auth()->user()->hasRole(Role::SUPERVISOR)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only users with the Owner or Supervisor role can reject this SPB.',
+            ], 403);
+        }
+
         DB::beginTransaction();
 
         // Cari SpbProject berdasarkan doc_no_spb
