@@ -41,10 +41,7 @@ class SPBprojectCollection extends ResourceCollection
                 return true; // Jika tidak ada filter tanggal, masukkan semua produk
             });
 
-            if ($filteredProducts->isEmpty()) {
-                continue; // Skip project ini dari hasil
-            }
-
+            
             // Hitung total produk yang sesuai dengan filter
             $totalProduk = $filteredProducts->sum(function ($product) {
                 return $product->subtotal_produk;
@@ -139,7 +136,7 @@ class SPBprojectCollection extends ResourceCollection
                     'id' => null,
                     'nama' => null,
                 ],
-                'produk' => $filteredProducts->map(function ($product) use ($spbProject) {
+                'produk' => $spbProject->productCompanySpbprojects->map(function ($product) use ($spbProject) {
                             $dueDate = Carbon::createFromFormat("Y-m-d", $product->due_date); // Membaca due_date
                             $nowDate = Carbon::now(); // Mendapatkan tanggal sekarang
                             $status = $product->status_produk; // Status awal produk
