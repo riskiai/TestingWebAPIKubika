@@ -536,17 +536,17 @@ class SPBController extends Controller
         }
 
         if ($request->has('tukang')) {
-            $tukangIds = explode(',', $request->tukang); // Mengambil ID tukang dari parameter yang dipisah dengan koma
+            $tukangIds = explode(',', $request->tukang); 
             $query->whereHas('project.tenagaKerja', function ($query) use ($tukangIds) {
-                $query->whereIn('users.id', $tukangIds); // Pastikan menggunakan 'users.id'
+                $query->whereIn('users.id', $tukangIds);
             });
         }
 
         if ($request->has('supervisor_id')) {
             $query->whereHas('project.tenagaKerja', function ($q) use ($request) {
-                $q->where('users.id', $request->supervisor_id) // Filter berdasarkan ID supervisor
+                $q->where('users.id', $request->supervisor_id) 
                   ->whereHas('role', function ($roleQuery) {
-                      $roleQuery->where('role_id', Role::SUPERVISOR); // Pastikan role adalah Supervisor
+                      $roleQuery->where('role_id', Role::SUPERVISOR); 
                   });
             });
         }  
@@ -901,12 +901,14 @@ class SPBController extends Controller
             ->count();
 
         $totalproduknon = $payment_request + $paid;
+        $unpaidspbnon = $totalproduknon - $paid;
     
         // Respons JSON
         return response()->json([
             'received' => $received, // Jumlah data
             'total_spb_yang_belum_diapprove' => $unknownSpb,
             'total_produk_non' => $totalproduknon,
+            "unpaid_spb_nonproject" => $unpaidspbnon, 
             // 'submit' => $submit,
             // 'verified' => $verified,
             'over_due' => $over_due,
@@ -1157,12 +1159,14 @@ class SPBController extends Controller
         ->count();
 
         $totalproduk = $submit + $verified + $payment_request + $paid;
+        $unpaidspbproject = $totalproduk  - $paid;
     
         // Respons JSON
         return response()->json([
             'received' => $received, // Jumlah data (per halaman atau semua)
             'total_spb_yang_belum_diapprove' => $unknownSpb,
             'total_produk_project_aktif' => $totalproduk,
+            "unpaid_spb_project" => $unpaidspbproject, 
             'submit' => $submit,
             'verified' => $verified,
             'over_due' => $over_due,
