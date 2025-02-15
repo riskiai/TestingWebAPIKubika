@@ -128,6 +128,52 @@ class ProjectCollection extends ResourceCollection
                         ],
                     ]
                     : null,
+                'supervisor' => $project->tenagaKerja()
+                    ->whereHas('role', function ($query) {
+                        $query->where('role_name', 'Supervisor');
+                    })
+                    ->first() // Mengambil hanya satu data
+                    ?->loadMissing(['salary', 'divisi']) // Memastikan salary dan divisi dimuat
+                    ? [
+                        'id' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->id ?? null,
+                        'name' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->name ?? null,
+                        'daily_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->salary->daily_salary ?? 0,
+                        'hourly_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->salary->hourly_salary ?? 0,
+                        'hourly_overtime_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->salary->hourly_overtime_salary ?? 0,
+                        'divisi' => [
+                            'id' => $project->tenagaKerja()
+                                ->whereHas('role', function ($query) {
+                                    $query->where('role_name', 'Supervisor');
+                                })
+                                ->first()?->divisi->id ?? null,
+                            'name' => $project->tenagaKerja()
+                                ->whereHas('role', function ($query) {
+                                    $query->where('role_name', 'Supervisor');
+                                })
+                                ->first()?->divisi->name ?? null,
+                        ],
+                    ]
+                    : null,
                 'tukang' => $project->tenagaKerja() 
                 ->get()
                 ->map(function ($user) {

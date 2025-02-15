@@ -278,6 +278,15 @@ class ProjectController extends Controller
             });
         }        
 
+        if ($request->has('supervisor_id')) {
+            $query->whereHas('tenagaKerja', function ($q) use ($request) {
+                $q->where('users.id', $request->supervisor_id) 
+                  ->whereHas('role', function ($roleQuery) {
+                      $roleQuery->where('role_id', Role::SUPERVISOR); 
+                  });
+            });
+        }    
+
         // Urutkan berdasarkan tahun dan increment ID proyek
         $projects = $query->selectRaw('*, CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(id, "-", -2), "-", 1) AS UNSIGNED) as year')
         ->selectRaw('CAST(SUBSTRING_INDEX(id, "-", -1) AS UNSIGNED) as increment')
@@ -1397,6 +1406,52 @@ class ProjectController extends Controller
                             'name' => $project->tenagaKerja()
                                 ->whereHas('role', function ($query) {
                                     $query->where('role_name', 'Marketing');
+                                })
+                                ->first()?->divisi->name ?? null,
+                        ],
+                    ]
+                    : null,
+                    'supervisor' => $project->tenagaKerja()
+                    ->whereHas('role', function ($query) {
+                        $query->where('role_name', 'Supervisor');
+                    })
+                    ->first() // Mengambil hanya satu data
+                    ?->loadMissing(['salary', 'divisi']) // Memastikan salary dan divisi dimuat
+                    ? [
+                        'id' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->id ?? null,
+                        'name' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->name ?? null,
+                        'daily_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->salary->daily_salary ?? 0,
+                        'hourly_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->salary->hourly_salary ?? 0,
+                        'hourly_overtime_salary' => $project->tenagaKerja()
+                            ->whereHas('role', function ($query) {
+                                $query->where('role_name', 'Supervisor');
+                            })
+                            ->first()?->salary->hourly_overtime_salary ?? 0,
+                        'divisi' => [
+                            'id' => $project->tenagaKerja()
+                                ->whereHas('role', function ($query) {
+                                    $query->where('role_name', 'Supervisor');
+                                })
+                                ->first()?->divisi->id ?? null,
+                            'name' => $project->tenagaKerja()
+                                ->whereHas('role', function ($query) {
+                                    $query->where('role_name', 'Supervisor');
                                 })
                                 ->first()?->divisi->name ?? null,
                         ],
