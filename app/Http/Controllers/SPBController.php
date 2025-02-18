@@ -567,6 +567,18 @@ class SPBController extends Controller
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
 
+        if ($request->has('tab_spb')) {
+            $tab = $request->get('tab_spb');
+            if (in_array($tab, [
+                SpbProject::TAB_SUBMIT,
+                SpbProject::TAB_VERIFIED,
+                SpbProject::TAB_PAYMENT_REQUEST,
+                SpbProject::TAB_PAID
+            ])) {
+                $query->where('tab_spb', $tab);
+            }
+        }
+
         if ($request->has('project')) {
             $query->where('project_id', $request->project);
         }
@@ -1108,7 +1120,10 @@ class SPBController extends Controller
                         break;
     
                     case SpbProject_Status::PAID:
-                        $paid += $total;
+                        // $paid += $total;
+                        if ($spbProject->tab_spb === SpbProject::TAB_PAID) {
+                            $paid += $total;
+                        }
                         break;
     
                     default:
