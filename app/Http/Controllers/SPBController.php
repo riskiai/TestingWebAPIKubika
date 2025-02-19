@@ -1233,6 +1233,7 @@ class SPBController extends Controller
                 // Jika kategori SPB adalah BORONGAN, status menjadi AWAITING
                 $spbCategory->id == SpbProject_Category::BORONGAN => SpbProject_Status::AWAITING,
                 $spbCategory->id == SpbProject_Category::INVOICE => SpbProject_Status::AWAITING,
+                $request->type_project == SpbProject::TYPE_PROJECT_SPB && $spbCategory->id == SpbProject_Category::FLASH_CASH => SpbProject_Status::AWAITING,
             
                 // Logika untuk tipe proyek NON-PROJECT
                 $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $nowDate->isSameDay($tanggalBerahirSpb) => SpbProject_Status::DUEDATE,
@@ -1240,9 +1241,9 @@ class SPBController extends Controller
                 $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $nowDate->lt($tanggalBerahirSpb) => SpbProject_Status::OPEN,
             
                 // Logika untuk tipe proyek FLASH_CASH
-                $request->type_project == SpbProject_Category::FLASH_CASH && $nowDate->isSameDay($tanggalBerahirSpb) => SpbProject_Status::DUEDATE,
+                /* $request->type_project == SpbProject_Category::FLASH_CASH && $nowDate->isSameDay($tanggalBerahirSpb) => SpbProject_Status::DUEDATE,
                 $request->type_project == SpbProject_Category::FLASH_CASH && $nowDate->gt($tanggalBerahirSpb) => SpbProject_Status::OVERDUE,
-                $request->type_project == SpbProject_Category::FLASH_CASH && $nowDate->lt($tanggalBerahirSpb) => SpbProject_Status::OPEN,
+                $request->type_project == SpbProject_Category::FLASH_CASH && $nowDate->lt($tanggalBerahirSpb) => SpbProject_Status::OPEN, */
             
                 // Default status jika kondisi lain tidak terpenuhi
                 default => SpbProject_Status::AWAITING,
@@ -1260,14 +1261,24 @@ class SPBController extends Controller
 
             $company_id = $request->vendor_borongan_id;
 
+            $tab = match (true) {
+                // Jika jenis proyek adalah NON-PROJECT dan kategori SPB adalah FLASH_CASH
+                $request->type_project == SpbProject::TYPE_NON_PROJECT_SPB && $spbCategory->id == SpbProject_Category::FLASH_CASH => SpbProject::TAB_PAYMENT_REQUEST,
+            
+                // Untuk proyek biasa (TYPE_PROJECT_SPB) dan kategori lainnya, masuk ke TAB_SUBMIT
+                $request->type_project == SpbProject::TYPE_PROJECT_SPB || $spbCategory->id != SpbProject_Category::FLASH_CASH => SpbProject::TAB_SUBMIT,
+                default => SpbProject::TAB_SUBMIT,
+            };
+
             // Merge data untuk SPB Project
             $request->merge([
                 'doc_no_spb' => $this->generateDocNo($maxNumericPart, $spbCategory),
                 'doc_type_spb' => strtoupper($spbCategory->name),
                 'spbproject_status_id' => $spbStatus,
-                'tab_spb' => $spbCategory->id == SpbProject_Category::FLASH_CASH
+                'tab_spb' => $tab,
+                /* 'tab_spb' => $spbCategory->id == SpbProject_Category::FLASH_CASH
                     ? SpbProject::TAB_PAYMENT_REQUEST
-                    : SpbProject::TAB_SUBMIT,
+                    : SpbProject::TAB_SUBMIT, */
                 'user_id' => auth()->user()->id,
                 'type_termin_spb' => $typeTerminSpb,
                 'company_id' => $company_id,
@@ -1298,6 +1309,7 @@ class SPBController extends Controller
                     $dueDate = Carbon::parse($item['due_date']);
                     $status = match (true) {
                         $spbCategory->id == SpbProject_Category::INVOICE => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
+                        $spbCategory->id == SpbProject_Category::FLASH_CASH => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT,
                         $nowDate->isSameDay($dueDate) => ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT,
                         $nowDate->gt($dueDate) => ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
                         $nowDate->lt($dueDate) => ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
@@ -3266,11 +3278,19 @@ class SPBController extends Controller
                 }
             } else {
                 // Jika kategori lain, semua persetujuan harus diisi
-                if (!$spbProject->know_kepalagudang || !$spbProject->know_supervisor) {
+                /* if (!$spbProject->know_kepalagudang || !$spbProject->know_supervisor) {
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Cannot accept SPB Project. All approvals must be completed first.',
                     ], 400);
+                } */
+                if ($spbProject->spbproject_category_id == SpbProject_Category::INVOICE) {
+                    if (!$spbProject->know_kepalagudang || !$spbProject->know_supervisor) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Cannot accept SPB Project. All approvals must be completed first.',
+                        ], 400);
+                    }
                 }
             }
 
