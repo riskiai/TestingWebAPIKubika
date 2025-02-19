@@ -535,6 +535,12 @@ class SPBController extends Controller
             });
         }
 
+        if ($request->has('vendor_id')) {
+            $vendorId = $request->vendor_id;
+            $query->where('company_id', $vendorId); 
+        }
+    
+
         if ($request->has('tukang')) {
             $tukangIds = explode(',', $request->tukang); 
             $query->whereHas('project.tenagaKerja', function ($query) use ($tukangIds) {
@@ -550,18 +556,6 @@ class SPBController extends Controller
                   });
             });
         }  
-
-        if ($request->has('vendor_id')) {
-            $vendorId = $request->vendor_id;
-    
-            // Filter berdasarkan company_id di SPB Project langsung dan melalui pivot table product_company_spbproject
-            $query->where(function ($q) use ($vendorId) {
-                $q->where('company_id', $vendorId) // Filter berdasarkan company_id di SPB Project
-                  ->orWhereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
-                      $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
-                  });
-            });
-        }
 
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
@@ -964,12 +958,9 @@ class SPBController extends Controller
         if ($request->has('vendor_id')) {
             $vendorId = $request->vendor_id;
     
-            // Filter berdasarkan company_id di SPB Project langsung dan melalui pivot table product_company_spbproject
-            $query->where(function ($q) use ($vendorId) {
-                $q->where('company_id', $vendorId) // Filter berdasarkan company_id di SPB Project
-                  ->orWhereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
-                      $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
-                  });
+            // Fokus filter berdasarkan company_id di pivot table product_company_spbprojects
+            $query->whereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
+                $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
             });
         }
 
