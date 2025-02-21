@@ -18,7 +18,7 @@ class PaymentTerminRequest extends FormRequest
     {
         return [
             'harga_termin_proyek' => 'nullable|numeric|min:0',
-            'deskripsi_termin_proyek' => 'nullable|string|max:255',
+            'deskripsi_termin_proyek' => 'nullable|string',
             'type_termin_proyek' => 'nullable|in:1,2',
             'payment_date_termin_proyek' => 'nullable|date',
             'attachment_file_termin_proyek' => 'nullable|file|mimes:pdf,png,jpg,jpeg,xlsx,xls,heic|max:3072', 
