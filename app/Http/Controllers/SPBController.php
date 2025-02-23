@@ -1173,6 +1173,7 @@ class SPBController extends Controller
 
         $totalproduk = $submit + $verified + $payment_request + $paid;
         $unpaidspbproject = $totalproduk  - $paid;
+        $totalterbayarkaproduk = $paid + $totalTerbayarkan;
     
         // Respons JSON
         return response()->json([
@@ -1181,6 +1182,7 @@ class SPBController extends Controller
             'total_produk_project_aktif' => $totalproduk,
             "unpaid_spb_project" => $unpaidspbproject, 
             'total_terbayarkan' => $totalTerbayarkan,
+            'total_terbayarkan_produk_tabpaid_paymentvendor' => $totalterbayarkaproduk,
             'submit' => $submit,
             'verified' => $verified,
             'over_due' => $over_due,
