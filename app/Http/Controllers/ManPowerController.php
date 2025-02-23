@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
+use App\Models\User;
+use App\Models\Project;
+use App\Models\ManPower;
+use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Http\Requests\ManPower\StoreRequest;
 use App\Http\Requests\ManPower\UpdateRequest;
 use App\Http\Resources\ManPower\ManPowerCollection;
-use App\Models\ManPower;
-use App\Models\Project;
-use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ManPowerController extends Controller
 {
@@ -396,6 +397,24 @@ class ManPowerController extends Controller
         }
 
         try {
+
+            Log::info('Deleting ManPower: ', [
+                'deleted_at' => now(),
+                'deleted_by' => auth()->user()->name
+            ]);
+            
+            // Menambahkan log penghapusan ke dalam tabel log_man_powers
+            DB::table('log_man_powers')->insert([
+                'man_power_id' => $manPower->id,
+                'message' => 'Man power deleted by ' . auth()->user()->name,
+                'created_by' => auth()->user()->name,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'deleted_at' => now(), // Waktu penghapusan
+                'deleted_by' => auth()->user()->name, // Nama pengguna yang menghapus
+            ]);
+
+            // Hapus data dari tabel man_powers
             $manPower->delete();
 
             DB::commit();

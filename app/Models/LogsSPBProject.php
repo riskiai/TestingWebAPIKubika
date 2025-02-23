@@ -16,5 +16,9 @@ class LogsSPBProject extends Model
         'tab_spb',  // Status tab
         'name',  // Nama user
         'message', // Tambahkan message di sini
+        'deleted_at',  // Tambahkan deleted_at ke fillable
+        'deleted_by',
     ];
+
+    protected $dates = ['deleted_at'];
 }

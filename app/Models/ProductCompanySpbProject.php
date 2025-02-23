@@ -51,6 +51,7 @@ class ProductCompanySpbProject extends Model
         'description',
         'payment_date',
         'file_payment',
+        'status_vendor',
         // 'type_pembelian_produk',
     ];
 
@@ -109,6 +110,22 @@ class ProductCompanySpbProject extends Model
             'ppn_value' => $ppnValue, // Nilai PPN
         ];
     }
+
+    public function getTotalVendorAttribute()
+    {
+        // Menggunakan array untuk beberapa kondisi where
+        $vendorProducts = $this->where([
+                ['company_id', '=', $this->company_id],
+                ['spb_project_id', '=', $this->spb_project_id] // Menambahkan filter berdasarkan spb_project_id
+            ])
+            ->get();
+    
+        // Hitung total subtotal produk yang terkait dengan vendor
+        $totalVendor = $vendorProducts->sum('subtotal_produk');
+    
+        return round($totalVendor); // Membulatkan hasil total produk
+    }
+    
 
     public function getSubtotalProdukAttribute()
     {

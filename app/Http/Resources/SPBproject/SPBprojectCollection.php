@@ -140,6 +140,7 @@ class SPBprojectCollection extends ResourceCollection
                             $dueDate = Carbon::createFromFormat("Y-m-d", $product->due_date); // Membaca due_date
                             $nowDate = Carbon::now(); // Mendapatkan tanggal sekarang
                             $status = $product->status_produk; // Status awal produk
+                            $status = $product->status_vendor; // Status awal produk
 
                             // Periksa jika status produk adalah "Paid"
                             if ($status === ProductCompanySpbProject::TEXT_PAID_PRODUCT) {
@@ -159,6 +160,8 @@ class SPBprojectCollection extends ResourceCollection
                                         'bank_name' => $product->company->bank_name ?? 'Unknown',
                                         'account_name' => $product->company->account_name ?? 'Unknown',
                                     ],
+                                    'total_vendor' => $product->getTotalVendorAttribute(),
+                                    'status_vendor' => $status,
                                     'status_produk' => $status, // Status produk adalah "Paid"
                                     'note_paid_produk' => $notePaid, // Catatan jika produk sudah dibayar
                                     'date' => $product->date,
@@ -192,8 +195,10 @@ class SPBprojectCollection extends ResourceCollection
                                         'bank_name' => $product->company->bank_name ?? 'Unknown',
                                         'account_name' => $product->company->account_name ?? 'Unknown',
                                     ],
-                                    'status_produk' => $status, // Status produk adalah "Rejected"
-                                    'note_reject_produk' => $noteReject, // Catatan ditolak
+                                    'total_vendor' => $product->getTotalVendorAttribute(),
+                                    'status_vendor' => $status,
+                                    'status_produk' => $status,
+                                    'note_reject_produk' => $noteReject, 
                                     'date' => $product->date,
                                     'due_date' => $product->due_date,
                                     'description' => $product->description,
@@ -259,6 +264,8 @@ class SPBprojectCollection extends ResourceCollection
                                     'bank_name' => $product->company->bank_name ?? 'Unknown',
                                     'account_name' => $product->company->account_name ?? 'Unknown',
                                 ],
+                            'total_vendor' => $product->getTotalVendorAttribute(),
+                            'status_vendor' => $product->status_vendor,
                             'status_produk' => $product->status_produk,
                             'note_reject_produk' => $noteReject,
                             'date' => $product->date,
@@ -280,6 +287,8 @@ class SPBprojectCollection extends ResourceCollection
                         ];
                     }),
                 'total' => $totalProduk,
+                'sisa_pembayaran' => $spbProject->sisaPembayaranProductVendor(),
+                'total_terbayarkan' => $spbProject->totalTerbayarProductVendor(), // Memanggil method dari SpbProject
                 'file_attachement' => $this->getDocument($spbProject),
                 "unit_kerja" => $spbProject->unit_kerja,
                 "vendor_borongan" => $company ? [
@@ -323,6 +332,36 @@ class SPBprojectCollection extends ResourceCollection
 
         return $data;
     }
+
+    /* protected function sisaPembayaranProductVendor($spbProject)
+    {
+        // Ambil total produk dari SPB Project
+        $totalProduk = $spbProject->getTotalProdukAttribute();
+    
+        // Ambil total yang sudah terbayar menggunakan totalTerbayarProductVendor
+        $totalTerbayar = $this->totalTerbayarProductVendor($spbProject);
+    
+        // Hitung sisa pembayaran
+        $sisaPembayaran = $totalProduk - $totalTerbayar;
+    
+        // Pastikan sisa pembayaran tidak negatif
+        return max(0, round($sisaPembayaran)); // Membulatkan dan memastikan nilai minimal adalah 0
+    }    
+
+    protected function totalTerbayarProductVendor($spbProject)
+    {
+        // Filter produk yang status_vendor-nya "Paid"
+        $paidProducts = $spbProject->productCompanySpbprojects->filter(function ($product) {
+            return $product->status_vendor === ProductCompanySpbProject::TEXT_PAID_PRODUCT;
+        });
+
+        // Hitung total subtotal produk yang status_vendor-nya "Paid"
+        $totalPaid = $paidProducts->sum(function ($product) {
+            return $product->subtotal_produk;
+        });
+
+        return round($totalPaid); // Membulatkan total yang terbayar
+    } */
     
 
     protected function getDataSisaPemabayaranTerminSpb($spbProject)

@@ -10,11 +10,13 @@ use App\Models\ProductCompanySpbProject;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes; 
 
 
 class SpbProject extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+   
 
     protected $table = 'spb_projects';
     protected $primaryKey = 'doc_no_spb';
@@ -122,6 +124,51 @@ class SpbProject extends Model
             ->where('type_termin_spb', self::TYPE_TERMIN_LUNAS)
             ->sum('harga_termin_spb');
     }
+
+    public function getTotalVendor($spbProjectId)
+    {
+        // Mengambil produk yang terkait dengan SPB Project dan Vendor tertentu
+        $vendorProducts = ProductCompanySpbProject::where('spb_project_id', $spbProjectId)
+                                                ->where('company_id', $this->company_id) // Menyaring berdasarkan company_id vendor
+                                                ->get();
+
+        // Hitung total subtotal produk yang terkait dengan vendor dan SPB Project
+        $totalVendor = $vendorProducts->sum('subtotal_produk');
+
+        return round($totalVendor); // Membulatkan hasil total produk
+    }
+
+
+    public function totalTerbayarProductVendor()
+    {
+        // Filter produk yang status_vendor-nya "Paid"
+        $paidProducts = $this->productCompanySpbprojects->filter(function ($product) {
+            return $product->status_vendor === ProductCompanySpbProject::TEXT_PAID_PRODUCT;
+        });
+
+        // Hitung total subtotal produk yang status_vendor-nya "Paid"
+        $totalPaid = $paidProducts->sum(function ($product) {
+            return $product->subtotal_produk;
+        });
+
+        return round($totalPaid); // Membulatkan total yang terbayar
+    }
+
+    // Method untuk menghitung sisa pembayaran
+    public function sisaPembayaranProductVendor()
+    {
+        // Ambil total produk dari SPB Project
+        $totalProduk = $this->getTotalProdukAttribute();
+
+        // Ambil total yang sudah terbayar menggunakan totalTerbayarProductVendor
+        $totalTerbayar = $this->totalTerbayarProductVendor();
+
+        // Hitung sisa pembayaran
+        $sisaPembayaran = $totalProduk - $totalTerbayar;
+
+        // Pastikan sisa pembayaran tidak negatif
+        return max(0, round($sisaPembayaran)); // Membulatkan dan memastikan nilai minimal adalah 0
+    }
     
     public function getTotalProdukAttribute()
     {
@@ -195,13 +242,13 @@ class SpbProject extends Model
     public function vendors()
     {
         return $this->belongsToMany(Company::class, 'product_company_spbproject', 'spb_project_id', 'company_id')
-                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description', 'payment_date', 'file_payment']);
+                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description', 'payment_date', 'file_payment', 'status_vendor']);
     }
 
     public function products()
     {
         return $this->belongsToMany(Product::class, 'product_company_spbproject', 'spb_project_id', 'produk_id')
-                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description', 'payment_date', 'file_payment']);
+                    ->withPivot(['ongkir', 'harga', 'stok', 'ppn', 'status_produk', 'pph', 'note_reject_produk', 'description', 'payment_date', 'file_payment', 'status_vendor']);
     }
 
     public function taxPpn(): HasOne

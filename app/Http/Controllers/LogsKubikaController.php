@@ -18,7 +18,9 @@ class LogsKubikaController extends Controller
                 'created_by',
                 'message',
                 'created_at',
-                'updated_at'
+                'updated_at',
+                'log_man_powers.deleted_at',    // Menambahkan kolom deleted_at dari log_man_powers
+                'log_man_powers.deleted_by'
             )
             ->addSelect(DB::raw("'man_power' as type"))
             ->get();
@@ -31,8 +33,11 @@ class LogsKubikaController extends Controller
                 'name as created_by',
                 'message',
                 'created_at',
-                'updated_at'
+                'updated_at',
+                'deleted_at',
+                'deleted_by'
             )
+            ->whereNotNull('deleted_at')
             ->addSelect(DB::raw("'spb_project' as type"))
             ->get();
 
@@ -59,7 +64,8 @@ class LogsKubikaController extends Controller
                 'users.name as created_by',
                 DB::raw("'Created SPB' as message"),
                 'spb_projects.created_at',
-                'spb_projects.updated_at'
+                'spb_projects.updated_at',
+                'spb_projects.deleted_at'
             )
             ->addSelect(DB::raw("'spb_project' as type"))
             ->get();
@@ -132,10 +138,12 @@ class LogsKubikaController extends Controller
                 'id' => $log->id ?? null,
                 'reference_id' => $log->reference_id,
                 'created_by' => $log->created_by,
+                'deleted_by' => isset($log->deleted_by) ? $log->deleted_by : null,
                 'message' => $log->message,
                 'type' => $log->type,
                 'created_at' => Carbon::parse($log->created_at)->timezone('Asia/Jakarta')->toDateTimeString(),
                 'updated_at' => Carbon::parse($log->updated_at)->timezone('Asia/Jakarta')->toDateTimeString(),
+                'deleted_at' => isset($log->deleted_at) ? Carbon::parse($log->deleted_at)->timezone('Asia/Jakarta')->toDateTimeString() : null
             ];
         });
 
