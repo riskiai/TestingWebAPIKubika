@@ -135,8 +135,13 @@ class SPBController extends Controller
         }
 
         if ($request->has('doc_type_spb')) {
-            $query->where('doc_type_spb', 'like', '%' . $request->doc_type_spb . '%');
-        }
+            $docTypes = explode(',', $request->doc_type_spb); // Pisahkan berdasarkan koma
+            $query->where(function($q) use ($docTypes) {
+                foreach ($docTypes as $docType) {
+                    $q->orWhere('doc_type_spb', 'like', '%' . trim($docType) . '%');
+                }
+            });
+        }        
         
 
         if ($request->has('status')) {
@@ -577,9 +582,14 @@ class SPBController extends Controller
             $query->where('project_id', $request->project);
         }
 
-        if ($request->has('doc_no_spb')) {
-            $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
-        }
+        if ($request->has('doc_type_spb')) {
+            $docTypes = explode(',', $request->doc_type_spb); // Pisahkan berdasarkan koma
+            $query->where(function($q) use ($docTypes) {
+                foreach ($docTypes as $docType) {
+                    $q->orWhere('doc_type_spb', 'like', '%' . trim($docType) . '%');
+                }
+            });
+        }       
 
           // Tambahkan filter berdasarkan proyek jika ada
         if ($request->has('project')) {
@@ -634,6 +644,7 @@ class SPBController extends Controller
             $nowDate
         ) {
             $hargaTotal = $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
+            $hargaTotalTermin = $spbProject->harga_termin_spb ?? 0;
 
             try {
                 $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
@@ -658,7 +669,7 @@ class SPBController extends Controller
 
                 case SpbProject::TAB_PAID:
                     $paid_request_hargatotalborongaspb += $hargaTotal;
-                    $paid += $spbProject->harga_termin_spb ?? 0;
+                    $paid += $hargaTotalTermin;
                     break;
 
                 default:
@@ -969,8 +980,13 @@ class SPBController extends Controller
         }
 
         if ($request->has('doc_type_spb')) {
-            $query->where('doc_type_spb', 'like', '%' . $request->doc_type_spb . '%');
-        }
+            $docTypes = explode(',', $request->doc_type_spb); // Pisahkan berdasarkan koma
+            $query->where(function($q) use ($docTypes) {
+                foreach ($docTypes as $docType) {
+                    $q->orWhere('doc_type_spb', 'like', '%' . trim($docType) . '%');
+                }
+            });
+        }     
 
         if ($request->has('tukang')) {
             $tukangIds = explode(',', $request->tukang); // Mengambil ID tukang dari parameter yang dipisah dengan koma
