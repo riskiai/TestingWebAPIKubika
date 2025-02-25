@@ -1546,8 +1546,6 @@ class SPBController extends Controller
         return $docNo;
     }
 
-
-
     public function update(UpdateRequest $request, $docNoSpb)
     {
         DB::beginTransaction();
@@ -1950,7 +1948,60 @@ class SPBController extends Controller
         }
     }
 
-        public function destroy($docNoSpb)
+    /* public function destroy($docNoSpb)
+    {
+        DB::beginTransaction();
+    
+        // Cari SpbProject berdasarkan doc_no_spb
+        $spbProject = SpbProject::where('doc_no_spb', $docNoSpb)->first();
+        if (!$spbProject) {
+            return MessageActeeve::notFound('Data not found!');
+        }
+    
+        // Pastikan doc_no_spb digunakan, bukan id
+        $spbProjectDocNo = $spbProject->doc_no_spb;  // Menggunakan doc_no_spb sebagai referensi
+    
+        try {
+            // Hapus dokumen yang terkait dengan SPB (jika ada)
+            $document = DocumentSPB::where('doc_no_spb', $spbProjectDocNo)->first();
+            if ($document) {
+                // Hapus file dari storage
+                Storage::delete($document->file_path);
+    
+                // Soft delete dokumen
+                $document->delete();
+            }
+    
+            // Hapus data log yang terkait dengan SpbProject
+            $spbProject->logs()->delete();  // Hapus semua log terkait SpbProject
+    
+            // Menambahkan log penghapusan ke dalam logs_spbprojects
+            DB::table('logs_spbprojects')->insert([
+                'spb_project_id' => $spbProjectDocNo,
+                'message' => 'SPB deleted by ' . auth()->user()->name,
+                'deleted_at' => now(),
+                'deleted_by' => auth()->user()->name,
+                'tab_spb' => $spbProject->tab_spb,
+                'name' => auth()->user()->name,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+    
+            // Soft delete untuk SpbProject
+            $spbProject->delete();
+    
+            // Commit transaksi
+            DB::commit();
+    
+            return MessageActeeve::success("SpbProject $docNoSpb and related document have been deleted");
+        } catch (\Throwable $th) {
+            // Rollback jika terjadi error
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    }    */ 
+
+    public function destroy($docNoSpb)
     {
         DB::beginTransaction();
 
@@ -1964,6 +2015,14 @@ class SPBController extends Controller
         $spbProjectDocNo = $spbProject->doc_no_spb;  // Menggunakan doc_no_spb sebagai referensi
 
         try {
+            $spbProject->documents()->each(function ($document) {
+                // Hapus file dari storage
+                Storage::delete($document->file_path);
+    
+                // Soft delete dokumen
+                $document->delete();
+            });
+            
             // Hapus data log yang terkait dengan SpbProject
             $spbProject->logs()->delete();  // Hapus semua log terkait SpbProject
 
@@ -4509,14 +4568,6 @@ class SPBController extends Controller
         try {
             // Menghapus file dari storage
             Storage::delete($spbProject->file_path);
-
-            // Menambahkan log penghapusan ke tabel logs_spbprojects
-            DB::table('logs_spbprojects')->insert([
-                'spb_project_id' => $spbProject->id,
-                'message' => 'SPB deleted by ' . auth()->user()->name,
-                'deleted_at' => now(), // Waktu penghapusan
-                'deleted_by' => auth()->user()->name, // Nama pengguna yang menghapus
-            ]);
 
             // Soft delete untuk data SPB
             $spbProject->delete();

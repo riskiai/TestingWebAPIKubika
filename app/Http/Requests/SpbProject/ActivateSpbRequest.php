@@ -40,7 +40,7 @@ class ActivateSpbRequest extends FormRequest
             'produk_data.*.vendor_id' => 'nullable|exists:companies,id',
             'produk_data.*.ongkir' => 'nullable|numeric|min:0',
             'produk_data.*.harga' => 'nullable|numeric|min:0',
-            'produk_data.*.stok' => 'nullable|integer|min:0',
+            'produk_data.*.stok' => 'nullable|numeric|min:0',
             'produk_data.*.tax_ppn' => 'nullable|numeric|min:0|max:100',
             'produk_data.*.date' => 'nullable|date',
             'produk_data.*.due_date' => 'nullable|date',

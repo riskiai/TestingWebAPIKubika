@@ -19,7 +19,7 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'spbproject_category_id' => 'required|exists:spb_project__categories,id',
+            'spbproject_category_id' => 'nullable|exists:spb_project__categories,id',
             'project_id' => 'nullable|string|max:255',
             'tanggal_dibuat_spb' => 'required|date',
             'tanggal_berahir_spb' => 'required|date',
