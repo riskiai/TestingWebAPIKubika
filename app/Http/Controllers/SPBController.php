@@ -1553,7 +1553,7 @@ class SPBController extends Controller
         try {
             $spbCategory = SpbProject_Category::find($request->spbproject_category_id);
             if (!$spbCategory) {
-                throw new \Exception("Kategori SPB tidak ditemukans .");
+                throw new \Exception("Kategori SPB tidak ditemukans");
             }
 
             // Mendapatkan SpbProject yang akan diperbarui
