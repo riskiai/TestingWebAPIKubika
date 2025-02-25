@@ -1520,7 +1520,7 @@ class SPBController extends Controller
     protected function generateDocNo($maxNumericPart, $spbCategory)
     {
         if (!$spbCategory || !isset($spbCategory->short)) {
-            throw new \Exception("Kategori SPB tidak valid atau tidak ditemukan.");
+            throw new \Exception("Kategori tidak valid atau tidak ditemukan.");
         }
 
         // Jika tidak ada doc_no_spb sebelumnya, mulai dari nomor 0001
