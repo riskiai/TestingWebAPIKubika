@@ -248,8 +248,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (337, 71, 'PRO-25-004', 1, 1, 110000, 13750, 27500, 4, 0, 55000, 0, 'Packing barang Indofood', 'Choirunnisa Nurfatihah', '2025-01-03 00:00:00', '2025-01-20 06:59:35', '2025-01-20 06:59:35', NULL),
 (338, 70, 'PRO-25-004', 1, 1, 110000, 13750, 27500, 2, 0, 27500, 0, 'Packing barang Indofood', 'Choirunnisa Nurfatihah', '2025-01-03 00:00:00', '2025-01-20 06:59:50', '2025-01-20 06:59:50', NULL),
 (340, 49, 'PRO-25-004', 1, 1, 110000, 13750, 27500, 0, 8, 0, 220000, 'Setup Indofood Taman Literasi', 'Choirunnisa Nurfatihah', '2025-01-05 00:00:00', '2025-01-20 07:00:46', '2025-01-20 07:00:46', NULL),
-(341, 69, 'PRO-25-004', 1, 1, 100000, 12500, 25000, 0, 8, 0, 200000, 'Setup Indofood Taman Literasi', 'Choirunnisa Nurfatihah', '2025-01-05 00:00:00', '2025-01-20 07:01:17', '2025-01-20 07:01:17', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(341, 69, 'PRO-25-004', 1, 1, 100000, 12500, 25000, 0, 8, 0, 200000, 'Setup Indofood Taman Literasi', 'Choirunnisa Nurfatihah', '2025-01-05 00:00:00', '2025-01-20 07:01:17', '2025-01-20 07:01:17', NULL),
 (342, 73, 'PRO-25-004', 1, 1, 100000, 12500, 25000, 0, 8, 0, 200000, 'Setup Indofood Taman Literasi', 'Choirunnisa Nurfatihah', '2025-01-05 00:00:00', '2025-01-20 07:01:28', '2025-01-20 07:01:28', NULL),
 (343, 72, 'PRO-25-004', 1, 1, 100000, 12500, 25000, 0, 8, 0, 200000, 'Setup Indofood Taman Literasi', 'Choirunnisa Nurfatihah', '2025-01-05 00:00:00', '2025-01-20 07:01:41', '2025-01-20 07:01:41', NULL),
 (344, 51, 'PRO-25-002', 1, 1, 110000, 13750, 27500, 8, 4, 110000, 110000, 'Membuat partisi OCBC\nMembuat partisi OCBC', 'Nabilatul Qodar', '2025-01-13 00:00:00', '2025-01-20 07:01:49', '2025-01-20 07:10:37', NULL),
@@ -491,8 +490,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (584, 32, 'PRO-25-025', 1, 1, 115000, 14375, 28750, 8, 4, 115000, 115000, 'Dempul gondola Hennessy \nAmplas dan cat gondola Hennessy', 'Choirunnisa Nurfatihah', '2025-01-12 00:00:00', '2025-01-20 10:08:58', '2025-01-20 10:08:58', NULL),
 (585, 35, 'PRO-25-025', 1, 1, 120000, 15000, 30000, 0, 4, 0, 120000, 'Amplas dan cat gondola Hennessy', 'Choirunnisa Nurfatihah', '2025-01-12 00:00:00', '2025-01-20 10:09:12', '2025-01-20 10:09:12', NULL),
 (586, 36, 'PRO-25-025', 1, 1, 130000, 16250, 32500, 0, 4, 0, 130000, 'Amplas dan cat gondola Hennessy', 'Choirunnisa Nurfatihah', '2025-01-12 00:00:00', '2025-01-20 10:09:30', '2025-01-20 10:09:30', NULL),
-(587, 39, 'PRO-25-025', 1, 1, 100000, 12500, 25000, 0, 4, 0, 100000, 'Amplas gondola Hennessy', 'Choirunnisa Nurfatihah', '2025-01-12 00:00:00', '2025-01-20 10:09:46', '2025-01-20 10:09:46', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(587, 39, 'PRO-25-025', 1, 1, 100000, 12500, 25000, 0, 4, 0, 100000, 'Amplas gondola Hennessy', 'Choirunnisa Nurfatihah', '2025-01-12 00:00:00', '2025-01-20 10:09:46', '2025-01-20 10:09:46', NULL),
 (588, 53, 'PRO-25-025', 1, 1, 110000, 13750, 27500, 0, 9, 0, 247500, 'Set up Hennessy', 'Choirunnisa Nurfatihah', '2025-01-12 00:00:00', '2025-01-20 10:10:03', '2025-01-20 10:10:03', NULL),
 (589, 46, 'PRO-25-025', 1, 1, 180000, 22500, 45000, 0, 4, 0, 180000, 'Packing gondola Hennessy', 'Choirunnisa Nurfatihah', '2025-01-12 00:00:00', '2025-01-20 10:10:19', '2025-01-20 10:10:19', NULL),
 (590, 48, 'PRO-25-025', 1, 1, 110000, 13750, 27500, 0, 9, 0, 247500, 'Set up Hennessy', 'Choirunnisa Nurfatihah', '2025-01-12 00:00:00', '2025-01-20 10:10:33', '2025-01-20 10:10:33', NULL),
@@ -739,8 +737,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (841, 59, 'PRO-25-001', 1, 1, 100000, 12500, 25000, 8, 4, 100000, 100000, 'Membuat partisi Dulux', 'Nabilatul Qodar', '2025-01-11 00:00:00', '2025-01-21 07:04:40', '2025-01-21 12:10:32', NULL),
 (842, 40, 'PRO-25-001', 1, 1, 100000, 12500, 25000, 8, 4, 100000, 100000, 'Dempul gate Dulux', 'Nabilatul Qodar', '2025-01-12 00:00:00', '2025-01-21 07:09:29', '2025-01-21 07:09:29', NULL),
 (843, 42, 'PRO-25-001', 1, 1, 125000, 15625, 31250, 0, 4, 0, 125000, 'Amplas partisi Dulux', 'Nabilatul Qodar', '2025-01-12 00:00:00', '2025-01-21 07:09:52', '2025-01-21 07:09:52', NULL),
-(844, 33, 'PRO-25-001', 1, 1, 100000, 12500, 25000, 8, 4, 100000, 100000, 'Dempul gate Dulux\nAmplas gate Dulux', 'Nabilatul Qodar', '2025-01-12 00:00:00', '2025-01-21 07:10:17', '2025-01-21 07:10:17', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(844, 33, 'PRO-25-001', 1, 1, 100000, 12500, 25000, 8, 4, 100000, 100000, 'Dempul gate Dulux\nAmplas gate Dulux', 'Nabilatul Qodar', '2025-01-12 00:00:00', '2025-01-21 07:10:17', '2025-01-21 07:10:17', NULL),
 (845, 41, 'PRO-25-001', 1, 1, 125000, 15625, 31250, 8, 4, 125000, 125000, 'Dempul gate Dulux\nDempul gate Dulux', 'Nabilatul Qodar', '2025-01-12 00:00:00', '2025-01-21 07:10:49', '2025-01-21 07:10:49', NULL),
 (846, 31, 'PRO-25-001', 1, 1, 125000, 15625, 31250, 8, 4, 125000, 125000, 'Dempul gate Dulux', 'Nabilatul Qodar', '2025-01-12 00:00:00', '2025-01-21 07:11:16', '2025-01-21 07:11:16', NULL),
 (847, 43, 'PRO-25-001', 1, 1, 125000, 15625, 31250, 8, 4, 125000, 125000, 'Dempul gate Dulux', 'Nabilatul Qodar', '2025-01-12 00:00:00', '2025-01-21 07:11:41', '2025-01-21 07:11:41', NULL),
@@ -988,8 +985,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (1133, 39, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 4, 100000, 100000, 'Amplas Meja ocbc\nAmplas logo ocbc', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-23 08:50:46', '2025-01-24 04:35:22', NULL),
 (1134, 36, 'PRO-25-002', 1, 1, 130000, 16250, 32500, 8, 4, 130000, 130000, 'Dempul meja bulat ocbc\nDempul rak besi ocbc', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-23 08:51:10', '2025-01-24 04:32:37', NULL),
 (1135, 33, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 4, 100000, 100000, 'Amplas meja bulat ocbc\nCat dasar list panggung ocbc', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-23 08:51:38', '2025-01-24 04:30:35', NULL),
-(1136, 40, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 6, 100000, 150000, 'Amplas rak ocbc\nAmplas list panggung ocbc', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-23 08:52:01', '2025-01-24 02:57:10', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1136, 40, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 6, 100000, 150000, 'Amplas rak ocbc\nAmplas list panggung ocbc', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-23 08:52:01', '2025-01-24 02:57:10', NULL)
 (1137, 43, 'PRO-25-002', 1, 1, 125000, 15625, 31250, 8, 4, 125000, 125000, 'Cat dasar tiang ocbc\nDempul tiang ocbc', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-23 08:52:27', '2025-01-28 08:59:24', NULL),
 (1138, 31, 'PRO-25-002', 1, 1, 125000, 15625, 31250, 8, 4, 125000, 125000, 'Cat atap ocbc\nAmplas atap ocbc', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-23 08:52:52', '2025-01-24 04:35:38', NULL),
 (1139, 42, 'PRO-25-002', 1, 1, 125000, 15625, 31250, 8, 4, 125000, 125000, 'Dempul logo ocbc\nLem box lampu ocbc', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-23 08:53:12', '2025-01-24 04:29:07', NULL),
@@ -1228,8 +1224,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (1447, 38, 'PRO-25-002', 1, 1, 130000, 16250, 32500, 8, 0, 130000, 0, 'Amplas kotak neon box ocbc', 'Choirunnisa Nurfatihah', '2025-01-21 00:00:00', '2025-01-28 08:30:39', '2025-01-28 08:30:39', NULL),
 (1448, 38, 'PRO-25-001', 1, 1, 130000, 16250, 32500, 8, 14, 130000, 455000, 'Setup Dulux', 'Choirunnisa Nurfatihah', '2025-01-22 00:00:00', '2025-01-28 08:32:19', '2025-01-28 08:32:19', NULL),
 (1449, 38, 'PRO-25-001', 1, 1, 130000, 16250, 32500, 8, 14, 130000, 455000, 'Setup Dulux', 'Choirunnisa Nurfatihah', '2025-01-23 00:00:00', '2025-01-28 08:32:29', '2025-01-28 08:32:29', NULL),
-(1450, 32, 'PRO-25-012', 1, 1, 115000, 14375, 28750, 8, 7.5, 115000, 215625, 'ke Niro Bintaro', 'Choirunnisa Nurfatihah', '2025-01-21 00:00:00', '2025-01-28 08:54:39', '2025-01-28 08:54:39', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1450, 32, 'PRO-25-012', 1, 1, 115000, 14375, 28750, 8, 7.5, 115000, 215625, 'ke Niro Bintaro', 'Choirunnisa Nurfatihah', '2025-01-21 00:00:00', '2025-01-28 08:54:39', '2025-01-28 08:54:39', NULL),
 (1451, 32, 'PRO-25-001', 1, 1, 115000, 14375, 28750, 8, 14, 115000, 402500, 'setup dulux', 'Choirunnisa Nurfatihah', '2025-01-22 00:00:00', '2025-01-28 08:55:56', '2025-01-28 08:55:56', NULL),
 (1452, 32, 'PRO-25-001', 1, 1, 115000, 14375, 28750, 8, 14, 115000, 402500, 'setup dulux', 'Choirunnisa Nurfatihah', '2025-01-23 00:00:00', '2025-01-28 08:56:06', '2025-01-28 08:56:06', NULL),
 (1453, 35, 'PRO-25-013', 1, 1, 120000, 15000, 30000, 0, 4, 0, 120000, 'dempul besi soleteree', 'Choirunnisa Nurfatihah', '2025-01-20 00:00:00', '2025-01-28 09:05:23', '2025-01-28 09:05:23', NULL),
@@ -1483,8 +1478,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (1727, 98, 'PRO-25-037', 1, 1, 150000, 18750, 37500, 8, 0, 150000, 0, 'Pasang velmer sungkai kisi-kisi RW Senayan City', 'Choirunnisa Nurfatihah', '2025-02-01 00:00:00', '2025-02-02 06:49:18', '2025-02-02 06:49:18', NULL),
 (1728, 47, 'PRO-25-029', 1, 1, 200000, 25000, 50000, 8, 4, 200000, 200000, 'Membuat panggung Honda', 'Choirunnisa Nurfatihah', '2025-01-27 00:00:00', '2025-02-02 06:51:13', '2025-02-02 06:51:13', NULL),
 (1729, 49, 'PRO-25-029', 1, 1, 110000, 13750, 27500, 4, 4, 55000, 110000, 'Bantu membuat panggung Honda', 'Choirunnisa Nurfatihah', '2025-01-27 00:00:00', '2025-02-02 06:51:35', '2025-02-02 06:51:35', NULL),
-(1730, 57, 'PRO-25-029', 1, 1, 170000, 21250, 42500, 8, 4, 170000, 170000, 'Bawain triplek untuk panggung Honda\nMembuat panggung Honda', 'Choirunnisa Nurfatihah', '2025-01-27 00:00:00', '2025-02-02 06:52:09', '2025-02-02 06:52:09', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1730, 57, 'PRO-25-029', 1, 1, 170000, 21250, 42500, 8, 4, 170000, 170000, 'Bawain triplek untuk panggung Honda\nMembuat panggung Honda', 'Choirunnisa Nurfatihah', '2025-01-27 00:00:00', '2025-02-02 06:52:09', '2025-02-02 06:52:09', NULL),
 (1731, 50, 'PRO-25-029', 1, 1, 110000, 13750, 27500, 4, 4, 55000, 110000, 'Bantu membuat panggung Honda', 'Choirunnisa Nurfatihah', '2025-01-27 00:00:00', '2025-02-02 06:52:30', '2025-02-02 06:52:30', NULL),
 (1732, 51, 'PRO-25-029', 1, 1, 110000, 13750, 27500, 8, 4, 110000, 110000, 'Bawain triplek untuk panggung Honda\nMembuat panggung Honda', 'Choirunnisa Nurfatihah', '2025-01-27 00:00:00', '2025-02-02 06:52:49', '2025-02-02 06:52:49', NULL),
 (1733, 52, 'PRO-25-029', 1, 1, 110000, 13750, 27500, 8, 4, 110000, 110000, 'Bawain triplek untuk panggung Honda dan bantu membuat panggung Hoda', 'Choirunnisa Nurfatihah', '2025-01-27 00:00:00', '2025-02-02 06:53:05', '2025-02-02 06:53:05', NULL),
@@ -1735,8 +1729,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (1984, 66, 'PRO-25-041', 1, 1, 120000, 15000, 30000, 8, 0, 120000, 0, 'Bikin neon box dulux', 'Choirunnisa Nurfatihah', '2025-02-02 00:00:00', '2025-02-03 06:39:10', '2025-02-03 06:39:10', NULL),
 (1985, 66, 'PRO-25-029', 1, 1, 120000, 15000, 30000, 0, 4, 0, 120000, 'potong akrilik honda iims', 'Choirunnisa Nurfatihah', '2025-02-02 00:00:00', '2025-02-03 06:40:10', '2025-02-03 06:40:10', NULL),
 (1986, 68, 'PRO-25-041', 1, 1, 105000, 13125, 26250, 8, 0, 105000, 0, 'Potong akrilik neon box dulux', 'Choirunnisa Nurfatihah', '2025-02-02 00:00:00', '2025-02-03 06:41:43', '2025-02-03 06:41:43', NULL),
-(1987, 68, 'PRO-25-029', 1, 1, 105000, 13125, 26250, 0, 4, 0, 105000, 'potong akrilik honda iims', 'Choirunnisa Nurfatihah', '2025-02-02 00:00:00', '2025-02-03 06:42:20', '2025-02-03 06:42:20', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1987, 68, 'PRO-25-029', 1, 1, 105000, 13125, 26250, 0, 4, 0, 105000, 'potong akrilik honda iims', 'Choirunnisa Nurfatihah', '2025-02-02 00:00:00', '2025-02-03 06:42:20', '2025-02-03 06:42:20', NULL),
 (1988, 67, 'PRO-25-002', 1, 1, 130000, 16250, 32500, 8, 0, 130000, 0, 'Potong sticker ocbc', 'Choirunnisa Nurfatihah', '2025-02-02 00:00:00', '2025-02-03 06:43:35', '2025-02-03 06:43:35', NULL),
 (1989, 67, 'PRO-25-029', 1, 1, 130000, 16250, 32500, 0, 4, 0, 130000, 'potong akrilik honda iims', 'Choirunnisa Nurfatihah', '2025-02-02 00:00:00', '2025-02-03 06:44:17', '2025-02-03 06:44:17', NULL),
 (1990, 69, 'PRO-25-029', 1, 1, 100000, 12500, 25000, 0, 4, 0, 100000, 'potong akrilik honda iims', 'Choirunnisa Nurfatihah', '2025-02-02 00:00:00', '2025-02-03 06:44:39', '2025-02-03 06:44:39', NULL),
@@ -1987,8 +1980,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (2249, 34, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 12, 100000, 300000, 'Setup Ocbc Bandung', 'Choirunnisa Nurfatihah', '2025-02-04 00:00:00', '2025-02-08 14:13:11', '2025-02-08 14:13:11', NULL),
 (2250, 34, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 8, 100000, 200000, 'Setup Ocbc Bandung', 'Choirunnisa Nurfatihah', '2025-02-05 00:00:00', '2025-02-08 14:13:20', '2025-02-08 14:13:20', NULL),
 (2251, 34, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 8, 100000, 200000, 'Setup Ocbc Bandung', 'Choirunnisa Nurfatihah', '2025-02-06 00:00:00', '2025-02-08 14:13:30', '2025-02-08 14:13:30', NULL),
-(2252, 34, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 8, 100000, 200000, 'Setup Ocbc Bandung', 'Choirunnisa Nurfatihah', '2025-02-07 00:00:00', '2025-02-08 14:13:39', '2025-02-08 14:13:39', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(2252, 34, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 8, 100000, 200000, 'Setup Ocbc Bandung', 'Choirunnisa Nurfatihah', '2025-02-07 00:00:00', '2025-02-08 14:13:39', '2025-02-08 14:13:39', NULL),
 (2253, 44, 'PRO-25-002', 1, 1, 140000, 17500, 35000, 8, 12, 140000, 420000, 'Setup Ocbc Bandung', 'Choirunnisa Nurfatihah', '2025-02-04 00:00:00', '2025-02-08 14:14:33', '2025-02-08 14:14:33', NULL),
 (2254, 44, 'PRO-25-002', 1, 1, 140000, 17500, 35000, 8, 8, 140000, 280000, 'Setup Ocbc Bandung', 'Choirunnisa Nurfatihah', '2025-02-05 00:00:00', '2025-02-08 14:14:42', '2025-02-08 14:14:42', NULL),
 (2255, 44, 'PRO-25-002', 1, 1, 140000, 17500, 35000, 8, 8, 140000, 280000, 'Setup Ocbc Bandung', 'Choirunnisa Nurfatihah', '2025-02-06 00:00:00', '2025-02-08 14:14:53', '2025-02-08 14:14:53', NULL),
@@ -2237,8 +2229,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (2508, 39, 'PRO-25-002', 1, 1, 100000, 12500, 25000, 8, 8, 100000, 200000, 'Setup Ocbc Medan', 'Choirunnisa Nurfatihah', '2025-02-11 00:00:00', '2025-02-15 04:43:46', '2025-02-15 04:43:46', NULL),
 (2509, 42, 'PRO-25-002', 1, 1, 125000, 15625, 31250, 8, 8, 125000, 250000, 'Setup Ocbc Medan', 'Choirunnisa Nurfatihah', '2025-02-10 00:00:00', '2025-02-15 04:44:02', '2025-02-15 04:44:02', NULL),
 (2510, 42, 'PRO-25-002', 1, 1, 125000, 15625, 31250, 8, 8, 125000, 250000, 'Setup Ocbc Medan', 'Choirunnisa Nurfatihah', '2025-02-11 00:00:00', '2025-02-15 04:44:13', '2025-02-15 04:44:13', NULL),
-(2511, 44, 'PRO-25-002', 1, 1, 140000, 17500, 35000, 8, 8, 140000, 280000, 'Setup Ocbc Medan', 'Choirunnisa Nurfatihah', '2025-02-10 00:00:00', '2025-02-15 04:44:27', '2025-02-15 04:44:27', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(2511, 44, 'PRO-25-002', 1, 1, 140000, 17500, 35000, 8, 8, 140000, 280000, 'Setup Ocbc Medan', 'Choirunnisa Nurfatihah', '2025-02-10 00:00:00', '2025-02-15 04:44:27', '2025-02-15 04:44:27', NULL),
 (2512, 44, 'PRO-25-002', 1, 1, 140000, 17500, 35000, 8, 8, 140000, 280000, 'Setup Ocbc Medan', 'Choirunnisa Nurfatihah', '2025-02-11 00:00:00', '2025-02-15 04:44:38', '2025-02-15 04:44:38', NULL),
 (2513, 45, 'PRO-25-002', 1, 1, 150000, 18750, 37500, 8, 8, 150000, 300000, 'Setup Ocbc Medan', 'Choirunnisa Nurfatihah', '2025-02-10 00:00:00', '2025-02-15 04:44:56', '2025-02-15 04:44:56', NULL),
 (2514, 45, 'PRO-25-002', 1, 1, 150000, 18750, 37500, 8, 8, 150000, 300000, 'Setup Ocbc Medan', 'Choirunnisa Nurfatihah', '2025-02-11 00:00:00', '2025-02-15 04:45:37', '2025-02-15 04:45:37', NULL),
@@ -2477,8 +2468,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (2749, 64, 'PRO-25-037', 1, 1, 160000, 20000, 40000, 8, 4, 160000, 160000, 'Pasang plimir sungkai untuk kisi kisi rw senayan city', 'Choirunnisa Nurfatihah', '2025-02-11 00:00:00', '2025-02-17 07:28:12', '2025-02-17 07:28:12', NULL),
 (2750, 64, 'PRO-25-037', 1, 1, 160000, 20000, 40000, 8, 0, 160000, 0, 'Bikin tiang rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-12 00:00:00', '2025-02-17 07:28:34', '2025-02-17 07:28:34', NULL),
 (2751, 64, 'PRO-25-037', 1, 1, 160000, 20000, 40000, 8, 0, 160000, 0, 'Membuat partisi rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-13 00:00:00', '2025-02-17 07:29:07', '2025-02-17 07:29:07', NULL),
-(2752, 64, 'PRO-25-037', 1, 1, 160000, 20000, 40000, 4, 0, 80000, 0, 'Membuat partisi rw senayan city', 'Choirunnisa Nurfatihah', '2025-02-14 00:00:00', '2025-02-17 07:29:46', '2025-02-17 07:29:46', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(2752, 64, 'PRO-25-037', 1, 1, 160000, 20000, 40000, 4, 0, 80000, 0, 'Membuat partisi rw senayan city', 'Choirunnisa Nurfatihah', '2025-02-14 00:00:00', '2025-02-17 07:29:46', '2025-02-17 07:29:46', NULL),
 (2753, 64, 'PRO-25-045', 1, 1, 160000, 20000, 40000, 4, 0, 80000, 0, 'Service kitchen set kantor', 'Choirunnisa Nurfatihah', '2025-02-14 00:00:00', '2025-02-17 07:30:33', '2025-02-17 07:30:33', NULL),
 (2754, 55, 'PRO-25-050', 1, 1, 150000, 18750, 37500, 8, 4, 150000, 150000, 'Potong triplek dan membuat partisi malaysia health care', 'Choirunnisa Nurfatihah', '2025-02-14 00:00:00', '2025-02-17 07:32:40', '2025-02-17 07:32:40', NULL),
 (2755, 66, 'PRO-25-029', 1, 1, 120000, 15000, 30000, 8, 14, 120000, 420000, 'Setup Honda IIMS', 'Choirunnisa Nurfatihah', '2025-02-10 00:00:00', '2025-02-17 07:46:15', '2025-02-17 07:46:15', NULL),
@@ -2722,8 +2712,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (3004, 46, 'PRO-25-037', 1, 1, 180000, 22500, 45000, 8, 4, 180000, 180000, 'Bikin hambalan rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-21 00:00:00', '2025-02-25 04:32:12', '2025-02-25 04:32:12', NULL),
 (3005, 46, 'PRO-25-037', 1, 1, 180000, 22500, 45000, 8, 4, 180000, 180000, 'Bikin kisi - kisi rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-22 00:00:00', '2025-02-25 04:33:46', '2025-02-25 04:33:46', NULL),
 (3006, 46, 'PRO-25-037', 1, 1, 180000, 22500, 45000, 8, 4, 180000, 180000, 'Bikin kisi kisi rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-23 00:00:00', '2025-02-25 04:34:15', '2025-02-25 04:34:15', NULL),
-(3007, 48, 'PRO-25-037', 1, 1, 110000, 13750, 27500, 8, 4, 110000, 110000, 'Pasang plimir sungkai rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-17 00:00:00', '2025-02-25 04:35:04', '2025-02-25 04:35:04', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(3007, 48, 'PRO-25-037', 1, 1, 110000, 13750, 27500, 8, 4, 110000, 110000, 'Pasang plimir sungkai rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-17 00:00:00', '2025-02-25 04:35:04', '2025-02-25 04:35:04', NULL),
 (3008, 48, 'PRO-25-037', 1, 1, 110000, 13750, 27500, 8, 4, 110000, 110000, 'Biikin pintu utk kisi kisi rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-18 00:00:00', '2025-02-25 04:35:55', '2025-02-25 04:35:55', NULL),
 (3009, 48, 'PRO-25-037', 1, 1, 110000, 13750, 27500, 4, 4, 55000, 110000, 'Pasang rel laci display rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-19 00:00:00', '2025-02-25 04:36:30', '2025-02-25 04:36:30', NULL),
 (3010, 48, 'PRO-25-037', 1, 1, 110000, 13750, 27500, 8, 4, 110000, 110000, 'Bikin kisi kisi rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-20 00:00:00', '2025-02-25 04:37:15', '2025-02-25 04:37:15', NULL),
@@ -2969,8 +2958,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (3259, 37, 'PRO-25-049', 1, 1, 180000, 22500, 45000, 4, 0, 90000, 0, 'Amplas besi otazen', 'Choirunnisa Nurfatihah', '2025-02-23 00:00:00', '2025-02-25 10:54:31', '2025-02-25 10:54:31', NULL),
 (3260, 39, 'PRO-25-037', 1, 1, 100000, 12500, 25000, 4, 0, 50000, 0, 'Dempul kisi kisi senayan', 'Choirunnisa Nurfatihah', '2025-02-19 00:00:00', '2025-02-25 10:58:00', '2025-02-25 10:58:00', NULL),
 (3261, 42, 'PRO-25-037', 1, 1, 125000, 15625, 31250, 4, 0, 62500, 0, 'Amplas kisi kisi senayan', 'Choirunnisa Nurfatihah', '2025-02-19 00:00:00', '2025-02-25 10:58:41', '2025-02-25 10:58:41', NULL),
-(3262, 34, 'PRO-25-037', 1, 1, 100000, 12500, 25000, 4, 0, 50000, 0, 'Amplas kisi kisi rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-19 00:00:00', '2025-02-25 10:59:26', '2025-02-25 10:59:26', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(3262, 34, 'PRO-25-037', 1, 1, 100000, 12500, 25000, 4, 0, 50000, 0, 'Amplas kisi kisi rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-19 00:00:00', '2025-02-25 10:59:26', '2025-02-25 10:59:26', NULL),
 (3263, 44, 'PRO-25-049', 1, 1, 140000, 17500, 35000, 4, 0, 70000, 0, 'Setting panggung otazen', 'Choirunnisa Nurfatihah', '2025-02-19 00:00:00', '2025-02-25 11:01:37', '2025-02-25 11:01:37', NULL),
 (3264, 45, 'PRO-25-049', 1, 1, 150000, 18750, 37500, 8, 0, 150000, 0, 'Pasang hpl otazen', 'Choirunnisa Nurfatihah', '2025-02-23 00:00:00', '2025-02-25 11:05:16', '2025-02-25 11:05:16', NULL),
 (3266, 49, 'PRO-25-050', 1, 1, 110000, 13750, 27500, 8, 13, 110000, 357500, 'Amplas display + setup malaysia cp', 'Choirunnisa Nurfatihah', '2025-02-17 00:00:00', '2025-02-25 11:10:01', '2025-02-25 11:10:01', NULL),
@@ -3209,8 +3197,7 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (3501, 70, 'PRO-25-050', 1, 1, 110000, 13750, 27500, 2, 0, 27500, 0, 'Beresin bekas bongkaran malaysia cp', 'Choirunnisa Nurfatihah', '2025-02-25 00:00:00', '2025-03-03 15:27:37', '2025-03-03 15:27:37', NULL),
 (3502, 70, 'PRO-25-040', 1, 1, 110000, 13750, 27500, 3, 0, 41250, 0, 'Beresin bekas bongkaran adora', 'Choirunnisa Nurfatihah', '2025-02-25 00:00:00', '2025-03-03 15:28:05', '2025-03-03 15:28:05', NULL),
 (3503, 70, 'PRO-25-029', 1, 1, 110000, 13750, 27500, 3, 0, 41250, 0, 'Beresin bekas bongkaran honda iims', 'Choirunnisa Nurfatihah', '2025-02-25 00:00:00', '2025-03-03 15:28:31', '2025-03-03 15:28:31', NULL),
-(3504, 70, 'PRO-25-073', 1, 1, 110000, 13750, 27500, 0, 2, 0, 55000, 'Bersih bersih ws', 'Choirunnisa Nurfatihah', '2025-02-25 00:00:00', '2025-03-03 15:28:54', '2025-03-03 15:28:54', NULL);
-INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_type`, `daily_salary_master`, `hourly_salary_master`, `hourly_overtime_salary_master`, `hour_salary`, `hour_overtime`, `current_salary`, `current_overtime_salary`, `description`, `created_by`, `entry_at`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(3504, 70, 'PRO-25-073', 1, 1, 110000, 13750, 27500, 0, 2, 0, 55000, 'Bersih bersih ws', 'Choirunnisa Nurfatihah', '2025-02-25 00:00:00', '2025-03-03 15:28:54', '2025-03-03 15:28:54', NULL),
 (3505, 70, 'PRO-25-057', 1, 1, 110000, 13750, 27500, 8, 1.5, 110000, 41250, 'Ambil barang belvedre 10 di ws legok', 'Choirunnisa Nurfatihah', '2025-02-26 00:00:00', '2025-03-03 15:30:28', '2025-03-03 15:30:28', NULL),
 (3506, 70, 'PRO-25-073', 1, 1, 110000, 13750, 27500, 8, 1.5, 110000, 41250, 'Jaga Pos + bersih bersih ws', 'Choirunnisa Nurfatihah', '2025-02-27 00:00:00', '2025-03-03 15:32:58', '2025-03-03 15:32:58', NULL),
 (3507, 70, 'PRO-25-037', 1, 1, 110000, 13750, 27500, 0, 12, 0, 330000, 'ke Rw senayan c', 'Choirunnisa Nurfatihah', '2025-02-27 00:00:00', '2025-03-03 15:33:22', '2025-03-03 15:33:22', NULL),
@@ -3322,41 +3309,3 @@ INSERT INTO `man_powers` (`id`, `user_id`, `project_id`, `work_type`, `project_t
 (3613, 114, 'PRO-25-037', 1, 1, 150000, 18750, 37500, 8, 0, 150000, 0, 'Las rak besi rw sency', 'Choirunnisa Nurfatihah', '2025-03-01 00:00:00', '2025-03-04 04:26:13', '2025-03-04 04:26:13', NULL),
 (3614, 114, 'PRO-25-037', 1, 1, 150000, 18750, 37500, 8, 0, 150000, 0, 'Las rak besi rw sency', 'Choirunnisa Nurfatihah', '2025-03-02 00:00:00', '2025-03-04 04:26:43', '2025-03-04 04:26:43', NULL),
 (3615, 114, 'PRO-25-049', 1, 1, 150000, 18750, 37500, 0, 4, 0, 150000, 'Muat barang otazen ke fuso', 'Choirunnisa Nurfatihah', '2025-03-02 00:00:00', '2025-03-04 04:27:14', '2025-03-04 04:27:14', NULL);
-
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `man_powers`
---
-ALTER TABLE `man_powers`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `man_powers_user_id_foreign` (`user_id`),
-  ADD KEY `man_powers_project_id_foreign` (`project_id`);
-
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `man_powers`
---
-ALTER TABLE `man_powers`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3616;
-
---
--- Constraints for dumped tables
---
-
---
--- Constraints for table `man_powers`
---
-ALTER TABLE `man_powers`
-  ADD CONSTRAINT `man_powers_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `man_powers_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
