@@ -217,8 +217,6 @@ class SpbProject extends Model
         return round($grandTotal); // Membulatkan hasil total ke bilangan bulat
     } */
 
-
-
     public function category(): BelongsTo
     {
         return $this->belongsTo(SpbProject_Category::class, 'spbproject_category_id', 'id');

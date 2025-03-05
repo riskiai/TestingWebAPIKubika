@@ -29,7 +29,6 @@ class CreateRequest extends FormRequest
             'nama' => 'required|string|max:255',
             'id_kategori' => 'nullable|exists:kategori,id',
             'deskripsi' => 'nullable|string',
-            'deskripsi' => 'nullable|string',
             'type_pembelian' => 'nullable|string|max:255',
             // 'stok' => 'nullable|integer|min:0',
             'harga_product' => 'nullable|numeric|min:0', 

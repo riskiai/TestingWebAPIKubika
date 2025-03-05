@@ -102,6 +102,10 @@ class SPBController extends Controller
             });
         }
 
+        if ($request->has('created_by')) {
+            $query->where('user_id', $request->created_by);
+        }             
+
         if ($request->has('vendor_id')) {
             $vendorId = $request->vendor_id;
     
@@ -429,6 +433,10 @@ class SPBController extends Controller
                 }
             });
         }
+
+        if ($request->has('created_by')) {
+            $query->where('user_id', $request->created_by);
+        }    
     
         if ($request->has('project')) {
             $query->where('project_id', $request->project);
@@ -544,7 +552,10 @@ class SPBController extends Controller
             $vendorId = $request->vendor_id;
             $query->where('company_id', $vendorId); 
         }
-    
+
+        if ($request->has('created_by')) {
+            $query->where('user_id', $request->created_by);
+        }
 
         if ($request->has('tukang')) {
             $tukangIds = explode(',', $request->tukang); 
@@ -779,6 +790,10 @@ class SPBController extends Controller
             });
         }
 
+        if ($request->has('created_by')) {
+            $query->where('user_id', $request->created_by);
+        }
+
         if ($request->has('supervisor_id')) {
             $query->whereHas('project.tenagaKerja', function ($q) use ($request) {
                 $q->where('users.id', $request->supervisor_id) // Filter berdasarkan ID supervisor
@@ -977,6 +992,10 @@ class SPBController extends Controller
             $query->whereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
                 $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
             });
+        }
+
+        if ($request->has('created_by')) {
+            $query->where('user_id', $request->created_by);
         }
 
         if ($request->has('doc_type_spb')) {
@@ -1381,6 +1400,88 @@ class SPBController extends Controller
                 ], 404);
             }
 
+            // **Tentukan Status Produk & Vendor Berdasarkan tab_spb**
+            $statusProduk = ($spbProject->tab_spb == SpbProject::TAB_PAID) 
+                ? ProductCompanySpbProject::TEXT_PAID_PRODUCT 
+                : ProductCompanySpbProject::TEXT_AWAITING_PRODUCT;
+
+            $statusVendor = ($spbProject->tab_spb == SpbProject::TAB_PAID) 
+                ? ProductCompanySpbProject::TEXT_PAID_PRODUCT 
+                : ProductCompanySpbProject::TEXT_AWAITING_PRODUCT;
+
+            // Proses setiap produk yang dikirim dalam request
+            foreach ($request->produk as $produkData) {
+                $vendorId = $produkData['vendor_id'];
+                $produkId = $produkData['produk_id'];
+
+                // Cari apakah produk sudah ada di tabel pivot
+                $product = $spbProject->productCompanySpbprojects()
+                    ->where('produk_id', $produkId)
+                    ->where('company_id', $vendorId)
+                    ->first();
+
+                if ($product) {
+                    // Jika produk sudah ada, update datanya
+                    $product->update([
+                        'harga' => $produkData['harga'],
+                        'stok' => $produkData['stok'],
+                        'tax_ppn' => $produkData['tax_ppn'] ?? 0,
+                        'ongkir' => $produkData['ongkir'] ?? 0,
+                        'date' => $produkData['date'],
+                        'due_date' => $produkData['due_date'],
+                        'status_produk' => $statusProduk, // Kondisi PAID jika tab_spb PAID
+                        'status_vendor' => $statusVendor, // Kondisi PAID jika tab_spb PAID
+                    ]);
+                } else {
+                    // Jika produk belum ada, tambahkan sebagai entri baru
+                    ProductCompanySpbProject::create([
+                        'spb_project_id' => $spbProject->doc_no_spb,
+                        'produk_id' => $produkId,
+                        'company_id' => $vendorId,
+                        'ongkir' => $produkData['ongkir'] ?? 0,
+                        'harga' => $produkData['harga'],
+                        'stok' => $produkData['stok'],
+                        'description' => $produkData['description'] ?? null,
+                        'ppn' => $produkData['tax_ppn'] ?? 0,
+                        'date' => $produkData['date'],
+                        'due_date' => $produkData['due_date'],
+                        'status_produk' => $statusProduk, // Kondisi PAID jika tab_spb PAID
+                        'status_vendor' => $statusVendor, // Kondisi PAID jika tab_spb PAID
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Produk berhasil ditambahkan atau diperbarui ke SPB Project {$spbProject->doc_no_spb}.",
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    /* public function storeProduk(AddProdukRequest $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Cari SPB Project berdasarkan ID
+            $spbProject = SpbProject::find($id);
+            if (!$spbProject) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'SPB Project not found!',
+                ], 404);
+            }
+
             // Proses setiap produk yang dikirim dalam request
             foreach ($request->produk as $produkData) {
                 $vendorId = $produkData['vendor_id'];
@@ -1437,7 +1538,7 @@ class SPBController extends Controller
                 'message' => $e->getMessage(),
             ], 500);
         }
-    }
+    } */
 
     /* protected function generateDocNo($maxNumericPart, $spbCategory)
     {
