@@ -1964,6 +1964,8 @@ class ProjectController extends Controller
         try {
             // Temukan proyek berdasarkan ID, atau akan gagal jika tidak ditemukan
             $project = Project::findOrFail($id);
+
+            SpbProject::where('project_id', $id)->update(['project_id' => null]);
     
             // Hapus hubungan many-to-many terlebih dahulu jika ada
             $project->product()->detach();  // Menanggalkan hubungan dengan produk

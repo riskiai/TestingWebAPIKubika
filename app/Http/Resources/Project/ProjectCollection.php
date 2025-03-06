@@ -69,7 +69,7 @@ class ProjectCollection extends ResourceCollection
                 'client' => [
                     'id' => optional($project->company)->id,
                     'name' => optional($project->company)->name,
-                    'contact_type' => $project->company->contactType->name,
+                    'contact_type' => optional($project->company)->contactType?->name,
                 ],
                 /* 'produk' => optional($project->product)->map(function ($product) {
                         return [

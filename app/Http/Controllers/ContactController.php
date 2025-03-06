@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\Project;
 use App\Models\ContactType;
 use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
@@ -278,7 +279,7 @@ class ContactController extends Controller
          return new ContactCollection($contacts);
     }
 
-    public function destroy($id)
+    /* public function destroy($id)
     {
         DB::beginTransaction();
 
@@ -306,5 +307,39 @@ class ContactController extends Controller
             DB::rollBack();
             return MessageActeeve::error($th->getMessage());
         }
+    } */
+
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+
+        $contact = Company::find($id);
+        if (!$contact) {
+            return MessageActeeve::notFound('data not found!');
+        }
+
+        try {
+            // Pastikan semua project yang terkait tidak terhapus, tetapi company_id-nya di-set NULL
+            Project::where('company_id', $id)->update(['company_id' => null]);
+
+            // cek kondisi jika npwp / file tersedia, maka storage tersebut akan dihapus
+            if ($contact->npwp) {
+                Storage::delete($contact->npwp);
+            }
+
+            if ($contact->file) {
+                Storage::delete($contact->file);
+            }
+
+            // Hapus contact
+            $contact->delete();
+
+            DB::commit();
+            return MessageActeeve::success("contact $contact->name has been deleted");
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
     }
+
 }

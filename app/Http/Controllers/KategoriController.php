@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use App\Models\Product;
 use App\Models\Kategori;
 use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
@@ -176,7 +177,7 @@ class KategoriController extends Controller
         }
     }
 
-    public function destroy(string $id)
+   /*  public function destroy(string $id)
     {
         DB::beginTransaction();
 
@@ -198,6 +199,31 @@ class KategoriController extends Controller
             DB::rollBack();
             return MessageActeeve::error($th->getMessage());
         }
+    } */
+
+    public function destroy(string $id)
+    {
+        DB::beginTransaction();
+
+        $kategori = Kategori::find($id);
+        if (!$kategori) {
+            return MessageActeeve::notFound('Category not found!');
+        }
+
+        try {
+            // Set id_kategori menjadi NULL pada produk yang terkait
+            Product::where('id_kategori', $id)->update(['id_kategori' => null]);
+
+            // Hapus kategori
+            $kategori->delete();
+
+            DB::commit();
+            return MessageActeeve::success("Category {$kategori->name} has been deleted");
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
     }
+
 
 }

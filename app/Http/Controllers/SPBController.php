@@ -3756,7 +3756,6 @@ class SPBController extends Controller
         }
     }
     
-    
     public function undo($docNoSpb)
     {
         DB::beginTransaction();
@@ -4397,7 +4396,7 @@ class SPBController extends Controller
             $spbProject->productCompanySpbprojects()
                 ->where('company_id', $companyId)  // Menggunakan company_id
                 ->whereNotIn('status_produk', [
-                    ProductCompanySpbProject::TEXT_PAID_PRODUCT,
+                ProductCompanySpbProject::TEXT_PAID_PRODUCT,
                     ProductCompanySpbProject::TEXT_REJECTED_PRODUCT,
                 ])  // Pastikan hanya produk yang belum dibayar atau ditolak
                 ->update([

@@ -32,10 +32,17 @@ class ManPowerCollection extends ResourceCollection
                 "total_salary" => $manPower->current_salary + $manPower->current_overtime_salary,
                 "description" => $manPower->description,
                 "entry_at" => $manPower->entry_at,
-                "project" => [
+              /*  "project" => $manPower->project ? [
                     "id" => $manPower->project->id,
                     "name" => $manPower->project->name,
-                ],
+                ] : null, */
+                "project" => $manPower->project ? [
+                    'id' => $manPower->project->id,
+                    'nama' => $manPower->project->name,
+                    ] : [
+                        'id' => null,
+                        'nama' => null,
+                    ],
                 "user" => [
                     "id" => $manPower->user->id,
                     "name" => $manPower->user->name,
