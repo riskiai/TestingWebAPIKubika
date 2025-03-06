@@ -2280,7 +2280,7 @@ class SPBController extends Controller
                             'stok' => $product->stok ?? 0,
                             'subtotal_item' => $product->subtotal_produk,
                             'payment_date' => $product->payment_date ?? null,  
-                            'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
+                            'file_payment' => $product->file_payment ? asset("storage/$product->file_payment") : null,
                             /* 'pph' => [
                                 'pph_type' => $product->taxPph->name ?? 'Unknown',
                                 'pph_rate' => $product->taxPph->percent ?? 0,
@@ -2320,7 +2320,7 @@ class SPBController extends Controller
                             'stok' => $product->stok ?? 0,
                             'subtotal_item' => $product->subtotal_produk,
                             'payment_date' => $product->payment_date ?? null,  
-                            'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
+                            'file_payment' => $product->file_payment ? asset("storage/$product->file_payment") : null,
                             /* 'pph' => [
                                 'pph_type' => $product->taxPph->name ?? 'Unknown',
                                 'pph_rate' => $product->taxPph->percent ?? 0,
@@ -2394,7 +2394,7 @@ class SPBController extends Controller
                     'stok' => $product->stok ?? 0,
                     'subtotal_item' => $product->subtotal_produk,
                     'payment_date' => $product->payment_date ?? null,  
-                    'file_payment' => $product->file_payment ? asset($product->file_payment) : null,
+                    'file_payment' => $product->file_payment ? asset("storage/$product->file_payment") : null,
                     /* 'pph' => [
                         'pph_type' => $product->taxPph->name ?? 'Unknown',
                         'pph_rate' => $product->taxPph->percent ?? 0,
