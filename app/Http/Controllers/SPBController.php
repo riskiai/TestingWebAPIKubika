@@ -3761,41 +3761,87 @@ class SPBController extends Controller
         DB::beginTransaction();
     
         // Cari SpbProject berdasarkan doc_no_spb
-        $spbProject = SpbProject::with('productCompanySpbprojects')->where('doc_no_spb', $docNoSpb)->first();
+        $spbProject = SpbProject::with('productCompanySpbprojects', 'termins')
+        ->where('doc_no_spb', $docNoSpb)
+        ->first();
         if (!$spbProject) {
             return MessageActeeve::notFound('Data not found!');
         }
-    
-        // Pastikan status saat ini adalah VERIFIED atau PAYMENT_REQUEST yang dapat di-undo
-        if ($spbProject->tab_spb == SpbProject::TAB_SUBMIT) {
-            return MessageActeeve::warning("Cannot undo because tab is submit");
+
+        $userRole = auth()->user()->role_id;
+
+        if ($spbProject->tab_spb == SpbProject::TAB_PAID && $userRole !== Role::OWNER) {
+            return MessageActeeve::error("Unauthorized! Only OWNER can undo from PAID.");
         }
-    
-        if (!in_array($spbProject->tab_spb, [SpbProject::TAB_VERIFIED, SpbProject::TAB_PAYMENT_REQUEST])) {
-            return MessageActeeve::warning("Cannot undo because the tab is not VERIFIED or PAYMENT REQUEST");
-        }
-    
+
         try {
-            // Cek apakah kategori SPB adalah BORONGAN
-            if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
-                // Reset tab_spb ke SUBMIT untuk kategori BORONGAN
+            // **Definisikan $nowDate sebelum digunakan**
+        $nowDate = Carbon::now('Asia/Jakarta');
+
+        // Cek apakah kategori SPB adalah BORONGAN
+        if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
+            // **Jika berada di TAB_PAID, undo ke TAB_PAYMENT_REQUEST dulu**
+            if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
+                $newTab = SpbProject::TAB_PAYMENT_REQUEST;
+            } 
+            // **Jika berada di TAB_PAYMENT_REQUEST, langsung ke TAB_SUBMIT**
+            elseif ($spbProject->tab_spb == SpbProject::TAB_PAYMENT_REQUEST) {
                 $newTab = SpbProject::TAB_SUBMIT;
-    
-                // Reset status produk di pivot table
-                foreach ($spbProject->productCompanySpbprojects as $product) {
-                    $product->update([
-                        'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, 
-                        'status_vendor' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, 
-                        'ppn' => 0, // Reset PPN
-                        'pph' => null, // Reset PPH
-                    ]);
-                }
-    
-                // Update status SPB Project dan tab
-                $spbProject->update([
-                    'spbproject_status_id' => SpbProject_Status::AWAITING,  // Status diubah kembali ke AWAITING
-                    'tab_spb' => $newTab,  // Tab dikembalikan ke SUBMIT
+            } 
+            // **Jaga-jaga jika ada skenario lain, default ke TAB_SUBMIT**
+            else {
+                $newTab = SpbProject::TAB_SUBMIT;
+            }
+
+            // Reset status produk di pivot table dengan ternary operator
+            foreach ($spbProject->productCompanySpbprojects as $product) {
+                $productDueDate = Carbon::parse($product->due_date)->timezone('Asia/Jakarta');
+
+                $status = ($newTab == SpbProject::TAB_SUBMIT)
+                    ? ProductCompanySpbProject::TEXT_AWAITING_PRODUCT
+                    : ($nowDate->isSameDay($productDueDate)
+                        ? ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT
+                        : ($nowDate->gt($productDueDate)
+                            ? ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT
+                            : ProductCompanySpbProject::TEXT_OPEN_PRODUCT
+                        )
+                    );
+
+                $product->update([
+                    'status_produk' => $status,
+                    'status_vendor' => $status,
+                    'ppn' => 0,
+                    'pph' => null,
                 ]);
+            }
+
+            // **Reset harga termin & riwayat termin hanya jika dari TAB_PAID ke SUBMIT**
+            if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
+                $spbProject->update([
+                    'harga_termin_spb' => 0,
+                    'deskripsi_termin_spb' => null,
+                    'type_termin_spb' => SpbProject::TYPE_TERMIN_BELUM_LUNAS, // **Set ke "Belum Lunas" (1)**
+                ]);
+
+                // **Hapus semua riwayat termin**
+                $spbProject->termins()->delete();
+            }
+
+            // **Update status SPB Project dan tab**
+            $spbProject->update([
+                'spbproject_status_id' => ($newTab == SpbProject::TAB_SUBMIT)
+                    ? SpbProject_Status::AWAITING
+                    : ($nowDate->isSameDay(Carbon::parse($spbProject->tanggal_berahir_spb))
+                        ? SpbProject_Status::DUEDATE
+                        : ($nowDate->gt(Carbon::parse($spbProject->tanggal_berahir_spb))
+                            ? SpbProject_Status::OVERDUE
+                            : SpbProject_Status::OPEN
+                        )
+                    ),
+                'tab_spb' => $newTab,
+            ]);
+
+
     
                 // Tambahkan log undo untuk kategori BORONGAN
                 LogsSPBProject::create([
@@ -3813,15 +3859,29 @@ class SPBController extends Controller
             // Jika bukan kategori BORONGAN, kurangi tab_spb satu tingkat
             $newTab = $spbProject->tab_spb - 1;
     
-            // Reset status produk di pivot table
+            // **Kondisikan status produk & vendor langsung di dalam update**
             foreach ($spbProject->productCompanySpbprojects as $product) {
+                
+                $productDueDate = Carbon::parse($product->due_date)->timezone('Asia/Jakarta');
+                $nowDate = Carbon::now('Asia/Jakarta');
+
+                // **Jika undo ke TAB_SUBMIT, semua produk & vendor harus jadi AWAITING**
+                if ($newTab == SpbProject::TAB_SUBMIT) {
+                    $status = ProductCompanySpbProject::TEXT_AWAITING_PRODUCT;
+                } else {
+                    // **Jika undo dari PAID atau PAYMENT_REQUEST, status menyesuaikan due date**
+                    $status = $nowDate->isSameDay($productDueDate) ? ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT
+                        : ($nowDate->gt($productDueDate) ? ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT
+                        : ProductCompanySpbProject::TEXT_OPEN_PRODUCT);
+                }
+
+                // **Pastikan status produk & vendor benar-benar diupdate**
                 $product->update([
-                    'status_produk' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, 
-                    'status_vendor' => ProductCompanySpbProject::TEXT_AWAITING_PRODUCT, 
-                    'ppn' => 0, // Reset PPN
-                    'pph' => null, // Reset PPH
+                    'status_produk' => $status,
+                    'status_vendor' => $status,
                 ]);
             }
+
     
             // Update status SPB Project dan tab
             $spbProject->update([
@@ -3846,6 +3906,86 @@ class SPBController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
+
+   /*  public function undo($docNoSpb)
+    {
+        DB::beginTransaction();
+
+        // Cari SpbProject berdasarkan doc_no_spb
+        $spbProject = SpbProject::with('productCompanySpbprojects')->where('doc_no_spb', $docNoSpb)->first();
+        if (!$spbProject) {
+            return MessageActeeve::notFound('Data not found!');
+        }
+
+        $userRole = auth()->user()->role_id;
+
+        // Jika bukan OWNER dan SPB sudah PAID, tidak bisa melakukan undo
+        if ($userRole !== Role::OWNER && $spbProject->tab_spb == SpbProject::TAB_PAID) {
+            return MessageActeeve::error("Unauthorized! Only OWNER can undo from PAID.");
+        }
+
+        // Jika sudah SUBMIT, tidak bisa di-undo lebih jauh
+        if ($spbProject->tab_spb == SpbProject::TAB_SUBMIT) {
+            return MessageActeeve::warning("Cannot undo because tab is already at SUBMIT.");
+        }
+
+        try {
+            // Tentukan tab sebelumnya berdasarkan tab saat ini
+            $previousTab = match ($spbProject->tab_spb) {
+                SpbProject::TAB_PAID => SpbProject::TAB_PAYMENT_REQUEST,
+                SpbProject::TAB_PAYMENT_REQUEST => SpbProject::TAB_VERIFIED,
+                SpbProject::TAB_VERIFIED => SpbProject::TAB_SUBMIT,
+                default => SpbProject::TAB_SUBMIT,
+            };
+
+            // Pastikan status SPB tidak kembali ke AWAITING kecuali jika di tab SUBMIT
+            $spbStatus = $spbProject->spbproject_status_id;
+            if ($previousTab == SpbProject::TAB_SUBMIT) {
+                $spbStatus = SpbProject_Status::AWAITING;
+            }
+
+            // Reset status produk & vendor hanya jika belum PAID atau REJECTED
+            foreach ($spbProject->productCompanySpbprojects as $product) {
+                if (!in_array($product->status_produk, [ProductCompanySpbProject::TEXT_PAID_PRODUCT, ProductCompanySpbProject::TEXT_REJECTED_PRODUCT])) {
+                    $productDueDate = Carbon::parse($product->due_date)->timezone('Asia/Jakarta');
+                    $nowDate = Carbon::now('Asia/Jakarta');
+
+                    $status = match (true) {
+                        $nowDate->isSameDay($productDueDate) => ProductCompanySpbProject::TEXT_DUEDATE_PRODUCT,
+                        $nowDate->gt($productDueDate) => ProductCompanySpbProject::TEXT_OVERDUE_PRODUCT,
+                        default => ProductCompanySpbProject::TEXT_OPEN_PRODUCT,
+                    };
+
+                    $product->update([
+                        'status_produk' => $status,
+                        'status_vendor' => $status,
+                    ]);
+                }
+            }
+
+            // Update tab_spb & status SPB Project
+            $spbProject->update([
+                'tab_spb' => $previousTab,
+                'spbproject_status_id' => $spbStatus,
+            ]);
+
+            // Tambahkan log undo
+            LogsSPBProject::create([
+                'spb_project_id' => $spbProject->doc_no_spb,
+                'tab_spb' => $previousTab,
+                'name' => auth()->user()->name,
+                'message' => "SPB Project has been undone and moved back to previous tab: " . $previousTab,
+            ]);
+
+            DB::commit();
+
+            return MessageActeeve::success("SPB Project $docNoSpb has been undone successfully and reverted to previous tab.");
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    } */
+
 
     public function reject($docNoSpb, Request $request)
     {

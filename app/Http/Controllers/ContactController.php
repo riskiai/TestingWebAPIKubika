@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Models\ProductCompanySpbProject;
 use App\Http\Requests\Contact\CreateRequest;
 use App\Http\Requests\Contact\UpdateRequest;
 use App\Http\Resources\Contact\ContactCollection;
@@ -321,6 +322,8 @@ class ContactController extends Controller
         try {
             // Pastikan semua project yang terkait tidak terhapus, tetapi company_id-nya di-set NULL
             Project::where('company_id', $id)->update(['company_id' => null]);
+
+            ProductCompanySpbProject::where('company_id', $id)->update(['company_id' => null]);
 
             // cek kondisi jika npwp / file tersedia, maka storage tersebut akan dihapus
             if ($contact->npwp) {

@@ -43,14 +43,14 @@ class ManPowerCollection extends ResourceCollection
                         'id' => null,
                         'nama' => null,
                     ],
-                "user" => [
+               "user" => $manPower->user ? [
                     "id" => $manPower->user->id,
                     "name" => $manPower->user->name,
-                    'divisi' => [
-                        'name' => $manPower->user->divisi->name ?? null,
-                        'kode_divisi' => $manPower->user->divisi->kode_divisi ?? null,
-                    ],
-                ],
+                    "divisi" => $manPower->user->divisi ? [
+                        "name" => $manPower->user->divisi->name,
+                        "kode_divisi" => $manPower->user->divisi->kode_divisi,
+                    ] : null,
+                ] : null,
                 "created_by" => [
                     "name" => $manPower->creator->name ?? $manPower->created_by,
                     "created_at" => Carbon::parse($manPower->created_at)->timezone('Asia/Jakarta')->toDateTimeString(),
