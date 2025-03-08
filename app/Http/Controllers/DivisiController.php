@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Requests\Divisi\CreateRequest;
 use App\Http\Requests\Divisi\UpdateRequest;
 use App\Http\Resources\Divisi\DivisiCollection;
+use App\Models\User;
 
 class DivisiController extends Controller
 {
@@ -184,6 +185,8 @@ class DivisiController extends Controller
         }
     
         try {
+            User::where('divisi_id', $id)->update(['divisi_id' => null]);
+
             // Hapus divisi
             $divisi->delete();
     

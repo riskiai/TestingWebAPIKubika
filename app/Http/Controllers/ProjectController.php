@@ -547,7 +547,7 @@ class ProjectController extends Controller
             $year = date('y', strtotime($request->date)); // Ambil tahun dua digit dari input tanggal
 
             // Generate ID dengan mengirimkan tahun ke function generateSequenceNumber
-            $sequenceNumber = Project::generateSequenceNumber($year); // Panggil ID generator dengan $year
+            $sequenceNumber = Project::generateSequenceNumber($year); 
             $project->id = 'PRO-' . $year . '-' . $sequenceNumber; // Generate ID
 
             // Isi field lainnya

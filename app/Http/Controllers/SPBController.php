@@ -102,9 +102,41 @@ class SPBController extends Controller
             });
         }
 
+        if ($request->has('date_range')) {
+            $dateRange = $request->input('date_range');
+        
+            // Jika dikirim dalam format string "[2025-01-01, 2025-01-31]", ubah menjadi array
+            if (is_string($dateRange)) {
+                $dateRange = str_replace(['[', ']'], '', $dateRange); // Hilangkan tanda kurung
+                $dateRange = explode(',', $dateRange); // Ubah string menjadi array
+            }
+        
+            // Pastikan format sudah menjadi array dengan dua elemen
+            if (is_array($dateRange) && count($dateRange) === 2) {
+                $startDate = trim($dateRange[0]); // Pastikan tidak ada spasi tambahan
+                $endDate = trim($dateRange[1]);
+        
+                // Gunakan filter tanggal
+                $query->where(function ($q) use ($startDate, $endDate) {
+                    $q->where(function ($q1) use ($startDate, $endDate) {
+                        $q1->where('tab_spb', SpbProject::TAB_PAID)
+                           ->whereBetween('updated_at', [$startDate, $endDate]);
+                    })
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->where('tab_spb', '!=', SpbProject::TAB_PAID)
+                           ->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
+                               $q3->whereBetween('payment_date', [$startDate, $endDate]);
+                           });
+                    });
+                });
+            }
+        }
+        
+
         if ($request->has('created_by')) {
             $query->where('user_id', $request->created_by);
-        }             
+        }  
+       
 
         if ($request->has('vendor_id')) {
             $vendorId = $request->vendor_id;
@@ -195,6 +227,16 @@ class SPBController extends Controller
                 $query->where('tab_spb', $tab);
             }
         }
+
+        if ($request->has('type_projects')) {
+            $typeProjects = is_array($request->type_projects) 
+                ? $request->type_projects 
+                : explode(',', $request->type_projects);
+        
+            $query->whereHas('project', function ($q) use ($typeProjects) {
+                $q->whereIn('type_projects', $typeProjects); // Filter berdasarkan type_projects di tabel projects
+            });
+        }        
 
         // Filter berdasarkan project ID
         if ($request->has('project')) {
@@ -557,6 +599,8 @@ class SPBController extends Controller
             $query->where('user_id', $request->created_by);
         }
 
+        
+
         if ($request->has('tukang')) {
             $tukangIds = explode(',', $request->tukang); 
             $query->whereHas('project.tenagaKerja', function ($query) use ($tukangIds) {
@@ -601,6 +645,17 @@ class SPBController extends Controller
                 }
             });
         }       
+
+        if ($request->has('type_projects')) {
+            $typeProjects = is_array($request->type_projects) 
+                ? $request->type_projects 
+                : explode(',', $request->type_projects);
+        
+            $query->whereHas('project', function ($q) use ($typeProjects) {
+                $q->whereIn('type_projects', $typeProjects);
+            });
+        }   
+
 
           // Tambahkan filter berdasarkan proyek jika ada
         if ($request->has('project')) {
@@ -788,6 +843,36 @@ class SPBController extends Controller
                       $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
                   });
             });
+        }
+
+        if ($request->has('date_range')) {
+            $dateRange = $request->input('date_range');
+        
+            // Jika dikirim dalam format string "[2025-01-01, 2025-01-31]", ubah menjadi array
+            if (is_string($dateRange)) {
+                $dateRange = str_replace(['[', ']'], '', $dateRange); // Hilangkan tanda kurung
+                $dateRange = explode(',', $dateRange); // Ubah string menjadi array
+            }
+        
+            // Pastikan format sudah menjadi array dengan dua elemen
+            if (is_array($dateRange) && count($dateRange) === 2) {
+                $startDate = trim($dateRange[0]); // Pastikan tidak ada spasi tambahan
+                $endDate = trim($dateRange[1]);
+        
+                // Gunakan filter tanggal
+                $query->where(function ($q) use ($startDate, $endDate) {
+                    $q->where(function ($q1) use ($startDate, $endDate) {
+                        $q1->where('tab_spb', SpbProject::TAB_PAID)
+                           ->whereBetween('updated_at', [$startDate, $endDate]);
+                    })
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->where('tab_spb', '!=', SpbProject::TAB_PAID)
+                           ->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
+                               $q3->whereBetween('payment_date', [$startDate, $endDate]);
+                           });
+                    });
+                });
+            }
         }
 
         if ($request->has('created_by')) {
@@ -1022,6 +1107,46 @@ class SPBController extends Controller
                   });
             });
         }  
+
+        if ($request->has('date_range')) {
+            $dateRange = $request->input('date_range');
+        
+            // Jika dikirim dalam format string "[2025-01-01, 2025-01-31]", ubah menjadi array
+            if (is_string($dateRange)) {
+                $dateRange = str_replace(['[', ']'], '', $dateRange); // Hilangkan tanda kurung
+                $dateRange = explode(',', $dateRange); // Ubah string menjadi array
+            }
+        
+            // Pastikan format sudah menjadi array dengan dua elemen
+            if (is_array($dateRange) && count($dateRange) === 2) {
+                $startDate = trim($dateRange[0]); // Pastikan tidak ada spasi tambahan
+                $endDate = trim($dateRange[1]);
+        
+                // Gunakan filter tanggal
+                $query->where(function ($q) use ($startDate, $endDate) {
+                    $q->where(function ($q1) use ($startDate, $endDate) {
+                        $q1->where('tab_spb', SpbProject::TAB_PAID)
+                           ->whereBetween('updated_at', [$startDate, $endDate]);
+                    })
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->where('tab_spb', '!=', SpbProject::TAB_PAID)
+                           ->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
+                               $q3->whereBetween('payment_date', [$startDate, $endDate]);
+                           });
+                    });
+                });
+            }
+        }
+
+        if ($request->has('type_projects')) {
+            $typeProjects = is_array($request->type_projects) 
+                ? $request->type_projects 
+                : explode(',', $request->type_projects);
+        
+            $query->whereHas('project', function ($q) use ($typeProjects) {
+                $q->whereIn('type_projects', $typeProjects);
+            });
+        }   
     
         // Filter berdasarkan project ID
         if ($request->has('project')) {
@@ -3840,8 +3965,6 @@ class SPBController extends Controller
                     ),
                 'tab_spb' => $newTab,
             ]);
-
-
     
                 // Tambahkan log undo untuk kategori BORONGAN
                 LogsSPBProject::create([
@@ -3887,6 +4010,7 @@ class SPBController extends Controller
             $spbProject->update([
                 'spbproject_status_id' => SpbProject_Status::AWAITING,  // Status diubah kembali ke AWAITING
                 'tab_spb' => $newTab,  // Tab dikurangi satu tingkat
+                'is_payment_vendor' => null, 
             ]);
     
             // Tambahkan log undo untuk kategori lain
@@ -4527,6 +4651,7 @@ class SPBController extends Controller
                 'payment_date' => $paymentDate,
                 'file_payment' => $filePaymentPath, // Jika ada file pembayaran
                 'updated_at' => $paymentDate, // Menggunakan payment_date untuk updated_at
+                'is_payment_vendor' => 1, // 1 True
             ]);
 
             // Ambil vendor_id dari request dan anggap itu adalah company_id
@@ -4735,6 +4860,7 @@ class SPBController extends Controller
                     $actorField => $actorField ? auth()->user()->id : null,
                     'approve_date' => now(),
                     'updated_at' => $request->updated_at,
+                    'is_payment_vendor' => 0, // 0 False
                 ]);
 
                 // Update status produk

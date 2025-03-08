@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon; // Import Carbon untuk tanggal
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Kategori extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
+    protected $dates = ['deleted_at']; 
     // Tentukan nama tabel yang sesuai di database
     protected $table = 'kategori';
 

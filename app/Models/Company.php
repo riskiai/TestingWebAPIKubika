@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Company extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes; 
 
     /**
      * Variable global yang bisa digunakan untuk menyimpan path attachment.
@@ -15,7 +16,7 @@ class Company extends Model
      */
     const ATTACHMENT_NPWP = 'attachment/contact/npwp';
     const ATTACHMENT_FILE = 'attachment/contact/file';
-
+    protected $dates = ['deleted_at'];
     /**
      * Kolom yang dapat diisi secara massal
      */

@@ -51,6 +51,7 @@ class SpbProject extends Model
         'project_id',
         'produk_id',
         'unit_kerja',
+        'is_payment_vendor',
         'tanggal_berahir_spb',
         'tanggal_dibuat_spb',
         'nama_toko',

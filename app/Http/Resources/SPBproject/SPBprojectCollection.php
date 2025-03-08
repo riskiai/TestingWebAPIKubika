@@ -68,6 +68,9 @@ class SPBprojectCollection extends ResourceCollection
             $data[$key] = [
                 "doc_no_spb" => $spbProject->doc_no_spb,
                 "doc_type_spb" => $spbProject->doc_type_spb,
+                "is_payment_vendor" => $spbProject->is_payment_vendor === null 
+                ? null 
+                : (bool) $spbProject->is_payment_vendor,
                 "status_spb" => $this->getStatus($spbProject),
                 // Menambahkan logs ke dalam data proyek
                 'logs_spb' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
