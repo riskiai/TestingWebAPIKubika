@@ -35,87 +35,162 @@ class ProjectController extends Controller
     {
         $query = Project::query();
 
-        if ($request->has('role_id')) {
-            // Ambil array role_id dari request, pastikan dalam bentuk array
-            $roleIds = is_array($request->role_id) ? $request->role_id : explode(',', $request->role_id);
+       // Eager load untuk mengurangi query N+1
+       $query->with(['company', 'user', 'product', 'tenagaKerja']);
 
-            // Terapkan filter untuk role_id
-            $query->whereHas('tenagaKerja', function ($q) use ($roleIds) {
-                $q->whereIn('role_id', $roleIds); // Pastikan menggunakan role_id
-            });
-        }
-
-         // Filter berdasarkan divisi (name)
-        if ($request->has('divisi_name')) {
-            $divisiNames = is_array($request->divisi_name) ? $request->divisi_name : explode(',', $request->divisi_name);
-
-            $query->whereHas('tenagaKerja.divisi', function ($q) use ($divisiNames) {
-                $q->whereIn('name', $divisiNames); // Filter berdasarkan name divisi
-            });
-        }
-
-        // Filter berdasarkan status proyek
-         // Filter berdasarkan status request_status_owner
-         if ($request->has('request_status_owner')) {
-            $query->where('request_status_owner', $request->request_status_owner);
-        }
-
-        // Filter berdasarkan status cost progress
-        if ($request->has('status_cost_progres')) {
-            $query->where('status_cost_progres', $request->status_cost_progres);
-        }
-
-        if ($request->has('type_projects')) {
-            $typeProjects = is_array($request->type_projects) 
-                ? $request->type_projects 
-                : explode(',', $request->type_projects);
-    
-            $query->whereIn('type_projects', $typeProjects); // Filter proyek berdasarkan type_projects
-        }
-
-        // Filter berdasarkan ID proyek
-        if ($request->has('project')) {
-            $query->where('id', $request->project);
-        }
-
-        // Filter berdasarkan vendor
-        if ($request->has('contact')) {
-            $query->where('company_id', $request->contact);
-        }
-
-        if ($request->has('date')) {
-            $date = str_replace(['[', ']'], '', $request->date);
-            $date = explode(", ", $date);
-        
-            $query->whereBetween('date', $date); // Ganti 'created_at' sesuai dengan kolom yang sesuai
-        }
-
-        if ($request->has('year')) {
-            $year = $request->year;
-            $query->whereYear('date', $year);
-        }
-
-       // Filter berdasarkan tenaga kerja (tukang)
-        if ($request->has('tukang')) {
-            $tukangIds = explode(',', $request->tukang); // Mengambil ID tukang dari parameter yang dipisah dengan koma
-            $query->whereHas('tenagaKerja', function ($query) use ($tukangIds) {
-                $query->whereIn('users.id', $tukangIds); // Pastikan menggunakan 'users.id'
-            });
-        }
-
-        // Filter berdasarkan work_type jika ada parameter di request
-        if ($request->has('work_type')) {
-            $workType = $request->work_type;
-            if ($workType == 1) {
-                $query->whereHas('manPowers', function ($q) {
-                    $q->where('work_type', 1); // Hanya ambil tukang harian
+       // Terapkan filter berdasarkan peran pengguna
+       if (auth()->user()->role_id == Role::MARKETING) {
+          $query->where(function ($q) {
+              $q->where('user_id', auth()->user()->id) // Proyek yang dibuat oleh Marketing
+                ->orWhereHas('tenagaKerja', function ($q) {
+                    $q->where('user_id', auth()->user()->id); // Proyek di mana Marketing menjadi tenaga kerja
                 });
-            } elseif ($workType == 0) {
-                $query->whereHas('manPowers', function ($q) {
-                    $q->where('work_type', 0); // Hanya ambil tukang borongan
+          });
+      }
+  
+      // Filter untuk Supervisor
+      if (auth()->user()->role_id == Role::SUPERVISOR) {
+          $query->whereHas('tenagaKerja', function ($q) {
+              $q->where('user_id', auth()->user()->id); // Proyek di mana Supervisor menjadi tenaga kerja
+          });
+      }      
+
+      // Terapkan filter berdasarkan peran pengguna
+      if ($request->has('role_id')) {
+          // Ambil array role_id dari request, pastikan dalam bentuk array
+          $roleIds = is_array($request->role_id) ? $request->role_id : explode(',', $request->role_id);
+
+          // Terapkan filter untuk role_id
+          $query->whereHas('tenagaKerja', function ($q) use ($roleIds) {
+              $q->whereIn('role_id', $roleIds); // Pastikan menggunakan role_id
+          });
+      }
+
+       // Filter berdasarkan divisi (name)
+      if ($request->has('divisi_name')) {
+          $divisiNames = is_array($request->divisi_name) ? $request->divisi_name : explode(',', $request->divisi_name);
+
+          $query->whereHas('tenagaKerja.divisi', function ($q) use ($divisiNames) {
+              $q->whereIn('name', $divisiNames); // Filter berdasarkan name divisi
+          });
+      }
+
+      // Filter berdasarkan status_bonus_project
+      if ($request->has('status_bonus_project')) {
+          $statusBonus = $request->status_bonus_project;
+          $query->where('status_bonus_project', $statusBonus);
+      }
+
+      // Filter pencarian
+      if ($request->has('search')) {
+          $query->where(function ($query) use ($request) {
+              $query->where('id', 'like', '%' . $request->search . '%')
+                    ->orWhere('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('no_dokumen_project', 'like', '%' . $request->search . '%') // Tambahkan ini
+                    ->orWhereHas('company', function ($query) use ($request) {
+                        $query->where('name', 'like', '%' . $request->search . '%');
+                    });
+          });
+      }
+
+      // Filter berdasarkan status request_status_owner
+      if ($request->has('request_status_owner')) {
+          $query->where('request_status_owner', $request->request_status_owner);
+      }
+
+      // Filter berdasarkan status cost progress
+      if ($request->has('status_cost_progres')) {
+          $statusCostProgress = $request->status_cost_progres;
+          $query->where('status_cost_progres', $statusCostProgress);
+      }
+
+      if ($request->has('no_dokumen_project')) {
+          $query->where('no_dokumen_project', 'like', '%' . $request->no_dokumen_project . '%');
+      }        
+      
+
+      if ($request->has('type_projects')) {
+          $typeProjects = is_array($request->type_projects) 
+              ? $request->type_projects 
+              : explode(',', $request->type_projects);
+  
+          $query->whereIn('type_projects', $typeProjects); // Filter proyek berdasarkan type_projects
+      }
+
+      // Filter berdasarkan ID proyek
+      if ($request->has('project')) {
+          $query->where('id', $request->project);
+      }
+
+      // Filter berdasarkan vendor
+      if ($request->has('contact')) {
+          $query->where('company_id', $request->contact);
+      }
+
+     /*  if ($request->has('date')) {
+          $date = str_replace(['[', ']'], '', $request->date);
+          $date = explode(", ", $date);
+      
+          $query->whereBetween('date', $date); // Ganti 'created_at' sesuai dengan kolom yang sesuai
+      }
+
+      if ($request->has('year')) {
+          $year = $request->year;
+          $query->whereYear('date', $year);
+      } */
+
+      if ($request->has('date')) {
+          $date = str_replace(['[', ']'], '', $request->date); 
+          $date = explode(", ", $date); 
+          
+          $query->whereRaw('STR_TO_DATE(date, "%Y-%m-%d") BETWEEN ? AND ?', [$date[0], $date[1]]);
+      }
+
+      if ($request->has('year')) {
+          $year = $request->year;
+          $query->whereRaw('YEAR(STR_TO_DATE(date, "%Y-%m-%d")) = ?', [$year]);
+      }     
+
+     // Filter berdasarkan tenaga kerja (tukang)
+      if ($request->has('tukang')) {
+          $tukangIds = explode(',', $request->tukang); // Mengambil ID tukang dari parameter yang dipisah dengan koma
+          $query->whereHas('tenagaKerja', function ($query) use ($tukangIds) {
+              $query->whereIn('users.id', $tukangIds); // Pastikan menggunakan 'users.id'
+          });
+      }
+
+      // Filter berdasarkan work_type jika ada parameter di request
+      if ($request->has('work_type')) {
+          $workType = $request->work_type;
+          if ($workType == 1) {
+              $query->whereHas('manPowers', function ($q) {
+                  $q->where('work_type', 1); // Hanya ambil tukang harian
+              });
+
+          } elseif ($workType == 0) {
+              $query->whereHas('manPowers', function ($q) {
+                  $q->where('work_type', 0); // Hanya ambil tukang borongan
+              });
+          }
+      }
+
+      if ($request->has('marketing_id')) {
+          $query->whereHas('tenagaKerja', function ($q) use ($request) {
+              $q->where('users.id', $request->marketing_id) // Filter berdasarkan ID marketing
+                ->whereHas('role', function ($roleQuery) {
+                    $roleQuery->where('role_id', Role::MARKETING); // Pastikan role adalah Marketing
                 });
-            }
-        }
+          });
+      }        
+
+      if ($request->has('supervisor_id')) {
+          $query->whereHas('tenagaKerja', function ($q) use ($request) {
+              $q->where('users.id', $request->supervisor_id) 
+                ->whereHas('role', function ($roleQuery) {
+                    $roleQuery->where('role_id', Role::SUPERVISOR); 
+                });
+          });
+      }
 
         // Tambahkan kondisi untuk menyortir data berdasarkan nama proyek
         $query->orderBy('name', 'asc');

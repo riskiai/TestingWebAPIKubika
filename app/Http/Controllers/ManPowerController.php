@@ -108,6 +108,88 @@ class ManPowerController extends Controller
         return new ManPowerCollection($manPowers);
     }
 
+    public function manpowerall(Request $request) {
+        $query = $this->manPower->with('user');
+
+        // Filter berdasarkan pencarian deskripsi atau nama pengguna
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', '%' . $search . '%')
+                ->orWhereHas('user', function ($query) use ($search) {
+                    $query->where('name', 'like', '%' . $search . '%');
+                });
+            });
+        }
+
+        // Filter berdasarkan user_id
+        if ($request->has('user_id')) {
+            $query->where("user_id", $request->user_id);
+        }
+
+        // Filter berdasarkan project_id
+        if ($request->has('project_id')) {
+            $query->where("project_id", $request->project_id);
+        }
+
+        // Filter berdasarkan work_type
+        if ($request->has('work_type')) {
+            $workType = $request->work_type;
+            if ($workType == 1) {
+                $query->where('work_type', 1);
+            } elseif ($workType == 0) {
+                $query->where('work_type', 0);
+            }
+        }
+
+        // Filter berdasarkan project_type
+        if ($request->has('project_type')) {
+            $projectType = $request->project_type;
+            if ($projectType == 1) {
+                $query->where('project_type', 1);
+            } elseif ($projectType == 0) {
+                $query->where('project_type', 0);
+            }
+        }
+
+        // Filter berdasarkan rentang tanggal entry_at
+    if ($request->has('entry_at')) {
+        $dates = explode(',', $request->entry_at);  // Memisahkan tanggal yang dipisah koma
+        if (count($dates) == 2) {
+            $start_date = trim($dates[0]);
+            $end_date = trim($dates[1]);
+
+            // Pastikan tanggalnya valid dengan format yang benar
+            if (strtotime($start_date) && strtotime($end_date)) {
+                $start_date = date('Y-m-d 00:00:00', strtotime($start_date)); // Pastikan waktu mulai pada pukul 00:00
+                $end_date = date('Y-m-d 23:59:59', strtotime($end_date));   // Pastikan waktu selesai pada pukul 23:59
+
+                // Apply filter untuk rentang tanggal
+                $query->whereBetween('entry_at', [$start_date, $end_date]);
+            } else {
+                // Jika tanggal tidak valid, beri respon error
+                return response()->json(['error' => 'Invalid date format'], 400);
+            }
+        } else {
+            // Jika parameter tanggal tidak valid (misal tidak ada koma atau hanya satu tanggal)
+            return response()->json(['error' => 'Invalid date range format. Format should be: YYYY-MM-DD,YYYY-MM-DD'], 400);
+        }
+    }
+
+        // Filter berdasarkan tanggal tertentu (optional)
+        if ($request->has('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+
+        // Urutkan berdasarkan entry_at secara descending
+        $query->orderBy('entry_at', 'desc');
+
+        // Mendapatkan data dengan pagination
+        $manPowers = $query->get();
+
+        return new ManPowerCollection($manPowers);
+    }
+
     public function counting(Request $request)
     {
         $query = ManPower::query();

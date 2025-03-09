@@ -341,12 +341,84 @@ class SPBController extends Controller
             'project.tenagaKerja'  
         ]);
     
-        // Filter berdasarkan doc_no_spb
+        if ($request->has('date_range')) {
+            $dateRange = $request->input('date_range');
+        
+            // Jika dikirim dalam format string "[2025-01-01, 2025-01-31]", ubah menjadi array
+            if (is_string($dateRange)) {
+                $dateRange = str_replace(['[', ']'], '', $dateRange); // Hilangkan tanda kurung
+                $dateRange = explode(',', $dateRange); // Ubah string menjadi array
+            }
+        
+            // Pastikan format sudah menjadi array dengan dua elemen
+            if (is_array($dateRange) && count($dateRange) === 2) {
+                $startDate = trim($dateRange[0]); // Pastikan tidak ada spasi tambahan
+                $endDate = trim($dateRange[1]);
+        
+                // Gunakan filter tanggal
+                $query->where(function ($q) use ($startDate, $endDate) {
+                    $q->where(function ($q1) use ($startDate, $endDate) {
+                        $q1->where('tab_spb', SpbProject::TAB_PAID)
+                           ->whereBetween('updated_at', [$startDate, $endDate]);
+                    })
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->where('tab_spb', '!=', SpbProject::TAB_PAID)
+                           ->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
+                               $q3->whereBetween('payment_date', [$startDate, $endDate]);
+                           });
+                    });
+                });
+            }
+        }
+        
+
+        if ($request->has('created_by')) {
+            $query->where('user_id', $request->created_by);
+        }  
+       
+
+        if ($request->has('vendor_id')) {
+            $vendorId = $request->vendor_id;
+    
+            // Filter berdasarkan company_id di SPB Project langsung dan melalui pivot table product_company_spbproject
+            $query->where(function ($q) use ($vendorId) {
+                $q->where('company_id', $vendorId) // Filter berdasarkan company_id di SPB Project
+                  ->orWhereHas('productCompanySpbprojects', function ($q) use ($vendorId) {
+                      $q->where('company_id', $vendorId); // Filter berdasarkan company_id di pivot table
+                  });
+            });
+        }
+
+        if ($request->has('tukang')) {
+            $tukangIds = explode(',', $request->tukang);
+            $query->whereHas('project.tenagaKerja', function ($query) use ($tukangIds) {
+                $query->whereIn('users.id', $tukangIds); 
+            });
+        }
+
+        if ($request->has('supervisor_id')) {
+            $query->whereHas('project.tenagaKerja', function ($q) use ($request) {
+                $q->where('users.id', $request->supervisor_id) // Filter berdasarkan ID supervisor
+                  ->whereHas('role', function ($roleQuery) {
+                      $roleQuery->where('role_id', Role::SUPERVISOR); // Pastikan role adalah Supervisor
+                  });
+            });
+        }   
+
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
-    
-        // Filter berdasarkan status
+
+        if ($request->has('doc_type_spb')) {
+            $docTypes = explode(',', $request->doc_type_spb); // Pisahkan berdasarkan koma
+            $query->where(function($q) use ($docTypes) {
+                foreach ($docTypes as $docType) {
+                    $q->orWhere('doc_type_spb', 'like', '%' . trim($docType) . '%');
+                }
+            });
+        }        
+        
+
         if ($request->has('status')) {
             $status = $request->status;
             // Pastikan status valid dan cocok dengan ID status
@@ -364,15 +436,24 @@ class SPBController extends Controller
                 });
             }
         }
-    
-        // Filter berdasarkan type_project
+
+         // Filter berdasarkan type_project (1: Project, 2: Non-Project)
         if ($request->has('type_project')) {
             $typeProject = $request->type_project;
             if (in_array($typeProject, [SpbProject::TYPE_PROJECT_SPB, SpbProject::TYPE_NON_PROJECT_SPB])) {
                 $query->where('type_project', $typeProject);
             }
-        }  
-    
+        }
+
+        if ($request->has('status_produk')) {
+            $status_produk = $request->status_produk;
+        
+            $query->whereHas('products', function ($query) use ($status_produk) {
+                $query->where('status_produk', $status_produk);
+            });
+        }        
+
+
         // Filter berdasarkan tab_spb
         if ($request->has('tab_spb')) {
             $tab = $request->get('tab_spb');
@@ -385,7 +466,17 @@ class SPBController extends Controller
                 $query->where('tab_spb', $tab);
             }
         }
-    
+
+        if ($request->has('type_projects')) {
+            $typeProjects = is_array($request->type_projects) 
+                ? $request->type_projects 
+                : explode(',', $request->type_projects);
+        
+            $query->whereHas('project', function ($q) use ($typeProjects) {
+                $q->whereIn('type_projects', $typeProjects); // Filter berdasarkan type_projects di tabel projects
+            });
+        }        
+
         // Filter berdasarkan project ID
         if ($request->has('project')) {
             $query->whereHas('project', function ($query) use ($request) {
@@ -393,11 +484,49 @@ class SPBController extends Controller
                 $query->where('projects.id', $request->project);
             });
         }
+
+         // Filter termin Borongan (1: Belum Lunas, 2: Lunas)
+         if ($request->has('type_termin_spb')) {
+            $typeTerminSpb = $request->type_termin_spb;
+            if (in_array($typeTerminSpb, [SpbProject::TYPE_TERMIN_BELUM_LUNAS, SpbProject::TYPE_TERMIN_LUNAS])) {
+                $query->where('type_termin_spb', $typeTerminSpb);
+            }
+        }
+
+        if ($request->has('tanggal_dibuat_spb') && $request->has('tanggal_berahir_spb')) {
+            $tanggalDibuatSpb = $request->tanggal_dibuat_spb;
+            $tanggalBerahirSpb = $request->tanggal_berahir_spb;
     
-        // Filter berdasarkan tanggal dibuat SPB
-        if ($request->has('tanggal_dibuat_spb')) {
-            $tanggalDibuatSpb = $request->input('tanggal_dibuat_spb');
-            $query->whereDate('tanggal_dibuat_spb', Carbon::parse($tanggalDibuatSpb));
+            // Memastikan bahwa filter tanggal hanya berlaku pada kategori "Borongan"
+            $query->where(function ($q) use ($tanggalDibuatSpb, $tanggalBerahirSpb) {
+                $q->whereBetween('tanggal_dibuat_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb])
+                  ->orWhereBetween('tanggal_berahir_spb', [$tanggalDibuatSpb, $tanggalBerahirSpb]);
+            });
+        } elseif ($request->has('tanggal_dibuat_spb')) {
+            $query->whereDate('tanggal_dibuat_spb', '=', $request->tanggal_dibuat_spb);
+        } elseif ($request->has('tanggal_berahir_spb')) {
+            $query->whereDate('tanggal_berahir_spb', '=', $request->tanggal_berahir_spb);
+        }
+
+        // Filter produk berdasarkan tanggal 'date' atau 'due_date' pada produk
+        if ($request->has('tanggal_date_produk') && $request->has('tanggal_due_date_produk')) {
+            $tanggalDateProduk = $request->tanggal_date_produk;
+            $tanggalDueDateProduk = $request->tanggal_due_date_produk;
+            
+            $query->whereHas('productCompanySpbprojects', function ($q) use ($tanggalDateProduk, $tanggalDueDateProduk) {
+                $q->whereBetween('date', [$tanggalDateProduk, $tanggalDueDateProduk])
+                ->orWhereBetween('due_date', [$tanggalDateProduk, $tanggalDueDateProduk]);
+            });
+        } elseif ($request->has('tanggal_date_produk')) {
+            $tanggalDateProduk = $request->tanggal_date_produk;
+            $query->whereHas('productCompanySpbprojects', function ($q) use ($tanggalDateProduk) {
+                $q->whereDate('date', '=', $tanggalDateProduk);
+            });
+        } elseif ($request->has('tanggal_due_date_produk')) {
+            $tanggalDueDateProduk = $request->tanggal_due_date_produk;
+            $query->whereHas('productCompanySpbprojects', function ($q) use ($tanggalDueDateProduk) {
+                $q->whereDate('due_date', '=', $tanggalDueDateProduk);
+            });
         }
     
         // Pengurutan berdasarkan tab
@@ -2310,6 +2439,9 @@ class SPBController extends Controller
         $data = [
             "doc_no_spb" => $spbProject->doc_no_spb,
             "doc_type_spb" => $spbProject->doc_type_spb,
+            "is_payment_vendor" => $spbProject->is_payment_vendor === null 
+            ? null 
+            : (bool) $spbProject->is_payment_vendor,
             "status_spb" => $this->getStatus($spbProject),
             'logs_spb' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
                 $lastLog = $logsByUser->sortByDesc('created_at')->first();
@@ -2600,6 +2732,9 @@ class SPBController extends Controller
     $data = [
             "doc_no_spb" => $spbProject->doc_no_spb,
             "doc_type_spb" => $spbProject->doc_type_spb,
+            "is_payment_vendor" => $spbProject->is_payment_vendor === null 
+            ? null 
+            : (bool) $spbProject->is_payment_vendor,
             "status_spb" => $this->getStatus($spbProject),
             'logs_spb' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
                 // Ambil log terakhir berdasarkan created_at untuk setiap pengguna
