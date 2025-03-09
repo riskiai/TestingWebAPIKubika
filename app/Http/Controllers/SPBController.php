@@ -2439,9 +2439,7 @@ class SPBController extends Controller
         $data = [
             "doc_no_spb" => $spbProject->doc_no_spb,
             "doc_type_spb" => $spbProject->doc_type_spb,
-            "is_payment_vendor" => $spbProject->is_payment_vendor === null 
-            ? null 
-            : (bool) $spbProject->is_payment_vendor,
+            "is_payment_vendor" => (bool) $spbProject->is_payment_vendor,
             "status_spb" => $this->getStatus($spbProject),
             'logs_spb' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
                 $lastLog = $logsByUser->sortByDesc('created_at')->first();
@@ -2732,9 +2730,10 @@ class SPBController extends Controller
     $data = [
             "doc_no_spb" => $spbProject->doc_no_spb,
             "doc_type_spb" => $spbProject->doc_type_spb,
-            "is_payment_vendor" => $spbProject->is_payment_vendor === null 
-            ? null 
-            : (bool) $spbProject->is_payment_vendor,
+            // "is_payment_vendor" => $spbProject->is_payment_vendor === null 
+            // ? null 
+            // : (bool) $spbProject->is_payment_vendor,
+            "is_payment_vendor" => (bool) $spbProject->is_payment_vendor,
             "status_spb" => $this->getStatus($spbProject),
             'logs_spb' => $spbProject->logs->groupBy('name')->map(function ($logsByUser) use ($spbProject) {
                 // Ambil log terakhir berdasarkan created_at untuk setiap pengguna

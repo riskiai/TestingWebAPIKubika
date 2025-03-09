@@ -104,6 +104,12 @@ class SpbProject extends Model
         return round($subtotal);  // Mengembalikan subtotal keseluruhan yang sudah dibulatkan
     } */
 
+    public function getIsPaymentVendorAttribute($value)
+    {
+        return $value === null ? false : (bool) $value;
+    }
+    
+
     public function getTypeProjectNameAttribute()
     {
         return match ($this->type_project) {
