@@ -10,6 +10,8 @@ use App\Models\SpbProject_Status;
 use Illuminate\Support\Facades\DB;
 use App\Models\ProductCompanySpbProject;
 use Illuminate\Http\Resources\Json\ResourceCollection;
+use App\Models\SpbProject_Category as SpbProjectCategory;
+
 
 class SPBprojectCollection extends ResourceCollection
 {
@@ -313,7 +315,7 @@ class SPBprojectCollection extends ResourceCollection
                 "accept_spb_finance" => $this->getUserRole($spbProject->know_finance), 
                 "payment_request_owner" => auth()->user()->hasRole(Role::OWNER) || $spbProject->request_owner ? $this->getUserRole($spbProject->request_owner) : null,
                 "created_at" => $spbProject->created_at->format('Y-m-d'),
-                "updated_at" => $spbProject->updated_at->format('Y-m-d'),
+                "updated_at" =>  $this->getUpdatedAt($spbProject),
             ];
 
             // Add created_by if user is associated
@@ -333,6 +335,60 @@ class SPBprojectCollection extends ResourceCollection
 
         return $data;
     }
+
+    protected function getUpdatedAt($spbProject)
+    {
+        // Pastikan relasi category() dimuat dengan benar
+        $category = $spbProject->category;
+
+        if (!$category) {
+            return "-"; // Jika tidak ada kategori, kembalikan default "-"
+        }
+
+        // Ambil total harga termin yang sudah dibayar
+        $hargaTotalTermin = $this->getHargaTerminSpb($spbProject);
+
+        // Cek apakah ada vendor yang sudah paid pada kategori Invoice atau FlashCash
+        $isPaidVendor = $spbProject->productCompanySpbprojects->contains(function ($product) {
+            return $product->status_vendor === ProductCompanySpbProject::TEXT_PAID_PRODUCT;
+        });
+
+        // ✅ **Jika kategori SPB adalah Borongan**
+        if ($category->id == SpbProjectCategory::BORONGAN) {
+            // 🔹 Jika belum ada pembayaran (harga termin masih 0)
+            if ($hargaTotalTermin == 0) {
+                return "Belum Ada Pembayaran";
+            }
+
+            // 🔹 Jika total pembayaran borongan masih belum lunas DAN belum mencapai TAB_PAID
+            if ($hargaTotalTermin >= 0 && $spbProject->tab_spb != SpbProject::TAB_PAID) {
+                return "Pembayaran Sudah Sebagian";
+            }
+
+            // 🔹 Jika sudah mencapai TAB_PAID, langsung tampilkan tanggal updated_at
+            return $spbProject->updated_at->format('Y-m-d');
+        }
+
+        // ✅ **Jika kategori SPB adalah Invoice atau FlashCash**
+        if (in_array($category->id, [SpbProjectCategory::INVOICE, SpbProjectCategory::FLASH_CASH])) {
+            // 🔹 Jika tidak ada vendor dengan status PAID
+            if (!$isPaidVendor) {
+                return "Belum Ada Pembayaran";
+            }
+
+            // 🔹 Jika ada vendor yang sudah PAID tetapi belum mencapai TAB_PAID
+            if ($isPaidVendor && $spbProject->tab_spb != SpbProject::TAB_PAID) {
+                return "Pembayaran Sudah Sebagian";
+            }
+
+            // 🔹 Jika sudah mencapai TAB_PAID, tampilkan tanggal updated_at
+            return $spbProject->updated_at->format('Y-m-d');
+        }
+
+        return "-"; // Default jika kategori tidak sesuai
+    }
+
+
 
     /* protected function sisaPembayaranProductVendor($spbProject)
     {
