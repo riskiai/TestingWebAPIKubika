@@ -4904,6 +4904,7 @@ class SPBController extends Controller
             }
 
             // Update SPB Project (jika ada perubahan pada payment_date dan file_payment)
+            $spbProject->timestamps = false; 
             $spbProject->update([
                 'payment_date' => $paymentDate,
                 'file_payment' => $filePaymentPath, // Jika ada file pembayaran
@@ -4932,15 +4933,16 @@ class SPBController extends Controller
             $remainingVendors = $spbProject->productCompanySpbprojects()
                 ->whereNotIn('status_produk', [
                     ProductCompanySpbProject::TEXT_PAID_PRODUCT,
-                    ProductCompanySpbProject::TEXT_REJECTED_PRODUCT,
                 ])
                 ->count();
 
             // Jika sisa vendor hanya 1 dan vendor sudah melakukan payment request
             if ($remainingVendors == 0) {
+                $spbProject->timestamps = false; 
                 $spbProject->update([
                     'spbproject_status_id' => SpbProject_Status::PAID,
                     'tab_spb' => SpbProject::TAB_PAID, 
+                    'payment_date' => $paymentDate,
                     'updated_at' => $paymentDate, 
                 ]);
 
