@@ -719,6 +719,25 @@ class SPBController extends Controller
             });
         }
 
+         if ($request->has('date_range')) {
+            $dateRange = $request->input('date_range');
+
+            // Jika dalam format string "[2025-01-01, 2025-01-31]", ubah menjadi array
+            if (is_string($dateRange)) {
+                $dateRange = str_replace(['[', ']'], '', $dateRange); // Hilangkan tanda kurung
+                $dateRange = explode(',', $dateRange); // Ubah string menjadi array
+            }
+
+            // Pastikan format sudah benar
+            if (is_array($dateRange) && count($dateRange) === 2) {
+                $startDate = trim($dateRange[0]);
+                $endDate = trim($dateRange[1]);
+
+                // Gunakan updated_at sebagai filter utama
+                $query->whereBetween('updated_at', [$startDate, $endDate]);
+            }
+        }
+
         if ($request->has('vendor_id')) {
             $vendorId = $request->vendor_id;
             $query->where('company_id', $vendorId); 
@@ -727,8 +746,6 @@ class SPBController extends Controller
         if ($request->has('created_by')) {
             $query->where('user_id', $request->created_by);
         }
-
-        
 
         if ($request->has('tukang')) {
             $tukangIds = explode(',', $request->tukang); 
