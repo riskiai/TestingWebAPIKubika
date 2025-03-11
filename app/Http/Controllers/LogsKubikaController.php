@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class LogsKubikaController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 10);
+        $currentPage = $request->input('page', 1);
+
         // Ambil data dari tabel log_man_powers
         $logManPowers = DB::table('log_man_powers')
             ->select(
@@ -19,11 +23,11 @@ class LogsKubikaController extends Controller
                 'message',
                 'created_at',
                 'updated_at',
-                'log_man_powers.deleted_at',    // Menambahkan kolom deleted_at dari log_man_powers
+                'log_man_powers.deleted_at',
                 'log_man_powers.deleted_by'
             )
             ->addSelect(DB::raw("'man_power' as type"))
-            ->get();
+            ->paginate($perPage);
 
         // Ambil data dari tabel logs_spbprojects
         $logsSpbProjects = DB::table('logs_spbprojects')
@@ -39,7 +43,7 @@ class LogsKubikaController extends Controller
             )
             ->whereNotNull('deleted_at')
             ->addSelect(DB::raw("'spb_project' as type"))
-            ->get();
+            ->paginate($perPage);
 
         // Ambil data dari tabel projects
         $logsProjects = DB::table('projects')
@@ -53,7 +57,7 @@ class LogsKubikaController extends Controller
                 'projects.updated_at'
             )
             ->addSelect(DB::raw("'project' as type"))
-            ->get();
+            ->paginate($perPage);
 
         // Tambahkan log khusus untuk created SPB dan man power
         $createdSpbs = DB::table('spb_projects')
@@ -68,9 +72,9 @@ class LogsKubikaController extends Controller
                 'spb_projects.deleted_at'
             )
             ->addSelect(DB::raw("'spb_project' as type"))
-            ->get();
-        
-            $logsProductCompanySpb = DB::table('product_company_spbproject')
+            ->paginate($perPage);
+
+        $logsProductCompanySpb = DB::table('product_company_spbproject')
             ->join('spb_projects', 'product_company_spbproject.spb_project_id', '=', 'spb_projects.doc_no_spb')
             ->join('users', 'spb_projects.user_id', '=', 'users.id')
             ->select(
@@ -82,9 +86,9 @@ class LogsKubikaController extends Controller
                 'product_company_spbproject.updated_at'
             )
             ->addSelect(DB::raw("'product spb project' as type"))
-            ->get();
+            ->paginate($perPage);
 
-            $logsSpbProjectTermins = DB::table('spb_project_termins')
+        $logsSpbProjectTermins = DB::table('spb_project_termins')
             ->join('spb_projects', 'spb_project_termins.doc_no_spb', '=', 'spb_projects.doc_no_spb')
             ->join('users', 'spb_projects.user_id', '=', 'users.id')
             ->select(
@@ -100,9 +104,9 @@ class LogsKubikaController extends Controller
                 'spb_project_termins.updated_at'
             )
             ->addSelect(DB::raw("'spb project termin' as type"))
-            ->get();
+            ->paginate($perPage);
 
-            $logsProjectTermins = DB::table('project_termins')
+        $logsProjectTermins = DB::table('project_termins')
             ->join('projects', 'project_termins.project_id', '=', 'projects.id')
             ->join('users', 'projects.user_id', '=', 'users.id')
             ->select(
@@ -118,22 +122,33 @@ class LogsKubikaController extends Controller
                 'project_termins.updated_at'
             )
             ->addSelect(DB::raw("'project termin' as type"))
-            ->get();
+            ->paginate($perPage);
 
         // Gabungkan semua data
-        $combinedLogs = $logManPowers
-            ->concat($logsSpbProjects)
-            ->concat($logsProjects)
-            ->concat($createdSpbs)
-            ->concat($logsProductCompanySpb)
-            ->concat($logsSpbProjectTermins)
-            ->concat($logsProjectTermins);
+        $combinedLogs = collect()
+            ->merge($logManPowers->items())
+            ->merge($logsSpbProjects->items())
+            ->merge($logsProjects->items())
+            ->merge($createdSpbs->items())
+            ->merge($logsProductCompanySpb->items())
+            ->merge($logsSpbProjectTermins->items())
+            ->merge($logsProjectTermins->items());
 
         // Urutkan berdasarkan created_at secara descending
-        $sortedLogs = $combinedLogs->sortByDesc('created_at');
+        $sortedLogs = $combinedLogs->sortByDesc('created_at')->values();
+
+        // Paginasi hasil gabungan
+        $total = $sortedLogs->count();
+        $paginatedLogs = new LengthAwarePaginator(
+            $sortedLogs->forPage($currentPage, $perPage),
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         // Format hasil log
-        $formattedLogs = $sortedLogs->map(function ($log) {
+        $formattedLogs = $paginatedLogs->map(function ($log) {
             return [
                 'id' => $log->id ?? null,
                 'reference_id' => $log->reference_id,
@@ -147,10 +162,16 @@ class LogsKubikaController extends Controller
             ];
         });
 
-        // Kembalikan data dalam format JSON
+        // Kembalikan data dalam format JSON dengan metadata pagination
         return response()->json([
             'status' => 'success',
             'logs' => $formattedLogs->values()->all(),
+            'pagination' => [
+                'current_page' => $paginatedLogs->currentPage(),
+                'last_page' => $paginatedLogs->lastPage(),
+                'per_page' => $paginatedLogs->perPage(),
+                'total' => $paginatedLogs->total(),
+            ]
         ]);
     }
 }
