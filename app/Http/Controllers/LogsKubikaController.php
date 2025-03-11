@@ -14,8 +14,34 @@ class LogsKubikaController extends Controller
         $perPage = $request->input('per_page', 10);
         $currentPage = $request->input('page', 1);
 
-        // Ambil data dari tabel log_man_powers
+        // **1. Dapatkan tanggal terbaru dari semua tabel**
+        $latestDates = [
+            DB::table('log_man_powers')->max('created_at'),
+            DB::table('logs_spbprojects')->max('created_at'),
+            DB::table('projects')->max('created_at'),
+            DB::table('spb_projects')->max('created_at'),
+            DB::table('product_company_spbproject')->max('created_at'),
+            DB::table('spb_project_termins')->max('created_at'),
+            DB::table('project_termins')->max('created_at'),
+            DB::table('log_man_powers')->max('updated_at'),
+            DB::table('logs_spbprojects')->max('updated_at'),
+            DB::table('projects')->max('updated_at'),
+            DB::table('spb_projects')->max('updated_at'),
+            DB::table('product_company_spbproject')->max('updated_at'),
+            DB::table('spb_project_termins')->max('updated_at'),
+            DB::table('project_termins')->max('updated_at'),
+        ];
+
+        // **Ambil tanggal terbaru di antara semua tabel**
+        $maxDate = collect($latestDates)->filter()->max();
+
+        // Pastikan format tanggal sesuai (Y-m-d)
+        $maxDate = Carbon::parse($maxDate)->format('Y-m-d');
+
+        // **2. Ambil data berdasarkan tanggal terbaru**
         $logManPowers = DB::table('log_man_powers')
+            ->whereDate('log_man_powers.created_at', $maxDate)
+            ->orWhereDate('log_man_powers.updated_at', $maxDate)
             ->select(
                 'id',
                 'man_power_id as reference_id',
@@ -23,14 +49,16 @@ class LogsKubikaController extends Controller
                 'message',
                 'created_at',
                 'updated_at',
-                'log_man_powers.deleted_at',
-                'log_man_powers.deleted_by'
+                'deleted_at',
+                'deleted_by'
             )
             ->addSelect(DB::raw("'man_power' as type"))
-            ->paginate($perPage);
+            ->orderByDesc('created_at')
+            ->get();
 
-        // Ambil data dari tabel logs_spbprojects
         $logsSpbProjects = DB::table('logs_spbprojects')
+            ->whereDate('logs_spbprojects.created_at', $maxDate)
+            ->orWhereDate('logs_spbprojects.updated_at', $maxDate)
             ->select(
                 'id',
                 'spb_project_id as reference_id',
@@ -41,13 +69,14 @@ class LogsKubikaController extends Controller
                 'deleted_at',
                 'deleted_by'
             )
-            ->whereNotNull('deleted_at')
             ->addSelect(DB::raw("'spb_project' as type"))
-            ->paginate($perPage);
+            ->orderByDesc('created_at')
+            ->get();
 
-        // Ambil data dari tabel projects
         $logsProjects = DB::table('projects')
             ->join('users', 'projects.user_id', '=', 'users.id')
+            ->whereDate('projects.created_at', $maxDate)
+            ->orWhereDate('projects.updated_at', $maxDate)
             ->select(
                 DB::raw('NULL as id'),
                 'projects.id as reference_id',
@@ -57,11 +86,13 @@ class LogsKubikaController extends Controller
                 'projects.updated_at'
             )
             ->addSelect(DB::raw("'project' as type"))
-            ->paginate($perPage);
+            ->orderByDesc('projects.created_at')
+            ->get();
 
-        // Tambahkan log khusus untuk created SPB dan man power
         $createdSpbs = DB::table('spb_projects')
             ->join('users', 'spb_projects.user_id', '=', 'users.id')
+            ->whereDate('spb_projects.created_at', $maxDate)
+            ->orWhereDate('spb_projects.updated_at', $maxDate)
             ->select(
                 DB::raw('NULL as id'),
                 'spb_projects.doc_no_spb as reference_id',
@@ -72,72 +103,20 @@ class LogsKubikaController extends Controller
                 'spb_projects.deleted_at'
             )
             ->addSelect(DB::raw("'spb_project' as type"))
-            ->paginate($perPage);
+            ->orderByDesc('spb_projects.created_at')
+            ->get();
 
-        $logsProductCompanySpb = DB::table('product_company_spbproject')
-            ->join('spb_projects', 'product_company_spbproject.spb_project_id', '=', 'spb_projects.doc_no_spb')
-            ->join('users', 'spb_projects.user_id', '=', 'users.id')
-            ->select(
-                DB::raw('NULL as id'),
-                'product_company_spbproject.id as reference_id',
-                'users.name as created_by',
-                DB::raw("'Updated product in SPB project' as message"),
-                'product_company_spbproject.created_at',
-                'product_company_spbproject.updated_at'
-            )
-            ->addSelect(DB::raw("'product spb project' as type"))
-            ->paginate($perPage);
-
-        $logsSpbProjectTermins = DB::table('spb_project_termins')
-            ->join('spb_projects', 'spb_project_termins.doc_no_spb', '=', 'spb_projects.doc_no_spb')
-            ->join('users', 'spb_projects.user_id', '=', 'users.id')
-            ->select(
-                DB::raw('NULL as id'),
-                'spb_project_termins.id as reference_id',
-                'users.name as created_by',
-                DB::raw("CASE 
-                            WHEN spb_project_termins.file_attachment_id IS NOT NULL 
-                            THEN 'Paid termin in SPB project' 
-                            ELSE 'Updated termin in SPB project' 
-                         END as message"),
-                'spb_project_termins.created_at',
-                'spb_project_termins.updated_at'
-            )
-            ->addSelect(DB::raw("'spb project termin' as type"))
-            ->paginate($perPage);
-
-        $logsProjectTermins = DB::table('project_termins')
-            ->join('projects', 'project_termins.project_id', '=', 'projects.id')
-            ->join('users', 'projects.user_id', '=', 'users.id')
-            ->select(
-                DB::raw('NULL as id'),
-                'project_termins.id as reference_id',
-                'users.name as created_by',
-                DB::raw("CASE 
-                            WHEN project_termins.file_attachment_pembayaran IS NOT NULL 
-                            THEN 'Paid termin in project' 
-                            ELSE 'Updated termin in project' 
-                         END as message"),
-                'project_termins.created_at',
-                'project_termins.updated_at'
-            )
-            ->addSelect(DB::raw("'project termin' as type"))
-            ->paginate($perPage);
-
-        // Gabungkan semua data
+        // **3. Gabungkan semua data**
         $combinedLogs = collect()
-            ->merge($logManPowers->items())
-            ->merge($logsSpbProjects->items())
-            ->merge($logsProjects->items())
-            ->merge($createdSpbs->items())
-            ->merge($logsProductCompanySpb->items())
-            ->merge($logsSpbProjectTermins->items())
-            ->merge($logsProjectTermins->items());
+            ->merge($logManPowers)
+            ->merge($logsSpbProjects)
+            ->merge($logsProjects)
+            ->merge($createdSpbs);
 
-        // Urutkan berdasarkan created_at secara descending
+        // **4. Urutkan berdasarkan created_at secara descending**
         $sortedLogs = $combinedLogs->sortByDesc('created_at')->values();
 
-        // Paginasi hasil gabungan
+        // **5. Paginasi hasil gabungan**
         $total = $sortedLogs->count();
         $paginatedLogs = new LengthAwarePaginator(
             $sortedLogs->forPage($currentPage, $perPage),
@@ -147,7 +126,7 @@ class LogsKubikaController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // Format hasil log
+        // **6. Format hasil log**
         $formattedLogs = $paginatedLogs->map(function ($log) {
             return [
                 'id' => $log->id ?? null,
@@ -162,7 +141,7 @@ class LogsKubikaController extends Controller
             ];
         });
 
-        // Kembalikan data dalam format JSON dengan metadata pagination
+        // **7. Kembalikan data dalam format JSON**
         return response()->json([
             'status' => 'success',
             'logs' => $formattedLogs->values()->all(),
