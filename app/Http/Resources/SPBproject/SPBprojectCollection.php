@@ -361,7 +361,11 @@ class SPBprojectCollection extends ResourceCollection
             }
 
             // 🔹 Jika total pembayaran borongan masih belum lunas DAN belum mencapai TAB_PAID
-            if ($hargaTotalTermin >= 0 && $spbProject->tab_spb != SpbProject::TAB_PAID) {
+            /* if ($hargaTotalTermin >= 0 && $spbProject->tab_spb != SpbProject::TAB_PAID) {
+                return "Pembayaran Sudah Sebagian";
+            } */
+
+            if ($hargaTotalTermin >= 0 && $spbProject->type_termin_spb == SpbProject::TYPE_TERMIN_BELUM_LUNAS) {
                 return "Pembayaran Sudah Sebagian";
             }
 

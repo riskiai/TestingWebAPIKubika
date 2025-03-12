@@ -155,9 +155,15 @@ class SPBController extends Controller
                 $query->where(function ($q) use ($startDate, $endDate, $docTypeSpb, $tabSpb) {
                     
                     // Jika kategori SPB adalah BORONGAN dan tab_spb adalah TAB_PAYMENT_REQUEST
-                    if (in_array(SpbProject_Category::BORONGAN, $docTypeSpb) || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
+                   /*  if (in_array(SpbProject_Category::BORONGAN, $docTypeSpb) || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
                         $q->whereBetween('updated_at', [$startDate, $endDate]);
-                    } 
+                    }  */
+                    if (in_array(strtoupper('BORONGAN'), array_map('strtoupper', $docTypeSpb)) || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
+                        $q->whereHas('termins', function ($q1) use ($startDate, $endDate) {
+                            $q1->whereBetween('tanggal', [$startDate, $endDate]);
+                        });
+                    }
+                                  
                     // Jika kategori adalah INVOICE atau FLASHCASH dan tab_spb adalah TAB_PAYMENT_REQUEST
                     elseif ((in_array(SpbProject_Category::INVOICE, $docTypeSpb) || in_array(SpbProject_Category::FLASH_CASH, $docTypeSpb)) 
                         && $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
@@ -173,11 +179,6 @@ class SPBController extends Controller
                         });
                     }
                 });
-        
-                // Debugging Query
-                \Log::info("SQL Query: " . $query->toSql());
-                \Log::info("Bindings: " . json_encode($query->getBindings()));
-        
                 // Uncomment untuk debugging langsung di browser
                 // dd($query->toSql(), $query->getBindings());
             }
