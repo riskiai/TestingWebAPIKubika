@@ -791,30 +791,30 @@ class SPBController extends Controller
             }
         } */
 
+        // Filter berdasarkan rentang tanggal hanya pada termins
         if ($request->has('date_range')) {
             $dateRange = $request->input('date_range');
-    
+
             // Jika dalam format string "[2025-01-01, 2025-01-31]", ubah menjadi array
             if (is_string($dateRange)) {
                 $dateRange = str_replace(['[', ']'], '', $dateRange); // Hilangkan tanda kurung
                 $dateRange = explode(',', $dateRange); // Ubah string menjadi array
             }
-    
+
             // Pastikan format sudah benar
             if (is_array($dateRange) && count($dateRange) === 2) {
                 $startDate = Carbon::parse(trim($dateRange[0]))->format('Y-m-d');
                 $endDate = Carbon::parse(trim($dateRange[1]))->format('Y-m-d');
-    
-                $query->where(function ($q) use ($startDate, $endDate) {
-                    // Filter berdasarkan updated_at dengan format Y-m-d
-                    $q->whereBetween('updated_at', [$startDate, $endDate])
-                      // Atau jika ada termins yang masuk dalam date range
-                      ->orWhereHas('termins', function ($q1) use ($startDate, $endDate) {
-                          $q1->whereBetween('tanggal', [$startDate, $endDate]);
-                      });
+
+                // Hanya tampilkan data berdasarkan termins.tanggal yang berada dalam rentang yang dicari
+                $query->whereHas('termins', function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('tanggal', [$startDate, $endDate])
+                    ->whereNotNull('harga_termin')
+                    ->where('harga_termin', '>', 0);
                 });
             }
         }
+
 
         if ($request->has('vendor_id')) {
             $vendorId = $request->vendor_id;
