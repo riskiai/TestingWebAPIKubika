@@ -791,7 +791,7 @@ class SPBController extends Controller
             }
         } */
 
-        // Filter berdasarkan rentang tanggal hanya pada termins
+         // Filter berdasarkan rentang tanggal hanya pada termins
         if ($request->has('date_range')) {
             $dateRange = $request->input('date_range');
 
@@ -905,7 +905,11 @@ class SPBController extends Controller
 
         // Subtotal untuk Borongan
         $subtotalHargaTotalBorongan = $query->sum('harga_total_pembayaran_borongan_spb');
-        $subtotalHargaTerminBorongan = $query->sum('harga_termin_spb');
+        // $subtotalHargaTerminBorongan = $query->sum('harga_termin_spb');
+        $subtotalHargaTerminBorongan = SpbProjectTermin::whereBetween('tanggal', [$startDate, $endDate])
+        ->whereNotNull('harga_termin')
+        ->where('harga_termin', '>', 0)
+        ->sum('harga_termin');
 
         // Inisialisasi variabel untuk menghitung masing-masing status
         $submit = 0;
