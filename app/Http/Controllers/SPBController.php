@@ -802,11 +802,11 @@ class SPBController extends Controller
     
             // Pastikan format sudah benar
             if (is_array($dateRange) && count($dateRange) === 2) {
-                $startDate = trim($dateRange[0]);
-                $endDate = trim($dateRange[1]);
+                $startDate = Carbon::parse(trim($dateRange[0]))->format('Y-m-d');
+                $endDate = Carbon::parse(trim($dateRange[1]))->format('Y-m-d');
     
                 $query->where(function ($q) use ($startDate, $endDate) {
-                    // Filter berdasarkan updated_at
+                    // Filter berdasarkan updated_at dengan format Y-m-d
                     $q->whereBetween('updated_at', [$startDate, $endDate])
                       // Atau jika ada termins yang masuk dalam date range
                       ->orWhereHas('termins', function ($q1) use ($startDate, $endDate) {
