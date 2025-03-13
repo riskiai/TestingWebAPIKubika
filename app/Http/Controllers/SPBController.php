@@ -908,7 +908,7 @@ class SPBController extends Controller
 
         // Subtotal untuk Borongan
         $subtotalHargaTotalBorongan = $query->sum('harga_total_pembayaran_borongan_spb');
-        
+
         if (!isset($subtotalHargaTerminBorongan)) {
             $subtotalHargaTerminBorongan = $query->sum('harga_termin_spb');
         }
@@ -948,15 +948,25 @@ class SPBController extends Controller
             &$paid_request_hargatotalborongaspb,
             &$payment_request,
             &$paid,
-            $nowDate
+            $nowDate,
+            $startDate,
+            $endDate
         ) {
             $hargaTotal = $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
-            $hargaTotalTermin = $spbProject->harga_termin_spb ?? 0;
+            // $hargaTotalTermin = $spbProject->harga_termin_spb ?? 0;
 
             try {
                 $dueDate = Carbon::createFromFormat("Y-m-d", $spbProject->tanggal_berahir_spb);
             } catch (\Exception $e) {
                 $dueDate = $nowDate->copy();
+            }
+
+            if (isset($startDate) && isset($endDate)) {
+                $hargaTotalTerminFiltered = $spbProject->termins()
+                    ->whereBetween('tanggal', [$startDate, $endDate])
+                    ->sum('harga_termin');
+            } else {
+                $hargaTotalTerminFiltered = $spbProject->harga_termin_spb ?? 0;
             }
 
             // Hitung berdasarkan status tab
@@ -971,12 +981,14 @@ class SPBController extends Controller
 
                 case SpbProject::TAB_PAYMENT_REQUEST:
                     $payment_request_hargatotalborongaspb += $hargaTotal;
-                    $payment_request += $spbProject->harga_termin_spb ?? 0;
+                    // $payment_request += $spbProject->harga_termin_spb ?? 0;
+                    $payment_request += $hargaTotalTerminFiltered;
                     break;
 
                 case SpbProject::TAB_PAID:
                     $paid_request_hargatotalborongaspb += $hargaTotal;
-                    $paid += $hargaTotalTermin;
+                    // $paid += $hargaTotalTermin;
+                    $paid += $hargaTotalTerminFiltered;
                     break;
 
                 default:
