@@ -805,9 +805,17 @@ class SPBController extends Controller
                 $startDate = Carbon::parse(trim($dateRange[0]))->format('Y-m-d');
                 $endDate = Carbon::parse(trim($dateRange[1]))->format('Y-m-d');
         
+                // Filter query hanya menampilkan termin dalam rentang tanggal
                 $query->whereHas('termins', function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('tanggal', [$startDate, $endDate]);
                 });
+        
+                // Jika ada filter tanggal, sum harga_termin berdasarkan tanggal
+                $subtotalHargaTerminBorongan = SpbProjectTermin::whereHas('spbProject', function ($q) use ($query) {
+                        $q->whereIn('doc_no_spb', $query->pluck('doc_no_spb')->toArray());
+                    })
+                    ->whereBetween('tanggal', [$startDate, $endDate])
+                    ->sum('harga_termin');
             }
         }
 
@@ -900,9 +908,13 @@ class SPBController extends Controller
 
         // Subtotal untuk Borongan
         $subtotalHargaTotalBorongan = $query->sum('harga_total_pembayaran_borongan_spb');
-        // $subtotalHargaTerminBorongan = $query->sum('harga_termin_spb');
-        // Pastikan $startDate dan $endDate telah didefinisikan sebelum digunakan dalam query
-        $subtotalHargaTerminBorongan = 0;
+        
+        if (!isset($subtotalHargaTerminBorongan)) {
+            $subtotalHargaTerminBorongan = $query->sum('harga_termin_spb');
+        }
+
+
+       /*  $subtotalHargaTerminBorongan = 0;
 
         if (isset($startDate) && isset($endDate)) {
             $subtotalHargaTerminBorongan = SpbProjectTermin::whereHas('spbProject', function ($q) use ($query) {
@@ -910,7 +922,7 @@ class SPBController extends Controller
                 })
                 ->whereBetween('tanggal', [$startDate, $endDate])
                 ->sum('harga_termin');
-        }
+        } */
 
         // Inisialisasi variabel untuk menghitung masing-masing status
         $submit = 0;
