@@ -381,7 +381,6 @@ class SPBprojectCollection extends ResourceCollection
             }
 
             // 🔹 Jika ada vendor yang sudah PAID tetapi belum mencapai TAB_PAID
-                    // 🔹 Jika sudah mencapai TAB_PAID, langsung tampilkan tanggal updated_at
             if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
                 return $spbProject->updated_at->format('Y-m-d');
             }
