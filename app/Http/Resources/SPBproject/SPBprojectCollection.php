@@ -365,13 +365,9 @@ class SPBprojectCollection extends ResourceCollection
                 return "Pembayaran Sudah Sebagian";
             } */
 
-            // if ($hargaTotalTermin >= 0 && $spbProject->type_termin_spb == SpbProject::TYPE_TERMIN_BELUM_LUNAS) {
-            //     return "Pembayaran Sudah Sebagian";
-            // }
-
-            if ($isPaidVendor) {
+            if ($hargaTotalTermin >= 0 && $spbProject->type_termin_spb == SpbProject::TYPE_TERMIN_BELUM_LUNAS) {
                 return "Pembayaran Sudah Sebagian";
-            }            
+            }
 
             // 🔹 Jika sudah mencapai TAB_PAID, langsung tampilkan tanggal updated_at
             return $spbProject->updated_at->format('Y-m-d');
@@ -385,9 +381,13 @@ class SPBprojectCollection extends ResourceCollection
             }
 
             // 🔹 Jika ada vendor yang sudah PAID tetapi belum mencapai TAB_PAID
-            if ($isPaidVendor && $spbProject->tab_spb != SpbProject::TAB_PAID) {
+            /* if ($isPaidVendor && $spbProject->tab_spb != SpbProject::TAB_PAID) {
                 return "Pembayaran Sudah Sebagian";
-            }
+            } */
+
+            if ($isPaidVendor) {
+                return "Pembayaran Sudah Sebagian";
+            }            
 
             // 🔹 Jika sudah mencapai TAB_PAID, tampilkan tanggal updated_at
             return $spbProject->updated_at->format('Y-m-d');
