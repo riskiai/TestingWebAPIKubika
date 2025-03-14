@@ -1505,7 +1505,10 @@ class SPBController extends Controller
             $dueDate = Carbon::parse($spbProject->tanggal_berahir_spb);
             $nowDate = Carbon::now();
 
-            $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
+            // $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
+            if ($spbProject->tab_spb === SpbProject::TAB_PAYMENT_REQUEST) {
+                $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
+            }            
     
             // Logika tambahan berdasarkan status SPB
             if ($spbProject->status) {
