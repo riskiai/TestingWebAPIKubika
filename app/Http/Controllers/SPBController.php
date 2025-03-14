@@ -1523,13 +1523,15 @@ class SPBController extends Controller
             // Reset variabel agar tidak double-counting
             $totalTerbayarkanPerSPB = 0;
 
-            // ✅ Jika berada di TAB_PAYMENT_REQUEST, tambahkan ke total
             if ($spbProject->tab_spb === SpbProject::TAB_PAYMENT_REQUEST) {
                 $totalTerbayarkanPerSPB = $spbProject->totalTerbayarProductVendor();
             }
-
-            // ✅ Pastikan hanya transaksi yang belum masuk TAB_PAID yang dihitung
-            if ($spbProject->tab_spb !== SpbProject::TAB_PAID) {
+            
+            // ✅ Jika berada di TAB_PAID, tampilkan total keseluruhan pembayaran
+            if ($spbProject->tab_spb === SpbProject::TAB_PAID) {
+                $totalTerbayarkan = $spbProject->totalTerbayarProductVendor(); // Ambil total paid secara keseluruhan
+            } else {
+                // Jika belum lunas, tambahkan ke total sementara
                 $totalTerbayarkan += $totalTerbayarkanPerSPB;
             }
     
