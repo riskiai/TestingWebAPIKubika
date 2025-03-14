@@ -1511,14 +1511,27 @@ class SPBController extends Controller
             $dueDate = Carbon::parse($spbProject->tanggal_berahir_spb);
             $nowDate = Carbon::now();
 
-            $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
+            // $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
             // if ($spbProject->tab_spb === SpbProject::TAB_PAYMENT_REQUEST) {
             //     $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
             // }
 
             // if ($spbProject->tab_spb != SpbProject::TAB_PAID) {
             //     $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
-            // }            
+            // }      
+            
+            // Reset variabel agar tidak double-counting
+            $totalTerbayarkanPerSPB = 0;
+
+            // ✅ Jika berada di TAB_PAYMENT_REQUEST, tambahkan ke total
+            if ($spbProject->tab_spb === SpbProject::TAB_PAYMENT_REQUEST) {
+                $totalTerbayarkanPerSPB = $spbProject->totalTerbayarProductVendor();
+            }
+
+            // ✅ Pastikan hanya transaksi yang belum masuk TAB_PAID yang dihitung
+            if ($spbProject->tab_spb !== SpbProject::TAB_PAID) {
+                $totalTerbayarkan += $totalTerbayarkanPerSPB;
+            }
     
             // Logika tambahan berdasarkan status SPB
             if ($spbProject->status) {
