@@ -166,7 +166,7 @@ class SPBController extends Controller
                                   
                     // Jika kategori adalah INVOICE atau FLASHCASH dan tab_spb adalah TAB_PAYMENT_REQUEST
                     elseif ((in_array(SpbProject_Category::INVOICE, $docTypeSpb) || in_array(SpbProject_Category::FLASH_CASH, $docTypeSpb)) 
-                        && $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
+                        || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
                         $q->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
                             $q3->whereBetween('payment_date', [$startDate, $endDate]);
                         });

@@ -365,9 +365,13 @@ class SPBprojectCollection extends ResourceCollection
                 return "Pembayaran Sudah Sebagian";
             } */
 
-            if ($hargaTotalTermin >= 0 && $spbProject->type_termin_spb == SpbProject::TYPE_TERMIN_BELUM_LUNAS) {
+            // if ($hargaTotalTermin >= 0 && $spbProject->type_termin_spb == SpbProject::TYPE_TERMIN_BELUM_LUNAS) {
+            //     return "Pembayaran Sudah Sebagian";
+            // }
+
+            if ($isPaidVendor) {
                 return "Pembayaran Sudah Sebagian";
-            }
+            }            
 
             // 🔹 Jika sudah mencapai TAB_PAID, langsung tampilkan tanggal updated_at
             return $spbProject->updated_at->format('Y-m-d');
