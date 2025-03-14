@@ -173,11 +173,6 @@ class SPBController extends Controller
                         });
                     }
 
-                    // 📌 Tampilkan data jika ada produk dengan status_vendor = "Paid"
-                    $q->orWhereHas('productCompanySpbprojects', function ($q4) {
-                        $q4->where('status_vendor', ProductCompanySpbProject::TEXT_PAID_PRODUCT);
-                    });
-
                     // 📌 Jika SPB dalam TAB_PAID, gunakan updated_at sebagai filter
                     if ($tabSpb === SpbProject::TAB_PAID) {
                         $q->orWhereBetween('updated_at', [$startDate, $endDate]);
