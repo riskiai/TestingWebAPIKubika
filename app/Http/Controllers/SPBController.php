@@ -172,11 +172,11 @@ class SPBController extends Controller
                             $q3->whereBetween('payment_date', [$startDate, $endDate]);
                         });
                     }
-
+                    
                     // 📌 Jika SPB dalam TAB_PAID, gunakan updated_at sebagai filter
-                    if ($tabSpb === SpbProject::TAB_PAID) {
+                   /*  if ($tabSpb === SpbProject::TAB_PAID) {
                         $q->orWhereBetween('updated_at', [$startDate, $endDate]);
-                    }
+                    } */
                 });
                 // Uncomment untuk debugging langsung di browser
                 // dd($query->toSql(), $query->getBindings());
