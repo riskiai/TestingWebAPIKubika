@@ -1516,7 +1516,7 @@ class SPBController extends Controller
             //     $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
             // }
 
-            if ($spbProject->tab_spb !== SpbProject::TAB_PAID) {
+            if ($spbProject->tab_spb != SpbProject::TAB_PAID) {
                 $totalTerbayarkan += $spbProject->totalTerbayarProductVendor();
             }            
     
