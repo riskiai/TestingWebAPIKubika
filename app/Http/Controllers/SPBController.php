@@ -164,19 +164,20 @@ class SPBController extends Controller
                         });
                     }
                                   
-                    // 📌 Jika kategori adalah "INVOICE" atau "FLASH_CASH", atau jika dalam TAB_PAYMENT_REQUEST
-                        if ((in_array(SpbProject_Category::INVOICE, $docTypeSpb) || in_array(SpbProject_Category::FLASH_CASH, $docTypeSpb))
-                        || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
-
+                    // Jika kategori adalah INVOICE atau FLASHCASH dan tab_spb adalah TAB_PAYMENT_REQUEST
+                    elseif ((in_array(SpbProject_Category::INVOICE, $docTypeSpb) || in_array(SpbProject_Category::FLASH_CASH, $docTypeSpb)) 
+                        && $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
                         $q->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
                             $q3->whereBetween('payment_date', [$startDate, $endDate]);
                         });
+                    } 
+                    // Jika kategori lain, gunakan filter default
+                    else {
+                        $q->where(function ($q1) use ($startDate, $endDate) {
+                            $q1->where('tab_spb', SpbProject::TAB_PAID)
+                                ->whereBetween('updated_at', [$startDate, $endDate]);
+                        });
                     }
-                    
-                    // 📌 Jika SPB dalam TAB_PAID, gunakan updated_at sebagai filter
-                   /*  if ($tabSpb === SpbProject::TAB_PAID) {
-                        $q->orWhereBetween('updated_at', [$startDate, $endDate]);
-                    } */
                 });
                 // Uncomment untuk debugging langsung di browser
                 // dd($query->toSql(), $query->getBindings());
