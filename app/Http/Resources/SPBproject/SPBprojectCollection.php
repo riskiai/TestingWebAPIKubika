@@ -381,7 +381,7 @@ class SPBprojectCollection extends ResourceCollection
             }
 
             // 🔹 Jika ada vendor yang sudah PAID tetapi belum mencapai TAB_PAID
-            if ($isPaidVendor) {
+            if ($isPaidVendor && $spbProject->tab_spb != SpbProject::TAB_PAID) {
                 return "Pembayaran Sudah Sebagian";
             }
 
