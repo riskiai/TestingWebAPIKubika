@@ -381,12 +381,13 @@ class SPBprojectCollection extends ResourceCollection
             }
 
             // 🔹 Jika ada vendor yang sudah PAID tetapi belum mencapai TAB_PAID
-            if ($isPaidVendor && $spbProject->tab_spb != SpbProject::TAB_PAID) {
-                return "Pembayaran Sudah Sebagian";
+                    // 🔹 Jika sudah mencapai TAB_PAID, langsung tampilkan tanggal updated_at
+            if ($spbProject->tab_spb == SpbProject::TAB_PAID) {
+                return $spbProject->updated_at->format('Y-m-d');
             }
 
-            // 🔹 Jika sudah mencapai TAB_PAID, tampilkan tanggal updated_at
-            return $spbProject->updated_at->format('Y-m-d');
+            // 🔹 Jika ada vendor yang sudah PAID, tetapi belum TAB_PAID, tampilkan "Pembayaran Sudah Sebagian"
+            return "Pembayaran Sudah Sebagian";
         }
 
         return "-"; // Default jika kategori tidak sesuai
