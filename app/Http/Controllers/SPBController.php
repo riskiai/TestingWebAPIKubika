@@ -400,6 +400,37 @@ class SPBController extends Controller
             'project.tenagaKerja'  
         ]);
     
+        // if ($request->has('date_range')) {
+        //     $dateRange = $request->input('date_range');
+        
+        //     // Jika dikirim dalam format string "[2025-01-01, 2025-01-31]", ubah menjadi array
+        //     if (is_string($dateRange)) {
+        //         $dateRange = str_replace(['[', ']'], '', $dateRange); // Hilangkan tanda kurung
+        //         $dateRange = explode(',', $dateRange); // Ubah string menjadi array
+        //     }
+        
+        //     // Pastikan format sudah menjadi array dengan dua elemen
+        //     if (is_array($dateRange) && count($dateRange) === 2) {
+        //         $startDate = trim($dateRange[0]); // Pastikan tidak ada spasi tambahan
+        //         $endDate = trim($dateRange[1]);
+        
+        //         // Gunakan filter tanggal
+        //         $query->where(function ($q) use ($startDate, $endDate) {
+        //             $q->where(function ($q1) use ($startDate, $endDate) {
+        //                 $q1->where('tab_spb', SpbProject::TAB_PAID)
+        //                    ->whereBetween('updated_at', [$startDate, $endDate]);
+        //             })
+        //             ->orWhere(function ($q2) use ($startDate, $endDate) {
+        //                 $q2->where('tab_spb', '!=', SpbProject::TAB_PAID)
+        //                    ->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
+        //                        $q3->whereBetween('payment_date', [$startDate, $endDate]);
+        //                    });
+        //             });
+        //         });
+        //     }
+        // }
+
+
         if ($request->has('date_range')) {
             $dateRange = $request->input('date_range');
         
@@ -409,24 +440,53 @@ class SPBController extends Controller
                 $dateRange = explode(',', $dateRange); // Ubah string menjadi array
             }
         
-            // Pastikan format sudah menjadi array dengan dua elemen
+            // Pastikan format sudah benar
             if (is_array($dateRange) && count($dateRange) === 2) {
-                $startDate = trim($dateRange[0]); // Pastikan tidak ada spasi tambahan
+                $startDate = trim($dateRange[0]);
                 $endDate = trim($dateRange[1]);
         
-                // Gunakan filter tanggal
-                $query->where(function ($q) use ($startDate, $endDate) {
-                    $q->where(function ($q1) use ($startDate, $endDate) {
-                        $q1->where('tab_spb', SpbProject::TAB_PAID)
-                           ->whereBetween('updated_at', [$startDate, $endDate]);
-                    })
-                    ->orWhere(function ($q2) use ($startDate, $endDate) {
-                        $q2->where('tab_spb', '!=', SpbProject::TAB_PAID)
-                           ->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
-                               $q3->whereBetween('payment_date', [$startDate, $endDate]);
-                           });
-                    });
+                // Ambil kategori SPB yang dipilih pengguna
+                $docTypeSpb = $request->has('doc_type_spb') ? explode(',', strtoupper($request->doc_type_spb)) : [];
+                $tabSpb = $request->has('tab_spb') ? (int) $request->tab_spb : null;
+        
+                // Gunakan filter berdasarkan kondisi Borongan atau Non-Borongan
+                $query->where(function ($q) use ($startDate, $endDate, $docTypeSpb, $tabSpb) {
+                    
+                    // Jika kategori SPB adalah BORONGAN dan tab_spb adalah TAB_PAYMENT_REQUEST
+                   /*  if (in_array(SpbProject_Category::BORONGAN, $docTypeSpb) || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
+                        $q->whereBetween('updated_at', [$startDate, $endDate]);
+                    }  */
+                    if (in_array(strtoupper('BORONGAN'), array_map('strtoupper', $docTypeSpb)) || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
+                        $q->whereHas('termins', function ($q1) use ($startDate, $endDate) {
+                            $q1->whereBetween('tanggal', [$startDate, $endDate]);
+                        });
+                    }
+                                  
+                    // Jika kategori adalah INVOICE atau FLASHCASH dan tab_spb adalah TAB_PAYMENT_REQUEST
+                    elseif ((in_array(SpbProject_Category::INVOICE, $docTypeSpb) || in_array(SpbProject_Category::FLASH_CASH, $docTypeSpb)) 
+                        && $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
+                        
+                        $q->whereHas('productCompanySpbprojects', function ($q3) use ($startDate, $endDate) {
+                            $q3->whereBetween('payment_date', [$startDate, $endDate]);
+                        });
+
+                        // Tambahkan kondisi jika produk sudah Paid meskipun masih dalam TAB_PAYMENT_REQUEST
+                        $q->orWhereHas('productCompanySpbprojects', function ($q4) use ($startDate, $endDate) {
+                            $q4->where('status_vendor', ProductCompanySpbProject::TEXT_PAID_PRODUCT)
+                            ->whereBetween('payment_date', [$startDate, $endDate]);
+                        });
+
+                    } 
+                    // Jika kategori lain, gunakan filter default
+                    else {
+                        $q->where(function ($q1) use ($startDate, $endDate) {
+                            $q1->where('tab_spb', SpbProject::TAB_PAID)
+                            ->whereBetween('updated_at', [$startDate, $endDate]);
+                        });
+                    }
                 });
+                // Uncomment untuk debugging langsung di browser
+                // dd($query->toSql(), $query->getBindings());
             }
         }
         
