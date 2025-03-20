@@ -3906,11 +3906,29 @@ class SPBController extends Controller
             }
     
             // Jika ada termin yang diupdate, perbarui deskripsi dan tipe termin SPB
-            if ($lastUpdatedTerminData) {
+            /* if ($lastUpdatedTerminData) {
                 $spbProject->update([
                     'deskripsi_termin_spb' => $lastUpdatedTerminData['deskripsi_termin'],
-                    'type_termin_spb' => $lastUpdatedTerminData['type_termin_spb'], // ID Type Termin
+                    'type_termin_spb' => $lastUpdatedTerminData['type_termin_spb'], 
                 ]);
+            } */
+
+            if ($lastUpdatedTerminData) {
+                $updateFields = [
+                    'deskripsi_termin_spb' => $lastUpdatedTerminData['deskripsi_termin'],
+                    'type_termin_spb' => $lastUpdatedTerminData['type_termin_spb'], // ID Type Termin
+                ];
+    
+                // Jika type_termin_spb adalah LUNAS, pindahkan ke TAB PAID
+                if ($lastUpdatedTerminData['type_termin_spb'] == SpbProject::TYPE_TERMIN_LUNAS) {
+                    $updateFields['spbproject_status_id'] = SpbProject_Status::PAID;
+                    $updateFields['tab_spb'] = SpbProject::TAB_PAID;
+                } else {
+                    $updateFields['tab_spb'] = SpbProject::TAB_PAYMENT_REQUEST;
+                }
+    
+                // Update SPB Project
+                $spbProject->update($updateFields);
             }
     
             // Menghitung ulang harga total termin setelah update termin
@@ -5221,7 +5239,6 @@ class SPBController extends Controller
                         'updated_at' => now(),
                     ]);
                 }
-
 
                 // Update SPB Project
                 $spbProject->update($updateFields);
