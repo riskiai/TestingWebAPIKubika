@@ -63,19 +63,6 @@ class SPBController extends Controller
         ]);
 
         // 🔹 **Pencarian (SEARCH)**
-       /*  if ($request->has('search')) {
-            $searchTerm = $request->search;
-
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('doc_no_spb', 'like', '%' . $searchTerm . '%') // Nomor SPB
-                ->orWhere('doc_type_spb', 'like', '%' . $searchTerm . '%') // Tipe SPB
-                ->orWhereHas('category', function ($q) use ($searchTerm) { 
-                    $q->where('name', 'like', '%' . $searchTerm . '%'); // Nama kategori SPB
-                });
-            });
-        } */
-
-        // 🔹 **Pencarian (SEARCH)**
         if ($request->has('search')) {
             $searchTerm = $request->search;
 
@@ -218,12 +205,40 @@ class SPBController extends Controller
 
         if ($request->has('supervisor_id')) {
             $query->whereHas('project.tenagaKerja', function ($q) use ($request) {
-                $q->where('users.id', $request->supervisor_id) // Filter berdasarkan ID supervisor
+                $q->where('users.id', $request->supervisor_id) 
                   ->whereHas('role', function ($roleQuery) {
-                      $roleQuery->where('role_id', Role::SUPERVISOR); // Pastikan role adalah Supervisor
+                      $roleQuery->where('role_id', Role::SUPERVISOR); 
                   });
             });
         }   
+
+        if ($request->has('owner_id')) {
+            $query->whereNotNull('request_owner') // Pastikan request_owner sudah diisi
+                  ->where(function ($q) use ($request) {
+                      // Filter berdasarkan owner_id yang diberikan dalam request
+                      $q->whereHas('user', function ($subQ) use ($request) {
+                          $subQ->where('id', $request->owner_id)
+                               ->whereHas('role', function ($roleQuery) {
+                                   $roleQuery->where('role_id', Role::OWNER);
+                               });
+                      })->orWhere('request_owner', $request->owner_id);
+                  });
+        }   
+        
+        
+        if ($request->has('gudang_id')) {
+            $query->whereNotNull('know_kepalagudang') // Pastikan hanya data yang memiliki know_kepalagudang
+                  ->where(function ($q) use ($request) {
+                      // Filter berdasarkan gudang_id yang diberikan dalam request
+                      $q->whereHas('user', function ($subQ) use ($request) {
+                          $subQ->where('id', $request->gudang_id)
+                               ->whereHas('role', function ($roleQuery) {
+                                   $roleQuery->where('role_id', Role::GUDANG);
+                               });
+                      })->orWhere('know_kepalagudang', $request->gudang_id);
+                  });
+        }
+        
 
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
@@ -904,6 +919,19 @@ class SPBController extends Controller
             });
         }  
 
+        if ($request->has('owner_id')) {
+            $query->whereNotNull('request_owner') // Pastikan request_owner sudah diisi
+                  ->where(function ($q) use ($request) {
+                      // Filter berdasarkan owner_id yang diberikan dalam request
+                      $q->whereHas('user', function ($subQ) use ($request) {
+                          $subQ->where('id', $request->owner_id)
+                               ->whereHas('role', function ($roleQuery) {
+                                   $roleQuery->where('role_id', Role::OWNER);
+                               });
+                      })->orWhere('request_owner', $request->owner_id);
+                  });
+        }        
+
         if ($request->has('doc_no_spb')) {
             $query->where('doc_no_spb', 'like', '%' . $request->doc_no_spb . '%');
         }
@@ -1422,6 +1450,33 @@ class SPBController extends Controller
                   });
             });
         }  
+
+        if ($request->has('owner_id')) {
+            $query->whereNotNull('request_owner') // Pastikan request_owner sudah diisi
+                  ->where(function ($q) use ($request) {
+                      // Filter berdasarkan owner_id yang diberikan dalam request
+                      $q->whereHas('user', function ($subQ) use ($request) {
+                          $subQ->where('id', $request->owner_id)
+                               ->whereHas('role', function ($roleQuery) {
+                                   $roleQuery->where('role_id', Role::OWNER);
+                               });
+                      })->orWhere('request_owner', $request->owner_id);
+                  });
+        }   
+        
+        
+        if ($request->has('gudang_id')) {
+            $query->whereNotNull('know_kepalagudang') // Pastikan hanya data yang memiliki know_kepalagudang
+                  ->where(function ($q) use ($request) {
+                      // Filter berdasarkan gudang_id yang diberikan dalam request
+                      $q->whereHas('user', function ($subQ) use ($request) {
+                          $subQ->where('id', $request->gudang_id)
+                               ->whereHas('role', function ($roleQuery) {
+                                   $roleQuery->where('role_id', Role::GUDANG);
+                               });
+                      })->orWhere('know_kepalagudang', $request->gudang_id);
+                  });
+        }
 
         if ($request->has('date_range')) {
             $dateRange = $request->input('date_range');
