@@ -24,13 +24,13 @@ use App\Http\Requests\Project\StoreRequest;
 use App\Http\Requests\Project\UpdateRequest;
 use App\Http\Resources\Project\ProjectCollection;
 use App\Http\Requests\Project\PaymentTerminRequest;
+use App\Http\Requests\SpbProject\UpdateTerminRequest;
+use App\Http\Resources\Project\ProjectNameCollection;
 use App\Http\Requests\Project\UpdatePaymentTerminRequest;
 use App\Http\Requests\Project\UpdatePengunaMuatanRequest;
-use App\Http\Requests\SpbProject\UpdateTerminRequest;
 
 class ProjectController extends Controller
 {
-
     public function projectall(Request $request)
     {
         $query = Project::query();
@@ -199,6 +199,12 @@ class ProjectController extends Controller
         $projects = $query->get();
 
         return new ProjectCollection($projects);
+    }
+
+    public function indexall()
+    {
+        $projects = Project::select('id', 'name')->get(); // Ambil hanya id dan name
+        return new ProjectNameCollection($projects);
     }
 
     public function index(Request $request)

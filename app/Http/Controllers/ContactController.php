@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\ProductCompanySpbProject;
 use App\Http\Requests\Contact\CreateRequest;
 use App\Http\Requests\Contact\UpdateRequest;
+use App\Http\Resources\Contact\ContactAllCollection;
 use App\Http\Resources\Contact\ContactCollection;
 
 class ContactController extends Controller
@@ -107,6 +108,19 @@ class ContactController extends Controller
         // untuk mempertahankan filtering bawaan paginate laravel
         // pembuatan file bisa menggunakan command `php artisan make:resource NamaFile`
         return new ContactCollection($contacts);
+    }
+
+    public function companyAll(Request $request)
+    {
+        $query = Company::with('contactType')->select('id', 'contact_type_id', 'name');
+
+        if ($request->has('contact_type')) {
+            $query->where('contact_type_id', $request->contact_type);
+        }
+
+        $companies = $query->get();
+
+        return new ContactAllCollection($companies);
     }
 
     public function store(CreateRequest $request)

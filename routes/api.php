@@ -67,6 +67,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
      /* Contact */
      Route::get('contact', [ContactController::class, 'index']);
+     Route::get('contact/name/all', [ContactController::class, 'companyAll']);
      Route::post('contact-store', [ContactController::class, 'store']);
      Route::post('contact-update/{id}', [ContactController::class, 'update']);
      Route::get('contact/{id}', [ContactController::class, 'show']);
@@ -105,6 +106,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
      // Project
      Route::get('project', [ProjectController::class, 'index']);
+     Route::get('/projects/names', [ProjectController::class, 'indexall']);
      Route::get('projectall', [ProjectController::class, 'projectall']);
      Route::get('projects/counting', [ProjectController::class, 'counting']);
      Route::get('project/{id}', [ProjectController::class, 'show']);

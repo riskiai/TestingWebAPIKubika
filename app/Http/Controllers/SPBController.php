@@ -391,7 +391,7 @@ class SPBController extends Controller
 
         // Return data dalam bentuk koleksi
         return new SPBprojectCollection($spbProjects);
-    }
+    } 
 
     public function indexall(Request $request) {
         $query = SpbProject::query();
