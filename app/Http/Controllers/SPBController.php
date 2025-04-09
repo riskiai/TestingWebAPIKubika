@@ -757,15 +757,29 @@ class SPBController extends Controller
         // Perhitungan sesuai dengan role
         switch ($role) {
             case Role::GUDANG:
-                $unapprovedSpb = $query->whereNull('know_kepalagudang')->count();
+                $unapprovedSpb = $query
+                    ->whereNotIn('spbproject_category_id', [
+                        SpbProject_Category::FLASH_CASH,
+                        SpbProject_Category::BORONGAN,
+                    ])
+                    ->whereNull('know_kepalagudang')
+                    ->count();
                 break;
         
             case Role::SUPERVISOR:
-                $unapprovedSpb = $query->whereNull('know_supervisor')->count();
+                $unapprovedSpb = $query
+                    ->whereNotIn('spbproject_category_id', [
+                        SpbProject_Category::FLASH_CASH,
+                        SpbProject_Category::BORONGAN,
+                    ])
+                    ->whereNull('know_supervisor')
+                    ->count();
                 break;
         
             case Role::OWNER:
-                $unapprovedSpb = $query->whereNull('request_owner')->count();
+                $unapprovedSpb = $query
+                    ->whereNull('request_owner')
+                    ->count();
                 break;
         
             case Role::ADMIN:
