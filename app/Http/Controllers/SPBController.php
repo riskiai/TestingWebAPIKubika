@@ -33,6 +33,7 @@ use App\Http\Requests\SpbProject\UpdateProdukRequest;
 use App\Http\Requests\SpbProject\PaymentProdukRequest;
 use App\Http\Requests\SpbProject\ActivateProdukRequest;
 use App\Http\Requests\SpbProject\PaymentVendorRequest;
+use App\Http\Requests\SpbProject\UpdatePaymentFlashInvRequest;
 use App\Http\Requests\SpbProject\UpdateTerminRequest;
 use App\Http\Resources\SPBproject\SPBprojectCollection;
 use App\Http\Resources\SPBproject\SpbProjectPrintCollection;
@@ -5205,6 +5206,70 @@ class SPBController extends Controller
         }
     }
 
+    public function updatePaymentFlasInv(UpdatePaymentFlashInvRequest $request, $docNo)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Validasi role
+            if (!auth()->user()->hasRole(Role::FINANCE) && !auth()->user()->hasRole(Role::OWNER) && !auth()->user()->hasRole(Role::ADMIN)) {
+                return MessageActeeve::forbidden('Only users with the Finance, Owner, or Admin role can update payments.');
+            }
+
+            // Cari SPB berdasarkan doc_no_spb
+            $spbProject = SpbProject::where('doc_no_spb', $docNo)->first();
+            if (!$spbProject) {
+                return MessageActeeve::notFound('Data not found!');
+            }
+
+            // Format updated_at hanya Y-m-d (tanpa jam)
+            $updatedAt = Carbon::parse($request->updated_at)->format('Y-m-d');
+
+            $updateFields = [
+                'updated_at' => $updatedAt,
+            ];
+
+            // Simpan file attachment jika ada
+            if ($request->hasFile('attachment_file_spb')) {
+                // Hapus dokumen lama dari DB dan storage
+                foreach ($spbProject->documents as $document) {
+                    if (Storage::disk('public')->exists($document->file_path)) {
+                        Storage::disk('public')->delete($document->file_path);
+                    }
+                    $document->delete();
+                }
+
+                // Simpan file baru
+                foreach ($request->file('attachment_file_spb') as $key => $file) {
+                    if ($file->isValid()) {
+                        $this->saveDocument($spbProject, $file, $key + 1);
+                    } else {
+                        return MessageActeeve::error('File upload failed');
+                    }
+                }
+            }
+
+
+            // Simpan perubahan ke database
+            $spbProject->update($updateFields);
+
+            // Tambahkan log update
+            $spbProject->logs()->create([
+                'tab_spb' => $spbProject->tab_spb,
+                'name' => auth()->user()->name,
+                'message' => 'SPB Flash/Invoice payment updated.',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+            return MessageActeeve::success("SPB $docNo payment updated successfully (Flash/Invoice)");
+
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    }
 
     public function updatepayment(PaymentRequest $request, $docNo)
     {
