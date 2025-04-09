@@ -754,26 +754,30 @@ class SPBController extends Controller
         // Clone query sebelum pagination diterapkan
         $unapprovedQuery = clone $query;
     
+        // Perhitungan sesuai dengan role
         switch ($role) {
             case Role::GUDANG:
-                $unapprovedSpb = $query->whereNull('know_kepalagudang')
-                                       ->whereNotIn('category', ['BORONGAN', 'FLASH_CASH'])->count();
+                $unapprovedSpb = $query->whereNull('know_kepalagudang')->count();
                 break;
+        
             case Role::SUPERVISOR:
-                $unapprovedSpb = $query->whereNull('know_supervisor')
-                                       ->whereNotIn('category', ['BORONGAN', 'FLASH_CASH'])->count();
+                $unapprovedSpb = $query->whereNull('know_supervisor')->count();
                 break;
+        
             case Role::OWNER:
                 $unapprovedSpb = $query->whereNull('request_owner')->count();
                 break;
-            case Role::ADMIN:
-                $unapprovedSpb = $query->count(); // Admin can see everything
-                break;
-            default:
-                // error handling
-                break;
-        }
         
+            case Role::ADMIN:
+                $unapprovedSpb = $query->count(); // Admin bisa melihat semuanya
+                break;
+        
+            default:
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Role not authorized for this action.'
+                ], 403);
+        }
     
         // Pagination setup (Pagination hanya untuk tampilan data, bukan perhitungan)
         $perPage = $request->get('per_page', 10);
