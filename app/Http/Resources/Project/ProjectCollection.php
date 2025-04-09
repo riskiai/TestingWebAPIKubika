@@ -34,21 +34,27 @@ class ProjectCollection extends ResourceCollection
                 case Role::GUDANG:
                     $totalUnapprovedSpb = $project->spbProjects()
                         ->whereHas('category', function ($q) {
-                            $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+                            $q->whereNotIn('spbproject_category_id', [
+                                SpbProject_Category::FLASH_CASH,
+                                SpbProject_Category::BORONGAN
+                            ]);
                         })
                         ->whereNull('know_kepalagudang') // Belum disetujui oleh GUDANG
                         ->count();
                     break;
-
+            
                 case Role::SUPERVISOR:
                     $totalUnapprovedSpb = $project->spbProjects()
                         ->whereHas('category', function ($q) {
-                            $q->where('spbproject_category_id', '!=', SpbProject_Category::FLASH_CASH);
+                            $q->whereNotIn('spbproject_category_id', [
+                                SpbProject_Category::FLASH_CASH,
+                                SpbProject_Category::BORONGAN
+                            ]);
                         })
                         ->whereNull('know_supervisor') // Belum disetujui oleh SUPERVISOR
                         ->count();
                     break;
-
+            
                 case Role::OWNER:
                     $totalUnapprovedSpb = $project->spbProjects()
                         ->whereHas('category', function ($q) {
@@ -57,11 +63,12 @@ class ProjectCollection extends ResourceCollection
                         ->whereNull('request_owner') // Belum disetujui oleh OWNER
                         ->count();
                     break;
-
+            
                 default:
                     // Jika role tidak dikenali, tidak ada data SPB yang dihitung
                     break;
             }
+            
             
             $data[] = [
                 'id' => $project->id,
