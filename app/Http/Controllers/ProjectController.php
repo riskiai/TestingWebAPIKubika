@@ -1909,6 +1909,7 @@ class ProjectController extends Controller
             Project::ACTIVE => "Active",
             Project::REJECTED => "Rejected",
             Project::CLOSED => "Closed",
+            Project::CANCEL => "Cancel",
         ];
 
         return [
@@ -1986,6 +1987,33 @@ class ProjectController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     } 
+
+    public function cancel($id) {
+        DB::beginTransaction();
+
+        if (!auth()->user()->hasRole(Role::OWNER)) {
+            return response()->json([
+                'message' => 'Access denied! Only owners can cancel projects.'
+            ], 403);
+        }
+
+        $project = Project::find($id);
+        if (!$project) {
+            return MessageActeeve::notFound('data not found');
+        }
+
+        try {
+            $project->update([
+                "request_status_owner" => Project::CANCEL
+            ]);
+
+            DB::commit();
+            return MessageActeeve::success("project $project->name has been updated");
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return MessageActeeve::error($th->getMessage());
+        }
+    }
 
     public function accept($id)
     {

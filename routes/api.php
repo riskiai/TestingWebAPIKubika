@@ -118,6 +118,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
      Route::put('project/accept/{id}', [ProjectController::class, 'accept']);
      Route::put('project/closed/{id}', [ProjectController::class, 'closed']);
+     Route::put('project/cancel/{id}', [ProjectController::class, 'cancel']);
      Route::put('project/bonus/{id}', [ProjectController::class, 'bonus']);
      Route::put('project/reject/{id}', [ProjectController::class, 'reject']);
      Route::put('projects/update-pengguna-muatan/{id}', [ProjectController::class, 'UpdatePenggunaMuatan']);

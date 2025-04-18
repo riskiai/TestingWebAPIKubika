@@ -656,6 +656,7 @@ class ProjectCollection extends ResourceCollection
             Project::ACTIVE => "Active",
             Project::REJECTED => "Rejected",
             Project::CLOSED => "Closed",
+            Project::CANCEL => "Cancel",
         ];
 
         return [

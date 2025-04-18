@@ -28,6 +28,7 @@ class Project extends Model
     const ACTIVE = 2;
     const REJECTED = 3;
     const CLOSED = 4;
+    const CANCEL = 5;
 
     const BELUM_DIKASIH_BONUS = 1;
     const SUDAH_DIKASIH_BONUS = 2;
