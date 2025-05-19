@@ -203,7 +203,7 @@ class ProjectController extends Controller
 
     public function indexall()
     {
-        $projects = Project::select('id', 'name')->get(); // Ambil hanya id dan name
+        $projects = Project::select('id', 'name')->get(); 
         return new ProjectNameCollection($projects);
     }
 

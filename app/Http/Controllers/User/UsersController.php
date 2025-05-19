@@ -114,7 +114,6 @@ class UsersController extends Controller
         return new UsersCollection($users);
     }
 
-
     public function show($id)
     {
         $user = User::find($id);
