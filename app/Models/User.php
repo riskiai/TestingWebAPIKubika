@@ -14,6 +14,10 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
+    // Status Users
+    const AKTIF = 1;
+    const TIDAK_AKTIF = 2;
+
     protected $dates = ['deleted_at'];
     
     protected $fillable = [
@@ -23,6 +27,7 @@ class User extends Authenticatable
         'email',
         'password',
         'token',
+        'status',
     ];
 
     protected $hidden = [

@@ -34,6 +34,14 @@ class LoginController extends Controller
             ], MessageActeeve::HTTP_BAD_REQUEST);
         }
 
+        if ((int) $user->status === User::TIDAK_AKTIF) {
+            return MessageActeeve::render([
+                'status' => MessageActeeve::WARNING,
+                'status_code' => MessageActeeve::HTTP_FORBIDDEN,
+                'message' => 'Akun Anda tidak aktif. Silakan hubungi administrator.'
+            ], MessageActeeve::HTTP_FORBIDDEN);
+        }
+
         try {
             $role = [strtolower($user->role->name)];
             $token = $user->createToken('api', $role)->plainTextToken;
