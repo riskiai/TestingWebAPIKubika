@@ -51,7 +51,7 @@ class ProdukController extends Controller
         return new ProductCollection($products);
     }
 
-    public function produkAll(Request $request)
+    /* public function produkAll(Request $request)
     {
         $query = Product::query();
 
@@ -86,6 +86,45 @@ class ProdukController extends Controller
         $products = $query->get();
 
         return new ProductCollection($products);
+    } */
+
+    public function produkAll(Request $request)
+    {
+        $keyword = trim($request->input('search', ''));
+
+        $query = Product::select('id', 'nama');
+
+        /* ── filter keyword ── */
+        if ($keyword !== '') {
+            $query->where(fn ($q) =>
+                $q->where('id',   'like', "%{$keyword}%")
+                ->orWhere('nama','like', "%{$keyword}%"));
+        } else {
+            $query->limit(5);   // batasi 5 jika tidak search
+        }
+
+        /* ── filter lain (opsional) ── */
+        if ($request->filled('kode_produk')) {
+            $query->where('kode_produk', 'like', "%{$request->kode_produk}%");
+        }
+
+        if ($request->filled('kode_kategori')) {
+            $query->whereHas('kategori', fn ($q) =>
+                $q->where('kode_kategori', 'like', "%{$request->kode_kategori}%"));
+        }
+
+        if ($request->filled('date')) {
+            $range = explode(', ', str_replace(['[',']'], '', $request->date));
+            if (count($range) === 2) {
+                $query->whereBetween('created_at', [$range[0], $range[1]]);
+            }
+        }
+
+        /* ── ambil & kirim ── */
+        $products = $query->orderBy('nama')->get();
+
+        //  ⬇️  Wrap di dalam "data"
+        return response()->json(['data' => $products], 200);
     }
     
     public function store(CreateRequest $request)
