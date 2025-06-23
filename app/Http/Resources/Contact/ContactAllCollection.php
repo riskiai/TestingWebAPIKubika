@@ -9,6 +9,7 @@ class ContactAllCollection extends ResourceCollection
     {
         return $this->collection->transform(function ($company) {
             return [
+                'id'   => $company->id,
                 "contact_type" => [
                     "id" => $company->contactType->id,
                     "name" => $company->contactType->name,
