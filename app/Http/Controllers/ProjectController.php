@@ -69,11 +69,11 @@ class ProjectController extends Controller
         return new ProjectCollection($projects);
     } */
 
-    public function projectall(Request $request)
+    /* public function projectall(Request $request)
     {
         $query = Project::query();
 
-        /* ---------------- Filter otorisasi ---------------- */
+       
         if (auth()->user()->role_id == Role::MARKETING) {
             $query->where(function ($q) {
                 $q->where('user_id', auth()->id())
@@ -96,14 +96,56 @@ class ProjectController extends Controller
             });
         }
 
-        /* ---------------- Filter ekstra (?project=) ---------------- */
+        
         if ($request->filled('project')) {
             $query->where('id', $request->project);
         }
 
-        /* ---------------- Ambil & kirim data ringan ---------------- */
+      
         $projects = Project::select('id', 'name')->get(); 
         return new ProjectNameCollection($projects);
+    } */
+
+    public function projectall(Request $request)
+    {
+        // 1.  Base query
+        $query = Project::query();
+
+        /* ───────── Otorisasi per-role ───────── */
+        if (auth()->user()->role_id == Role::MARKETING) {
+            $query->where(function ($q) {
+                $q->where('user_id', auth()->id())
+                ->orWhereHas('tenagaKerja', fn ($q) => $q->where('user_id', auth()->id()));
+            });
+        }
+
+        if (auth()->user()->role_id == Role::SUPERVISOR) {
+            $query->whereHas('tenagaKerja', fn ($q) => $q->where('user_id', auth()->id()));
+        }
+
+        /* ───────── Global search ───────── */
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                ->orWhere('name', 'like', "%{$search}%")
+                ->orWhere('no_dokumen_project', 'like', "%{$search}%")
+                ->orWhereHas('company', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+       
+        if ($request->filled('project')) {
+            $query->where('id', $request->project);
+        }
+
+      
+        $projects = $query->select('id', 'name')
+                        ->orderBy('name')
+                        ->limit(5)
+                        ->get();
+
+        return new ProjectNameCollection($projects);  
     }
 
     public function indexall()
