@@ -110,7 +110,7 @@ class ContactController extends Controller
         return new ContactCollection($contacts);
     }
 
-    public function companyAll(Request $request)
+    /* public function companyAll(Request $request)
     {
         $query = Company::with('contactType')->select('id', 'contact_type_id', 'name');
 
@@ -119,6 +119,29 @@ class ContactController extends Controller
         }
 
         $companies = $query->get();
+
+        return new ContactAllCollection($companies);
+    } */
+
+    public function companyAll(Request $request)
+    {
+        $keyword = trim($request->input('search', ''));
+
+        $query = Company::with('contactType')
+                        ->select('id', 'contact_type_id', 'name');
+
+        if ($keyword !== '') {
+            // Ada kata kunci → filter nama / ID, tanpa limit
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
+                ->orWhere('id', 'like', "%{$keyword}%");
+            });
+        } else {
+            // Tidak ada kata kunci → cukup 5 entri teratas
+            $query->limit(5);
+        }
+
+        $companies = $query->orderBy('name')->get();
 
         return new ContactAllCollection($companies);
     }
