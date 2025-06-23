@@ -92,7 +92,7 @@ class ProdukController extends Controller
     {
         $keyword = trim($request->input('search', ''));
 
-        $query = Product::select('id', 'nama');
+        $query = Product::select('id', 'nama', 'type_pembelian');
 
         /* ── filter keyword ── */
         if ($keyword !== '') {
