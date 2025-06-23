@@ -85,19 +85,25 @@ class ProjectController extends Controller
             $query->whereHas('tenagaKerja', fn ($q) => $q->where('user_id', auth()->id()));
         }
 
+         if ($request->has('search')) {
+            $query->where(function ($query) use ($request) {
+                $query->where('id', 'like', '%' . $request->search . '%')
+                      ->orWhere('name', 'like', '%' . $request->search . '%')
+                      ->orWhere('no_dokumen_project', 'like', '%' . $request->search . '%') // Tambahkan ini
+                      ->orWhereHas('company', function ($query) use ($request) {
+                          $query->where('name', 'like', '%' . $request->search . '%');
+                      });
+            });
+        }
+
         /* ---------------- Filter ekstra (?project=) ---------------- */
         if ($request->filled('project')) {
             $query->where('id', $request->project);
         }
 
         /* ---------------- Ambil & kirim data ringan ---------------- */
-        $projects = $query->select('id', 'name')
-                        ->orderBy('name')
-                        ->get()
-                        ->map(fn ($p) => ['id' => $p->id, 'name' => $p->name]) // ubah ke array sederhana
-                        ->values();                                           // reset index 0..N
-
-        return response()->json($projects, 200);
+        $projects = Project::select('id', 'name')->get(); 
+        return new ProjectNameCollection($projects);
     }
 
     public function indexall()
