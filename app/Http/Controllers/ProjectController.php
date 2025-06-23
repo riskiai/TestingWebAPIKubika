@@ -138,12 +138,11 @@ class ProjectController extends Controller
         if ($request->filled('project')) {
             $query->where('id', $request->project);
         }
-
       
         $projects = $query->select('id', 'name')
-                        ->orderBy('name')
-                        ->limit(5)
-                        ->get();
+                      ->orderBy('name')
+                      ->when(!$request->filled('search'), fn ($q) => $q->limit(5))   
+                      ->get();
 
         return new ProjectNameCollection($projects);  
     }
