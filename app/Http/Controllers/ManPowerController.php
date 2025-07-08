@@ -31,12 +31,14 @@ class ManPowerController extends Controller
         $query = $this->manPower->with(['user.divisi']);
 
     
-        if ($request->filled('divisi_name')) {
+         if ($request->filled('divisi_name')) {
             $divisi = trim($request->divisi_name);
 
             $query->whereHas('user.divisi', function ($q) use ($divisi) {
-                $q->where('name', 'like', "%{$divisi}%")
-                ->orWhere('kode_divisi', 'like', "%{$divisi}%");
+                $q->where(function ($inner) use ($divisi) {
+                    $inner->whereRaw('LOWER(name) = ?', [strtolower($divisi)])
+                        ->orWhereRaw('LOWER(kode_divisi) = ?', [strtolower($divisi)]);
+                });
             });
         }
 
