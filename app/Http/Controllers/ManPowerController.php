@@ -123,8 +123,8 @@ class ManPowerController extends Controller
     }
 
     public function manpowerall(Request $request) {
-        // $query = $this->manPower->with('user');
-         $query = $this->manPower->with(['user.divisi']);
+        $query = $this->manPower->with('user');
+        //  $query = $this->manPower->with(['user.divisi']);
 
         // Filter berdasarkan pencarian deskripsi atau nama pengguna
         if ($request->has('search')) {
@@ -137,7 +137,7 @@ class ManPowerController extends Controller
             });
         }
 
-         if ($request->filled('divisi_name')) {
+         /* if ($request->filled('divisi_name')) {
             $divisi = trim($request->divisi_name);
 
             $query->whereHas('user.divisi', function ($q) use ($divisi) {
@@ -146,7 +146,7 @@ class ManPowerController extends Controller
                         ->orWhereRaw('LOWER(kode_divisi) = ?', [strtolower($divisi)]);
                 });
             });
-        }
+        } */
 
 
         // Filter berdasarkan user_id
