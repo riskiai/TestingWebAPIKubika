@@ -27,7 +27,19 @@ class ManPowerController extends Controller
 
     public function index(Request $request)
     {
-        $query = $this->manPower->with('user');
+        // $query = $this->manPower->with('user');
+        $query = $this->manPower->with(['user.divisi']);
+
+    
+        if ($request->filled('divisi_name')) {
+            $divisi = trim($request->divisi_name);
+
+            $query->whereHas('user.divisi', function ($q) use ($divisi) {
+                $q->where('name', 'like', "%{$divisi}%")
+                ->orWhere('kode_divisi', 'like', "%{$divisi}%");
+            });
+        }
+
 
         // Filter berdasarkan pencarian deskripsi atau nama pengguna
         if ($request->has('search')) {
