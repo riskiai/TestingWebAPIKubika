@@ -142,10 +142,7 @@ class SPBController extends Controller
                 // Gunakan filter berdasarkan kondisi Borongan atau Non-Borongan
                 $query->where(function ($q) use ($startDate, $endDate, $docTypeSpb, $tabSpb) {
                     
-                    // Jika kategori SPB adalah BORONGAN dan tab_spb adalah TAB_PAYMENT_REQUEST
-                   /*  if (in_array(SpbProject_Category::BORONGAN, $docTypeSpb) || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
-                        $q->whereBetween('updated_at', [$startDate, $endDate]);
-                    }  */
+                    
                     if (in_array(strtoupper('BORONGAN'), array_map('strtoupper', $docTypeSpb)) || $tabSpb === SpbProject::TAB_PAYMENT_REQUEST) {
                         $q->whereHas('termins', function ($q1) use ($startDate, $endDate) {
                             $q1->whereBetween('tanggal', [$startDate, $endDate]);
@@ -170,8 +167,11 @@ class SPBController extends Controller
                     // Jika kategori lain, gunakan filter default
                     else {
                         $q->where(function ($q1) use ($startDate, $endDate) {
+                            // $q1->where('tab_spb', SpbProject::TAB_PAID)
+                            // ->whereBetween('updated_at', [$startDate, $endDate]);
                             $q1->where('tab_spb', SpbProject::TAB_PAID)
-                            ->whereBetween('updated_at', [$startDate, $endDate]);
+                                ->whereDate('updated_at', '>=', $startDate)   
+                                ->whereDate('updated_at', '<=', $endDate);
                         });
                     }
                 });
@@ -1220,8 +1220,11 @@ class SPBController extends Controller
                 // Gunakan filter tanggal
                 $query->where(function ($q) use ($startDate, $endDate) {
                     $q->where(function ($q1) use ($startDate, $endDate) {
+                        // $q1->where('tab_spb', SpbProject::TAB_PAID)
+                        //    ->whereBetween('updated_at', [$startDate, $endDate]);
                         $q1->where('tab_spb', SpbProject::TAB_PAID)
-                           ->whereBetween('updated_at', [$startDate, $endDate]);
+                            ->whereDate('updated_at', '>=', $startDate)
+                            ->whereDate('updated_at', '<=', $endDate);
                     })
                     ->orWhere(function ($q2) use ($startDate, $endDate) {
                         $q2->where('tab_spb', '!=', SpbProject::TAB_PAID)
@@ -1510,8 +1513,11 @@ class SPBController extends Controller
                 // Gunakan filter tanggal
                 $query->where(function ($q) use ($startDate, $endDate) {
                     $q->where(function ($q1) use ($startDate, $endDate) {
+                        // $q1->where('tab_spb', SpbProject::TAB_PAID)
+                        //    ->whereBetween('updated_at', [$startDate, $endDate]);
                         $q1->where('tab_spb', SpbProject::TAB_PAID)
-                           ->whereBetween('updated_at', [$startDate, $endDate]);
+                            ->whereDate('updated_at', '>=', $startDate)
+                            ->whereDate('updated_at', '<=', $endDate);
                     })
                     ->orWhere(function ($q2) use ($startDate, $endDate) {
                         $q2->where('tab_spb', '!=', SpbProject::TAB_PAID)
