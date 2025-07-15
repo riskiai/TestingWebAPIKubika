@@ -1003,9 +1003,6 @@ class ProjectController extends Controller
             ], 500);
         }
     }
-
- 
-
     public function UpdatePenggunaMuatan(UpdatePengunaMuatanRequest $request, $id)
     {
         DB::beginTransaction();
