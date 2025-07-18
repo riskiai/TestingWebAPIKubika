@@ -590,6 +590,11 @@ class ProjectController extends Controller
             $project->status_bonus_project = Project::DEFAULT_STATUS_NO_BONUS;
             $project->type_projects = $request->type_projects;
             $project->no_dokumen_project = $request->no_dokumen_project;
+          /*   $project->type_termin_proyek  = json_encode([
+                'id'   => Project::TYPE_TERMIN_PROYEK_NONE,
+                'name' => 'Belum Ada Pembayaran',
+            ], JSON_UNESCAPED_UNICODE);
+            $project->harga_termin_proyek = 0; */
 
             // Set harga_type_project to 0 if it's not provided
             $project->harga_type_project = $request->has('harga_type_project') ? $request->harga_type_project : 0;
@@ -1645,7 +1650,7 @@ class ProjectController extends Controller
         })->toArray();
     }
 
-    protected function convertTypeTermin($status)
+    /* protected function convertTypeTermin($status)
     {
         if (is_array($status)) {
             $id = $status['id'] ?? null;
@@ -1656,6 +1661,25 @@ class ProjectController extends Controller
         return [
             "id" => $id,
             "name" => is_null($id) ? "Unknown" : ($id == Project::TYPE_TERMIN_PROYEK_LUNAS ? "Lunas" : "Belum Lunas"),
+        ];
+    } */
+
+    protected function convertTypeTermin($status)
+    {
+        // ① Status kosong → default
+        if (empty($status) || (is_array($status) && empty($status['id']))) {
+            return [
+                'id'   => Project::TYPE_TERMIN_PROYEK_NONE,
+                'name' => 'Belum Ada Pembayaran',
+            ];
+        }
+
+        // ② Status terisi
+        $id = is_array($status) ? (int) $status['id'] : (int) $status;
+
+        return [
+            'id'   => $id,
+            'name' => $id == Project::TYPE_TERMIN_PROYEK_LUNAS ? 'Lunas' : 'Belum Lunas',
         ];
     }
 

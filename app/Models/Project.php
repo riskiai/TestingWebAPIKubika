@@ -46,6 +46,7 @@ class Project extends Model
     const DEFAULT_STATUS = self::PENDING;
     const DEFAULT_STATUS_PROJECT = self::INFORMASI_PROYEK;
 
+    const TYPE_TERMIN_PROYEK_NONE  = 0; 
     const TYPE_TERMIN_PROYEK_BELUM_LUNAS = 1;
     const TYPE_TERMIN_PROYEK_LUNAS = 2;
 
@@ -80,6 +81,11 @@ class Project extends Model
         'harga_termin_proyek',
         'payment_date_termin_proyek'
     ];
+
+    /* protected $attributes = [
+        'type_termin_proyek'      => '{"id":0,"name":"Belum Ada Pembayaran"}',
+        'harga_termin_proyek'     => 0,
+    ]; */
 
     public static function getTypeProjectsOptions()
     {
