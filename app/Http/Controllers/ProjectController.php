@@ -1502,8 +1502,7 @@ class ProjectController extends Controller
                     ];
                 }),
                 'total_spb_unapproved_for_role' => $totalUnapprovedSpb,
-              'spb_projects' => $project->spbProjects->map(function ($spbProject) {
-                // Memeriksa kategori SPB, jika kategori BORONGAN maka ambil nilai harga_total_pembayaran_borongan_spb
+              /* 'spb_projects' => $project->spbProjects->map(function ($spbProject) {
                 $spbCategory = $spbProject->spbproject_category_id;
                 $isBorongan = $spbCategory == \App\Models\SpbProject_Category::BORONGAN;
 
@@ -1533,7 +1532,7 @@ class ProjectController extends Controller
                     // Menambahkan kondisi untuk biaya borongan
                     'spb_borongan_cost' => $isBorongan ? $spbProject->harga_total_pembayaran_borongan_spb : null, // Menampilkan harga borongan jika kategori borongan
                 ];
-            }),
+            }), */
             'summary_salary_manpower' => [
                 'tukang_harian' => $this->tukangHarianSalary($project->manPowers()),
                 'tukang_borongan' => $this->tukangBoronganSalary($project->manPowers()),

@@ -203,8 +203,7 @@ class ProjectCollection extends ResourceCollection
                 ],
                 'total_spb_unapproved_for_role' => $totalUnapprovedSpb,
                 // Menampilkan seluruh produk yang terkait tanpa memfilter berdasarkan status PAID
-                'spb_projects' => $project->spbProjects->map(function ($spbProject) {
-                    // Memeriksa kategori SPB, jika kategori BORONGAN maka ambil nilai harga_total_pembayaran_borongan_spb
+                /* 'spb_projects' => $project->spbProjects->map(function ($spbProject) {
                     $spbCategory = $spbProject->spbproject_category_id;
                     $isBorongan = $spbCategory == \App\Models\SpbProject_Category::BORONGAN;
 
@@ -234,7 +233,7 @@ class ProjectCollection extends ResourceCollection
                         // Menambahkan kondisi untuk biaya borongan
                         'spb_borongan_cost' => $isBorongan ? $spbProject->harga_total_pembayaran_borongan_spb : null, // Menampilkan harga borongan jika kategori borongan
                     ];
-                }),
+                }), */
                /* 'file_attachment_spb' => [
                     'name' => $project->spb_file ? 'SPB-PROJECT-' . date('Y', strtotime($project->created_at)) . '/' . $project->id . '.' . pathinfo($project->spb_file, PATHINFO_EXTENSION) : null,
                     'link' => $project->spb_file ? asset("storage/$project->spb_file") : null,
