@@ -2809,7 +2809,7 @@ class SPBController extends Controller
                     ]
                     : null 
                 : null, 
-                'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+               /*  'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                     ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
                             $query->whereIn('role_name', ['Owner', 'Marketing', 'Supervisor']);
@@ -2825,7 +2825,7 @@ class SPBController extends Controller
                                 ],
                             ];
                         })
-                    : [], 
+                    : [],  */
             "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
@@ -3108,7 +3108,7 @@ class SPBController extends Controller
                     ]
                     : null 
                 : null, 
-                'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+                /* 'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                     ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
                             // Filter berdasarkan role yang diinginkan
@@ -3125,7 +3125,7 @@ class SPBController extends Controller
                                 ],
                             ];
                         })
-                    : [], 
+                    : [],  */
             "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
