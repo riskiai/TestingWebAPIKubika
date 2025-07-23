@@ -2185,7 +2185,7 @@ class SPBController extends Controller
         return $docNo;
     }
 
-    public function update(UpdateRequest $request, $docNoSpb)
+    /* public function update(UpdateRequest $request, $docNoSpb)
     {
         DB::beginTransaction();
 
@@ -2261,6 +2261,110 @@ class SPBController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => $th->getMessage(),
+            ], 500);
+        }
+    } */
+
+    public function update(UpdateRequest $request, $docNoSpb)
+    {
+        DB::beginTransaction();
+
+        try {
+            /*
+             |--------------------------------------------------------------
+             | 1. Ambil model dan pastikan ada
+             |--------------------------------------------------------------
+             */
+            $spbProject = SpbProject::with('documents')
+                ->where('doc_no_spb', $docNoSpb)
+                ->firstOrFail();  // 404 otomatis jika tidak ada
+
+            /*
+             |--------------------------------------------------------------
+             | 2. (Opsional) Validasi kategori bila dikirim di request
+             |--------------------------------------------------------------
+             */
+            if ($request->filled('spbproject_category_id')) {
+                $spbCategory = SpbProject_Category::find($request->spbproject_category_id);
+                if (!$spbCategory) {
+                    throw new \Exception('Kategori SPB tidak ditemukan');
+                }
+            }
+
+            /*
+             |--------------------------------------------------------------
+             | 3. Siapkan data yang akan di-fill
+             |--------------------------------------------------------------
+             */
+            /* if (empty($request->project_id)) {
+                $request->merge(['project_id' => null]);
+            } */
+
+            $fillable = [
+                'doc_type_spb',
+                'spbproject_category_id',
+                'project_id',
+                'unit_kerja',
+                'type_project',
+                'tanggal_dibuat_spb',
+                'tanggal_berahir_spb',
+                'harga_total_pembayaran_borongan_spb',
+                'harga_termin_spb',
+                'deskripsi_termin_spb',
+                'type_termin_spb',
+                'company_id',
+                'vendor_borongan_id',
+            ];
+
+            /*
+             |--------------------------------------------------------------
+             | 4. Bekukan timestamp jika sudah Paid
+             |--------------------------------------------------------------
+             */
+            $freezeTimestamp = $spbProject->tab_spb == SpbProject::TAB_PAID;
+            if ($freezeTimestamp) {
+                $spbProject->timestamps = false;           // matikan auto-touch
+            }
+
+            $spbProject->fill($request->only($fillable));
+
+            // Khusus SPB Borongan: sinkronkan company_id jika vendor_borongan_id ada
+            if (
+                $spbProject->spbproject_category_id == SpbProject_Category::BORONGAN &&
+                $request->filled('vendor_borongan_id')
+            ) {
+                $spbProject->company_id = $request->vendor_borongan_id;
+            }
+
+            $spbProject->save();  // timestamps false → updated_at TIDAK berubah
+
+            /*
+             |--------------------------------------------------------------
+             | 5. Simpan / ganti lampiran jika ada
+             |--------------------------------------------------------------
+             */
+            if ($request->hasFile('attachment_file_spb')) {
+                foreach ($request->file('attachment_file_spb') as $idx => $file) {
+                    if ($file->isValid()) {
+                        $this->replaceDocument($spbProject, $file, $idx + 1);
+                    } else {
+                        throw new \Exception('File upload failed');
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "SPB Project {$spbProject->doc_no_spb} has been updated successfully.",
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
