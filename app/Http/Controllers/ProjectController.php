@@ -944,9 +944,7 @@ class ProjectController extends Controller
         }
     }
 
-
-
-    public function deleteTermin(Request $request, $id)
+    /* public function deleteTermin(Request $request, $id)
     {
         DB::beginTransaction();
 
@@ -1050,7 +1048,122 @@ class ProjectController extends Controller
                 'message' => $th->getMessage(),
             ], 500);
         }
+    } */
+
+    public function deleteTermin(Request $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            /* -----------------------------------------------------------
+            * 1. Validasi payload
+            * ----------------------------------------------------------*/
+            $terminIds = $request->input('riwayat_termin');
+            if (!is_array($terminIds) || empty($terminIds)) {
+                return response()->json([
+                    'status'  => 'ERROR',
+                    'message' => '"riwayat_termin" harus berupa array ID termin',
+                ], 400);
+            }
+
+            /* -----------------------------------------------------------
+            * 2. Ambil proyek & termin yang dipilih
+            * ----------------------------------------------------------*/
+            $project = Project::findOrFail($id);
+
+            $termins = ProjectTermin::where('project_id', $project->id)
+                ->whereIn('id', $terminIds)
+                ->get();
+
+            if ($termins->isEmpty()) {
+                return response()->json([
+                    'status'  => 'ERROR',
+                    'message' => 'ID termin tidak ditemukan pada proyek ini',
+                ], 404);
+            }
+
+            /* -----------------------------------------------------------
+            * 3. Hapus termin + file
+            * ----------------------------------------------------------*/
+            foreach ($termins as $termin) {
+                if ($termin->file_attachment_pembayaran &&
+                    Storage::disk('public')->exists($termin->file_attachment_pembayaran)) {
+                    Storage::disk('public')->delete($termin->file_attachment_pembayaran);
+                }
+                $termin->delete();
+            }
+
+            /* -----------------------------------------------------------
+            * 4. Hitung ulang termin yang tersisa
+            * ----------------------------------------------------------*/
+            $remainingTermins = $project->projectTermins()
+                ->orderBy('tanggal_payment', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $totalTermin = $remainingTermins->sum('harga_termin');
+            $isLunas     = $totalTermin >= (float) $project->billing;
+            $latest      = $remainingTermins->first();   // null jika semua termin terhapus
+
+            /* -----------------------------------------------------------
+            * 4B. Normalisasi status setiap termin
+            * ----------------------------------------------------------*/
+            if ($isLunas) {
+                // Set semua → Belum Lunas terlebih dulu
+                ProjectTermin::where('project_id', $project->id)
+                    ->update(['type_termin' => Project::TYPE_TERMIN_PROYEK_BELUM_LUNAS]);
+
+                // Mark termin terbaru sebagai Lunas
+                if ($latest) {
+                    $latest->update([
+                        'type_termin' => Project::TYPE_TERMIN_PROYEK_LUNAS,
+                    ]);
+                }
+            } else {
+                // Pastikan tidak ada termin berstatus Lunas
+                ProjectTermin::where('project_id', $project->id)
+                    ->where('type_termin', Project::TYPE_TERMIN_PROYEK_LUNAS)
+                    ->update(['type_termin' => Project::TYPE_TERMIN_PROYEK_BELUM_LUNAS]);
+            }
+
+            /* -----------------------------------------------------------
+            * 5. Update kolom proyek
+            * ----------------------------------------------------------*/
+            $project->update([
+                // a. info termin terakhir (nullable)
+                'deskripsi_termin_proyek'   => $latest?->deskripsi_termin,
+                'file_pembayaran_termin'    => $latest?->file_attachment_pembayaran,
+                'payment_date_termin_proyek'=> $latest?->tanggal_payment,
+
+                // b. total & sisa
+                'harga_termin_proyek'       => $totalTermin,
+                'sisa_pembayaran_termin'    => max(0, $project->billing - $totalTermin),
+
+                // c. status Lunas / Belum Lunas
+                'type_termin_proyek'        => json_encode([
+                    'id'   => $isLunas
+                            ? Project::TYPE_TERMIN_PROYEK_LUNAS
+                            : Project::TYPE_TERMIN_PROYEK_BELUM_LUNAS,
+                    'name' => $isLunas ? 'Lunas' : 'Belum Lunas',
+                ], JSON_UNESCAPED_UNICODE),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status'                 => 'SUCCESS',
+                'message'                => 'Selected termin(s) deleted successfully!',
+                'remaining_total_termin' => $totalTermin,
+            ]);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => 'ERROR',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
     }
+    
     public function UpdatePenggunaMuatan(UpdatePengunaMuatanRequest $request, $id)
     {
         DB::beginTransaction();
