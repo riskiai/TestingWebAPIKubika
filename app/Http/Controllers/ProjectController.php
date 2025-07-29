@@ -296,23 +296,23 @@ class ProjectController extends Controller
             }
         }
 
-        if ($request->has('marketing_id')) {
+         if ($request->filled('marketing_id')) {
             $query->whereHas('tenagaKerja', function ($q) use ($request) {
-                $q->where('users.id', $request->marketing_id) // Filter berdasarkan ID marketing
-                  ->whereHas('role', function ($roleQuery) {
-                      $roleQuery->where('role_id', Role::MARKETING); // Pastikan role adalah Marketing
-                  });
+                $q->where('users.id', $request->marketing_id)        // user tertentu
+                ->whereIn('users.role_id', [                      // ▶ Marketing ATAU Owner
+                    Role::MARKETING,
+                    Role::OWNER,
+                ]);
             });
-        }        
+        }
 
-        if ($request->has('supervisor_id')) {
+
+        if ($request->filled('supervisor_id')) {
             $query->whereHas('tenagaKerja', function ($q) use ($request) {
-                $q->where('users.id', $request->supervisor_id) 
-                  ->whereHas('role', function ($roleQuery) {
-                      $roleQuery->where('role_id', Role::SUPERVISOR); 
-                  });
+                $q->where('users.id',  $request->supervisor_id)
+                ->where('users.role_id', Role::SUPERVISOR);
             });
-        }    
+        }
 
         // Urutkan berdasarkan tahun dan increment ID proyek
         $projects = $query->selectRaw('*, CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(id, "-", -2), "-", 1) AS UNSIGNED) as year')
@@ -418,11 +418,6 @@ class ProjectController extends Controller
             });
         }
 
-       /*  if ($request->has('year')) {
-            $year = $request->year;
-            $query->whereYear('date', $year);
-        } */
-
           // Terapkan filter berdasarkan peran pengguna
           if ($request->has('role_id')) {
             // Ambil array role_id dari request, pastikan dalam bentuk array
@@ -476,27 +471,39 @@ class ProjectController extends Controller
             $query->where('company_id', $request->vendor);
         }
 
-        if ($request->has('marketing_id')) {
+        /* if ($request->has('marketing_id')) {
             $query->whereHas('tenagaKerja', function ($q) use ($request) {
                 $q->where('users.id', $request->marketing_id) // Filter berdasarkan ID marketing
                 ->whereHas('role', function ($roleQuery) {
                     $roleQuery->where('role_id', Role::MARKETING); // Pastikan role adalah Marketing
                 });
             });
-        }
-
-        /* if ($request->has('date')) {
-            $date = str_replace(['[', ']'], '', $request->date);
-            $date = explode(", ", $date);
-            $query->whereBetween('created_at', $date);
         } */
 
-        /* if ($request->has('date')) {
-            $date = str_replace(['[', ']'], '', $request->date);
-            $date = explode(", ", $date);
-        
-            $query->whereRaw('STR_TO_DATE(created_at, "%Y-%m-%d") BETWEEN ? AND ?', [$date[0], $date[1]]);
-        }        */ 
+        /* if ($request->filled('marketing_id')) {
+            $query->whereHas('tenagaKerja', function ($q) use ($request) {
+                $q->where('users.id', $request->marketing_id)      // user tertentu
+                ->where('users.role_id', Role::MARKETING);       // dan betul-betul Marketing
+            });
+        } */
+
+        if ($request->filled('marketing_id')) {
+            $query->whereHas('tenagaKerja', function ($q) use ($request) {
+                $q->where('users.id', $request->marketing_id)        // user tertentu
+                ->whereIn('users.role_id', [                      // ▶ Marketing ATAU Owner
+                    Role::MARKETING,
+                    Role::OWNER,
+                ]);
+            });
+        }
+
+
+        if ($request->filled('supervisor_id')) {
+            $query->whereHas('tenagaKerja', function ($q) use ($request) {
+                $q->where('users.id',  $request->supervisor_id)
+                ->where('users.role_id', Role::SUPERVISOR);
+            });
+        }
 
         if ($request->has('date')) {
             $date = str_replace(['[', ']'], '', $request->date); 
@@ -521,27 +528,59 @@ class ProjectController extends Controller
         // Menghitung persentase margin terhadap billing
         $percent = ($totalBilling > 0) ? ($totalMargin / $totalBilling) * 100 : 0;
         $percent = round($percent, 2) . '%';
-
         $totalHargaType = (float) $query->sum('harga_type_project');
-
         $totalProjects = $collection->count();
 
-        $totalHargaBorongan = SpbProject::where('spbproject_category_id', SpbProject_Category::BORONGAN)
-        ->whereHas('project', function ($q) use ($request) {
-            // Filter berdasarkan proyek yang dipilih
-            if ($request->has('project')) {
-                $q->where('id', $request->project);
-            }
-            // Filter berdasarkan vendor jika ada
-            if ($request->has('vendor')) {
-                $q->where('company_id', $request->vendor);
-            }
-            // Filter berdasarkan tahun jika ada
-            if ($request->has('year')) {
-                $q->whereRaw('YEAR(STR_TO_DATE(date, "%Y-%m-%d")) = ?', [$request->year]);
-            }
-        })
-        ->sum('harga_total_pembayaran_borongan_spb');
+       $totalHargaBorongan = SpbProject::where(
+        'spbproject_category_id',
+                SpbProject_Category::BORONGAN
+            )
+            ->whereHas('project', function ($q) use ($request) {
+
+                // ── filter proyek tertentu ───────────────────────────
+                if ($request->filled('project')) {
+                    $q->where('id', $request->project);
+                }
+
+                // ── filter marketing id ─────────────────────────────
+                /* if ($request->filled('marketing_id')) {
+                    $q->whereHas('tenagaKerja', function ($w) use ($request) {
+                        $w->where('users.id',  $request->marketing_id)     // user tertentu
+                        ->where('users.role_id', Role::MARKETING);       // role Marketing
+                    });
+                } */
+
+                if ($request->filled('marketing_id')) {
+                    $q->whereHas('tenagaKerja', function ($w) use ($request) {
+                        $w->where('users.id',  $request->marketing_id)
+                        ->whereIn('users.role_id', [
+                            Role::MARKETING,
+                            Role::OWNER,
+                        ]);
+                    });
+                }
+
+                if ($request->filled('supervisor_id')) {
+                    $q->whereHas('tenagaKerja', function ($w) use ($request) {
+                        $w->where('users.id',  $request->supervisor_id)
+                        ->where('users.role_id', Role::SUPERVISOR);
+                    });
+                }
+
+                // ── filter vendor ───────────────────────────────────
+                if ($request->filled('vendor')) {
+                    $q->where('company_id', $request->vendor);
+                }
+
+                // ── filter tahun ────────────────────────────────────
+                if ($request->filled('year')) {
+                    $q->whereRaw(
+                        'YEAR(STR_TO_DATE(date,"%Y-%m-%d")) = ?',
+                        [$request->year]
+                    );
+                }
+            })
+            ->sum('harga_total_pembayaran_borongan_spb');
 
         // Response data
         return response()->json([
@@ -616,6 +655,10 @@ class ProjectController extends Controller
             $userIds = array_filter($request->input('user_id', []));  // Hapus nilai kosong
 
             // $userIds[] = auth()->user()->id;
+            if (auth()->user()->role_id == Role::OWNER) {
+                $userIds[] = auth()->user()->id; // Tambahkan pembuat proyek ke daftar tenaga kerja
+            }
+
             if (auth()->user()->role_id == Role::MARKETING) {
                 $userIds[] = auth()->user()->id; // Tambahkan pembuat proyek ke daftar tenaga kerja
             }

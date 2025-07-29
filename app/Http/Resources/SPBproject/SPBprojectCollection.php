@@ -114,7 +114,7 @@ class SPBprojectCollection extends ResourceCollection
                         : null 
                     : null, 
 
-                /* 'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
+                 'tukang' => $spbProject->project && $spbProject->project->tenagaKerja->isNotEmpty()
                     ? $spbProject->project->tenagaKerja()
                         ->whereHas('role', function ($query) {
                             // Filter berdasarkan role yang diinginkan
@@ -131,7 +131,7 @@ class SPBprojectCollection extends ResourceCollection
                                 ],
                             ];
                         })
-                    : [],  */
+                    : [],  
                 "project" => $spbProject->project ? [
                 'id' => $spbProject->project->id,
                 'nama' => $spbProject->project->name,
