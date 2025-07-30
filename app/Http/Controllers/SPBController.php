@@ -3837,7 +3837,7 @@ class SPBController extends Controller
         }
     }
 
-    public function deleteTermin(Request $request, $docNoSpb)
+    /* public function deleteTermin(Request $request, $docNoSpb)
     {
         DB::beginTransaction();
 
@@ -3892,11 +3892,7 @@ class SPBController extends Controller
                 // Hapus termin dari database
                 DB::table('spb_project_termins')->where('id', $termin->id)->delete();
 
-                /* $spbProject = SpbProject::where('doc_no_spb', $docNoSpb)->first();
-                if ($spbProject) {
-                    $spbProject->harga_total_pembayaran_borongan_spb += $termin->harga_termin;
-                    $spbProject->save();
-                } */
+               
             }
 
             // Hitung ulang total harga termin
@@ -3941,7 +3937,119 @@ class SPBController extends Controller
                 'message' => $th->getMessage(),
             ], 500);
         }
+    } */
+
+    public function deleteTermin(Request $request, $docNoSpb)
+    {
+        DB::beginTransaction();
+
+        try {
+            /* -----------------------------------------------------------
+            * 1. Validasi payload
+            * ----------------------------------------------------------*/
+            $terminIds = $request->input('riwayat_termin');
+            if (!is_array($terminIds) || empty($terminIds)) {
+                return response()->json([
+                    'status'  => 'ERROR',
+                    'message' => '"riwayat_termin" harus berupa array ID termin',
+                ], 400);
+            }
+
+            /* -----------------------------------------------------------
+            * 2. Ambil SPB + termin yang dipilih
+            * ----------------------------------------------------------*/
+            /** @var \App\Models\SpbProject $spb */
+            $spb = SpbProject::where('doc_no_spb', $docNoSpb)->lockForUpdate()->firstOrFail();
+
+            $termins = $spb->termins()
+                ->whereIn('id', $terminIds)
+                ->get();
+
+            if ($termins->isEmpty()) {
+                return response()->json([
+                    'status'  => 'ERROR',
+                    'message' => 'ID termin tidak ditemukan pada SPB ini',
+                ], 404);
+            }
+
+            /* -----------------------------------------------------------
+            * 3. Hapus termin + file attachment
+            * ----------------------------------------------------------*/
+            foreach ($termins as $t) {
+                // hapus file pada document_spb (jika ada)
+                if ($t->file_attachment_id) {
+                    $doc = DB::table('document_spb')->where('id', $t->file_attachment_id)->first();
+                    if ($doc && Storage::disk('public')->exists($doc->file_path)) {
+                        Storage::disk('public')->delete($doc->file_path);
+                    }
+                    DB::table('document_spb')->where('id', $t->file_attachment_id)->delete();
+                }
+
+                $t->delete();
+            }
+
+            /* -----------------------------------------------------------
+            * 4. Hitung ulang termin yang tersisa
+            * ----------------------------------------------------------*/
+            $remaining = $spb->termins()
+                ->orderBy('tanggal', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $totalTermin = $remaining->sum(fn ($row) => (int) $row->harga_termin);
+            $latest      = $remaining->first();                // bisa null
+            $billing     = (float) $spb->harga_total_pembayaran_borongan_spb;
+            $isLunas     = $billing > 0 && $totalTermin >= $billing;
+
+            /* -----------------------------------------------------------
+            * 4B. Normalisasi STATUS setiap termin
+            * ----------------------------------------------------------*/
+            if ($isLunas) {
+                // semua → 1, lalu terbaru → 2
+                $spb->termins()->update([
+                    'type_termin_spb' => SpbProject::TYPE_TERMIN_BELUM_LUNAS,
+                ]);
+                if ($latest) {
+                    $latest->update(['type_termin_spb' => SpbProject::TYPE_TERMIN_LUNAS]);
+                }
+            } else {
+                // pastikan tak ada yang 2
+                $spb->termins()
+                    ->where('type_termin_spb', SpbProject::TYPE_TERMIN_LUNAS)
+                    ->update(['type_termin_spb' => SpbProject::TYPE_TERMIN_BELUM_LUNAS]);
+            }
+
+            /* -----------------------------------------------------------
+            * 5.  Update kolom ringkasan SPB
+            * ----------------------------------------------------------*/
+            $currentType = $isLunas
+                ? SpbProject::TYPE_TERMIN_LUNAS          // 2
+                : SpbProject::TYPE_TERMIN_BELUM_LUNAS;   // 1
+
+            $spb->update([
+                'deskripsi_termin_spb' => $latest?->deskripsi_termin,
+                'type_termin_spb'      => $currentType,          // ← gunakan status baru
+                'harga_termin_spb'     => $totalTermin,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status'                 => 'SUCCESS',
+                'message'                => 'Selected termin(s) deleted successfully!',
+                'remaining_total_termin' => $totalTermin,
+            ]);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            Log::error('Error during SPB termin deletion: '.$th->getMessage());
+
+            return response()->json([
+                'status'  => 'ERROR',
+                'message' => $th->getMessage(),
+            ], 500);
+        }
     }
+
 
     public function updateTermin(UpdateTerminRequest $request, $docNo)
     {
