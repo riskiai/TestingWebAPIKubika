@@ -203,6 +203,22 @@ class ProjectController extends Controller
             $query->where('status_bonus_project', $statusBonus);
         }
 
+         if ($request->has('has_harga_borongan')) {
+            $flag = filter_var($request->has_harga_borongan, FILTER_VALIDATE_BOOLEAN);
+
+            if ($flag) {
+                // hanya proyek yg punya harga_type_project (≠ null & ≠ 0)
+                $query->whereNotNull('harga_type_project')
+                    ->where('harga_type_project', '>', 0);
+            } else {
+                // hanya proyek yg BELUM punya harga_type_project (null atau 0)
+                $query->where(function ($q) {
+                    $q->whereNull('harga_type_project')
+                    ->orWhere('harga_type_project', 0);
+                });
+            }
+        }
+
         // Filter pencarian
         if ($request->has('search')) {
             $query->where(function ($query) use ($request) {
@@ -442,6 +458,22 @@ class ProjectController extends Controller
             });
         }
 
+         if ($request->has('has_harga_borongan')) {
+            $flag = filter_var($request->has_harga_borongan, FILTER_VALIDATE_BOOLEAN);
+
+            if ($flag) {
+                // hanya proyek yg punya harga_type_project (≠ null & ≠ 0)
+                $query->whereNotNull('harga_type_project')
+                    ->where('harga_type_project', '>', 0);
+            } else {
+                // hanya proyek yg BELUM punya harga_type_project (null atau 0)
+                $query->where(function ($q) {
+                    $q->whereNull('harga_type_project')
+                    ->orWhere('harga_type_project', 0);
+                });
+            }
+        }
+
         if ($request->has('request_status_owner')) {
             $query->where('request_status_owner', $request->request_status_owner);
         }
@@ -578,6 +610,22 @@ class ProjectController extends Controller
                         'YEAR(STR_TO_DATE(date,"%Y-%m-%d")) = ?',
                         [$request->year]
                     );
+                }
+
+                if ($request->has('has_harga_borongan')) {
+                    $flag = filter_var($request->has_harga_borongan, FILTER_VALIDATE_BOOLEAN);
+
+                    if ($flag) {
+                        // proyek dengan harga_type_project diisi
+                        $q->whereNotNull('harga_type_project')
+                        ->where('harga_type_project', '>', 0);
+                    } else {
+                        // proyek tanpa harga_type_project
+                        $q->where(function ($b) {
+                            $b->whereNull('harga_type_project')
+                            ->orWhere('harga_type_project', 0);
+                        });
+                    }
                 }
             })
             ->sum('harga_total_pembayaran_borongan_spb');
