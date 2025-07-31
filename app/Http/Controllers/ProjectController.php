@@ -942,95 +942,111 @@ class ProjectController extends Controller
     }
 
 
-    public function updateTermin(UpdatePaymentTerminRequest $request, $id)
+   public function updateTermin(UpdatePaymentTerminRequest $request, $id)
     {
         DB::beginTransaction();
 
         try {
-            $project = Project::with(['projectTermins'])->findOrFail($id);
+            $project = Project::with('projectTermins')->findOrFail($id);
 
             if (!$project) {
                 return response()->json([
-                    'status' => 'ERROR',
+                    'status'  => 'ERROR',
                     'message' => 'Project not found!',
                 ], 404);
             }
 
-            // Variabel untuk menyimpan data termin terakhir yang diupdate
             $lastUpdatedTerminData = null;
 
-            // Loop untuk memperbarui setiap termin dalam request
-            foreach ($request->riwayat_termin as $terminData) {
-                $termin = $project->projectTermins->where('id', $terminData['id'])->first();
+            /* =========================================================
+            *  LOOP SETIAP TERMIN
+            * ======================================================= */
+            foreach ($request->riwayat_termin as $index => $terminData) {
 
+                /* ---------- Ambil model termin ---------- */
+                $termin = $project->projectTermins->firstWhere('id', $terminData['id']);
                 if (!$termin) {
                     return response()->json([
-                        'status' => 'ERROR',
+                        'status'  => 'ERROR',
                         'message' => "Termin with ID {$terminData['id']} not found!",
                     ], 404);
                 }
 
-                // **Cek dan Update File Attachment**
-                $fileAttachmentPath = $termin->file_attachment_pembayaran;
+                /* ---------- Cek & simpan file attachment ---------- */
+                $fileAttachmentPath = $termin->file_attachment_pembayaran;      // path lama
 
-                if ($request->hasFile("riwayat_termin.{$terminData['id']}.attachment_file_termin_proyek")) {
-                    $file = $request->file("riwayat_termin.{$terminData['id']}.attachment_file_termin_proyek");
+                // field bisa dikirim dgn key id *atau* index → cek keduanya
+                $keyById    = "riwayat_termin.{$terminData['id']}.attachment_file_termin_proyek";
+                $keyByIndex = "riwayat_termin.$index.attachment_file_termin_proyek";
 
-                    if ($file->isValid()) {
-                        // Hapus file lama jika ada
-                        if ($fileAttachmentPath && Storage::disk('public')->exists($fileAttachmentPath)) {
-                            Storage::disk('public')->delete($fileAttachmentPath);
-                        }
+                $file = null;
+                if ($request->hasFile($keyById)) {
+                    $file = $request->file($keyById);
+                } elseif ($request->hasFile($keyByIndex)) {
+                    $file = $request->file($keyByIndex);
+                }
 
-                        // Simpan file baru
-                        $fileAttachmentPath = $file->store(Project::ATTACHMENT_FILE_TERMIN_PROYEK, 'public');
-                    } else {
+                if ($file) {
+                    if (!$file->isValid()) {
                         return response()->json([
-                            'status' => 'ERROR',
+                            'status'  => 'ERROR',
                             'message' => 'File upload failed',
                         ], 400);
                     }
+
+                    // hapus lama jika ada
+                    if ($fileAttachmentPath && Storage::disk('public')->exists($fileAttachmentPath)) {
+                        Storage::disk('public')->delete($fileAttachmentPath);
+                    }
+
+                    // simpan baru
+                    $fileAttachmentPath = $file->store(
+                        Project::ATTACHMENT_FILE_TERMIN_PROYEK,
+                        'public'
+                    );
                 }
 
-                // **Update Data Termin**
+                /* ---------- Update data termin ---------- */
                 $termin->update([
-                    'harga_termin' => (float) $terminData['harga_termin_proyek'],
-                    'deskripsi_termin' => $terminData['deskripsi_termin_proyek'],
-                    'type_termin' => (string) $terminData['type_termin_proyek'],
-                    'tanggal_payment' => $terminData['payment_date_termin_proyek'],
-                    'file_attachment_pembayaran' => $fileAttachmentPath, // Simpan string path file
+                    'harga_termin'              => (float) $terminData['harga_termin_proyek'],
+                    'deskripsi_termin'          => $terminData['deskripsi_termin_proyek'],
+                    'type_termin'               => (string) $terminData['type_termin_proyek'],
+                    'tanggal_payment'           => $terminData['payment_date_termin_proyek'],
+                    'file_attachment_pembayaran'=> $fileAttachmentPath,  // path baru / lama
                 ]);
 
-                // Simpan data termin terakhir yang diupdate
                 $lastUpdatedTerminData = $terminData;
             }
 
-            // **Update Deskripsi & Type Termin di Project**
+            /* ---------- Update kolom ringkasan di Project ---------- */
             if ($lastUpdatedTerminData) {
                 $project->update([
                     'deskripsi_termin_proyek' => $lastUpdatedTerminData['deskripsi_termin_proyek'],
-                    'type_termin_proyek' => json_encode([
-                        "id" => (string) $lastUpdatedTerminData['type_termin_proyek'],
-                        "name" => $lastUpdatedTerminData['type_termin_proyek'] == Project::TYPE_TERMIN_PROYEK_LUNAS ? "Lunas" : "Belum Lunas",
+                    'type_termin_proyek'      => json_encode([
+                        'id'   => (string) $lastUpdatedTerminData['type_termin_proyek'],
+                        'name' => $lastUpdatedTerminData['type_termin_proyek'] == Project::TYPE_TERMIN_PROYEK_LUNAS
+                            ? 'Lunas' : 'Belum Lunas',
                     ], JSON_UNESCAPED_UNICODE),
                 ]);
             }
 
-            // **Hitung ulang total harga_termin**
+            /* ---------- Hitung ulang total harga_termin ---------- */
             $totalHargaTermin = $project->projectTermins()->sum('harga_termin');
             $project->update([
                 'harga_termin_proyek' => (float) $totalHargaTermin,
             ]);
 
-            // **Ambil termin terbaru berdasarkan `tanggal_payment` & `created_at`**
+            /* ---------- Ambil termin terbaru utk summary ---------- */
             $latestTermin = $project->projectTermins()
-                ->orderBy('tanggal_payment', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('tanggal_payment', 'asc')
+                ->orderBy('created_at',    'asc')
                 ->first();
 
             if ($latestTermin) {
                 $project->update([
-                    'file_pembayaran_termin' => is_string($latestTermin->file_attachment_pembayaran) ? $latestTermin->file_attachment_pembayaran : null,
+                    'file_pembayaran_termin'     => is_string($latestTermin->file_attachment_pembayaran)
+                        ? $latestTermin->file_attachment_pembayaran
+                        : null,
                     'payment_date_termin_proyek' => $latestTermin->tanggal_payment,
                 ]);
             }
@@ -1038,19 +1054,19 @@ class ProjectController extends Controller
             DB::commit();
 
             return response()->json([
-                'status' => 'SUCCESS',
+                'status'  => 'SUCCESS',
                 'message' => 'Termin updated successfully!',
             ]);
-
         } catch (\Throwable $th) {
             DB::rollBack();
 
             return response()->json([
-                'status' => 'ERROR',
+                'status'  => 'ERROR',
                 'message' => $th->getMessage(),
             ], 500);
         }
     }
+
 
     /* public function deleteTermin(Request $request, $id)
     {
