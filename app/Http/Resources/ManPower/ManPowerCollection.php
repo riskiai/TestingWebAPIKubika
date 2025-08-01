@@ -9,15 +9,13 @@ use Illuminate\Http\Resources\Json\ResourceCollection;
 class ManPowerCollection extends ResourceCollection
 {
     /**
-     * Transform the resource collection into an array.
-     *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
         $rows = [];
 
-        foreach ($this as $manPower) {
+        foreach ($this->collection as $manPower) {
             $rows[] = [
                 'id'                            => $manPower->id,
                 'work_type'                     => $manPower->work_type ? 'Tukang Harian' : 'Tukang Borongan',
@@ -50,20 +48,14 @@ class ManPowerCollection extends ResourceCollection
                 'created_by'                    => [
                     'name'       => $manPower->creator->name ?? $manPower->created_by,
                     'created_at' => Carbon::parse($manPower->created_at)
-                                     ->timezone('Asia/Jakarta')
-                                     ->toDateTimeString(),
+                                         ->timezone('Asia/Jakarta')
+                                         ->toDateTimeString(),
                 ],
                 'created_at'                    => $manPower->created_at,
                 'updated_at'                    => $manPower->updated_at,
             ];
         }
 
-        /* -------- total salary keseluruhan -------- */
-        $total = array_sum(array_column($rows, 'total_salary'));
-
-        return [
-            'data'                     => $rows,
-            'total_salary_keseluruhan' => $total,
-        ];
+        return [ 'data' => $rows ];
     }
 }

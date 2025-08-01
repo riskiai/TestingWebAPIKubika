@@ -116,10 +116,21 @@ class ManPowerController extends Controller
         // Urutkan berdasarkan entry_at secara descending
         $query->orderBy('entry_at', 'desc');
 
+        /* ===========================================================
+        * 2. HITUNG GRAND-TOTAL SEBELUM PAGINATION
+        *    – clone() supaya tidak ‘mengganggu’ query asli
+        * ========================================================= */
+        $grandTotal = (clone $query)->whereNull('deleted_at')
+            ->sum(DB::raw('current_salary + current_overtime_salary'));
+
         // Mendapatkan data dengan pagination
         $manPowers = $query->paginate($request->per_page);
 
-        return new ManPowerCollection($manPowers);
+        // return new ManPowerCollection($manPowers);
+        return (new ManPowerCollection($manPowers))
+            ->additional([
+                'total_salary_keseluruhan' => $grandTotal
+            ]);
     }
 
     public function manpowerall(Request $request) {
