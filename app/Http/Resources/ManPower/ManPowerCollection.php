@@ -27,9 +27,9 @@ class ManPowerCollection extends ResourceCollection
                 "hourly_overtime_salary_master" => $manPower->hourly_overtime_salary_master,
                 "hour_salary" => $manPower->hour_salary,
                 "hour_overtime" => $manPower->hour_overtime,
-                "current_salary" => $manPower->current_salary,
-                "current_overtime_salary" => $manPower->current_overtime_salary,
-                "total_salary" => $manPower->current_salary + $manPower->current_overtime_salary,
+                'current_salary'               => $manPower->current_salary,
+                'current_overtime_salary'      => $manPower->current_overtime_salary,
+                'total_salary'                 => $manPower->total_salary,
                 "description" => $manPower->description,
                 "entry_at" => $manPower->entry_at,
               /*  "project" => $manPower->project ? [
