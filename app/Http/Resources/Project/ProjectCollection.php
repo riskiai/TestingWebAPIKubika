@@ -494,7 +494,7 @@ class ProjectCollection extends ResourceCollection
         ];
     } */
 
-    /* protected function costProgress($project)
+    protected function costProgress($project)
     {
         $status = Project::STATUS_OPEN;
         $totalSpbCost = 0;
@@ -559,59 +559,7 @@ class ProjectCollection extends ResourceCollection
             'spb_borongan_cost' => $totalSpbBoronganCost, 
             'man_power_cost' => $totalManPowerCost,
         ];
-    } */
-
-    protected function costProgress($project)
-{
-    $status               = Project::STATUS_OPEN;
-    $totalSpbCost         = 0;
-    $totalManPowerCost    = 0;
-    $totalSpbBoronganCost = 0;
-
-    /* ===================== 1. HITUNG COST SPB ===================== */
-    $spbProjects = $project->spbProjects()->get();
-
-    foreach ($spbProjects as $spbProject) {
-        if ($spbProject->spbproject_category_id == SpbProject_Category::BORONGAN) {
-            $totalSpbBoronganCost += $spbProject->harga_total_pembayaran_borongan_spb ?? 0;
-        } else {
-            if (in_array(
-                    $spbProject->tab_spb,
-                    [SpbProject::TAB_SUBMIT, SpbProject::TAB_VERIFIED,
-                     SpbProject::TAB_PAYMENT_REQUEST, SpbProject::TAB_PAID])
-            ) {
-                $totalSpbCost += $spbProject->getTotalProdukAttribute();
-            }
-        }
     }
-
-    /* ===================== 2. HITUNG COST MAN-POWER ===================== */
-    /*  – Selalu exclude soft-delete
-       – Gunakan SUM langsung → jauh lebih cepat daripada foreach      */
-    $totalManPowerCost = $project->manPowers()              // relasi hasMany
-        ->whereNull('deleted_at')                           // *penting*
-        ->sum(DB::raw('current_salary + current_overtime_salary'));
-
-    /* ===================== 3. TOTAL & STATUS ===================== */
-    $totalCost    = $totalSpbCost + $totalManPowerCost + $totalSpbBoronganCost;
-    $costEstimate = $project->cost_estimate > 0
-                    ? round(($totalCost / $project->cost_estimate) * 100, 2)
-                    : 0;
-
-    if ($costEstimate > 90)  $status = Project::STATUS_NEED_TO_CHECK;
-    if ($costEstimate == 100) $status = Project::STATUS_CLOSED;
-
-    $project->update(['status_cost_progres' => $status]);
-
-    return [
-        'status_cost_progres' => $status,
-        'percent'            => $costEstimate.'%',
-        'real_cost'          => $totalCost,
-        'spb_produk_cost'    => $totalSpbCost,
-        'spb_borongan_cost'  => $totalSpbBoronganCost,
-        'man_power_cost'     => $totalManPowerCost,
-    ];
-}
 
 
     protected function tukangHarianSalary($query) {
