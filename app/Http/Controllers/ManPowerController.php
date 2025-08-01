@@ -223,9 +223,9 @@ class ManPowerController extends Controller
         // Mendapatkan data dengan pagination
         $manPowers = $query->get();
 
-        // return new ManPowerCollection($manPowers);
-          return (new ManPowerCollection($manPowers))
-               ->withTotal($grandTotal);
+        return new ManPowerCollection($manPowers);
+        //   return (new ManPowerCollection($manPowers))
+        //        ->withTotal($grandTotal);
     }
 
     public function counting(Request $request)
