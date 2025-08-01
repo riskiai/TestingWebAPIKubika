@@ -14,6 +14,7 @@ use App\Http\Requests\ManPower\StoreRequest;
 use App\Http\Requests\ManPower\UpdateRequest;
 use App\Http\Resources\ManPower\ManPowerCollection;
 
+
 class ManPowerController extends Controller
 {
     protected $manPower, $user, $project;
@@ -216,9 +217,9 @@ class ManPowerController extends Controller
 
         // Urutkan berdasarkan entry_at secara descending
         $query->orderBy('entry_at', 'desc');
-        $grandTotal = (clone $query)
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('current_salary + current_overtime_salary'));
+        // $grandTotal = (clone $query)
+        //     ->whereNull('deleted_at')
+        //     ->sum(DB::raw('current_salary + current_overtime_salary'));
 
         // Mendapatkan data dengan pagination
         $manPowers = $query->get();
