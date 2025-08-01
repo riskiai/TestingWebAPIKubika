@@ -32,85 +32,62 @@ class ManPowerController extends Controller
         $query = $this->manPower->with(['user.divisi']);
         $filtered = false;
 
-        if ($request->filled('divisi_name')) {
+         if ($request->filled('divisi_name')) {
+            $filtered = true;
             $divisi = trim($request->divisi_name);
-
             $query->whereHas('user.divisi', function ($q) use ($divisi) {
                 $q->where(function ($inner) use ($divisi) {
                     $inner->whereRaw('LOWER(name) = ?', [strtolower($divisi)])
-                        ->orWhereRaw('LOWER(kode_divisi) = ?', [strtolower($divisi)]);
+                          ->orWhereRaw('LOWER(kode_divisi) = ?', [strtolower($divisi)]);
                 });
             });
         }
 
         // Filter berdasarkan pencarian deskripsi atau nama pengguna
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', '%' . $search . '%')
-                ->orWhereHas('user', function ($query) use ($search) {
-                    $query->where('name', 'like', '%' . $search . '%');
+        if ($request->filled('search')) {
+                $filtered = true;
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('description', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"));
                 });
-            });
-        }
+            }
 
         // Filter berdasarkan user_id
-        if ($request->has('user_id')) {
-            $query->where("user_id", $request->user_id);
+        if ($request->filled('user_id')) {
+            $filtered = true;
+            $query->where('user_id', $request->user_id);
         }
 
-        // Filter berdasarkan project_id
         if ($request->filled('project_id')) {
             $filtered = true;
             $query->where('project_id', $request->project_id);
         }
-        
-        // Filter berdasarkan work_type
-        if ($request->has('work_type')) {
-            $workType = $request->work_type;
-            if ($workType == 1) {
-                $query->where('work_type', 1);
-            } elseif ($workType == 0) {
-                $query->where('work_type', 0);
-            }
+
+        if ($request->filled('work_type')) {
+            $filtered = true;
+            $query->where('work_type', $request->work_type);
         }
 
-        // Filter berdasarkan project_type
-        if ($request->has('project_type')) {
-            $projectType = $request->project_type;
-            if ($projectType == 1) {
-                $query->where('project_type', 1);
-            } elseif ($projectType == 0) {
-                $query->where('project_type', 0);
-            }
+        if ($request->filled('project_type')) {
+            $filtered = true;
+            $query->where('project_type', $request->project_type);
         }
 
-        // Filter berdasarkan rentang tanggal entry_at
-        if ($request->has('entry_at')) {
-            $dates = explode(',', $request->entry_at);  // Memisahkan tanggal yang dipisah koma
-            if (count($dates) == 2) {
-                $start_date = trim($dates[0]);
-                $end_date = trim($dates[1]);
-
-                // Pastikan tanggalnya valid dengan format yang benar
-                if (strtotime($start_date) && strtotime($end_date)) {
-                    $start_date = date('Y-m-d 00:00:00', strtotime($start_date)); // Pastikan waktu mulai pada pukul 00:00
-                    $end_date = date('Y-m-d 23:59:59', strtotime($end_date));   // Pastikan waktu selesai pada pukul 23:59
-
-                    // Apply filter untuk rentang tanggal
-                    $query->whereBetween('entry_at', [$start_date, $end_date]);
-                } else {
-                    // Jika tanggal tidak valid, beri respon error
-                    return response()->json(['error' => 'Invalid date format'], 400);
-                }
+        if ($request->filled('entry_at')) {
+            $filtered = true;
+            [$start, $end] = array_map('trim', explode(',', $request->entry_at));
+            if (strtotime($start) && strtotime($end)) {
+                $query->whereBetween('entry_at', [
+                    "{$start} 00:00:00", "{$end} 23:59:59",
+                ]);
             } else {
-                // Jika parameter tanggal tidak valid (misal tidak ada koma atau hanya satu tanggal)
-                return response()->json(['error' => 'Invalid date range format. Format should be: YYYY-MM-DD,YYYY-MM-DD'], 400);
+                return response()->json(['error' => 'Invalid date range format.'], 400);
             }
         }
 
-        // Filter berdasarkan tanggal tertentu (optional)
-        if ($request->has('date')) {
+        if ($request->filled('date')) {
+            $filtered = true;
             $query->whereDate('created_at', $request->date);
         }
 
