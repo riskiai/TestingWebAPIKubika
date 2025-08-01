@@ -130,8 +130,8 @@ class ManPowerController extends Controller
     }
 
     public function manpowerall(Request $request) {
-        $query = $this->manPower->with('user');
-        //  $query = $this->manPower->with(['user.divisi']);
+        // $query = $this->manPower->with('user');
+         $query = $this->manPower->with(['user.divisi']);
 
         // Filter berdasarkan pencarian deskripsi atau nama pengguna
         if ($request->has('search')) {
@@ -217,16 +217,16 @@ class ManPowerController extends Controller
 
         // Urutkan berdasarkan entry_at secara descending
         $query->orderBy('entry_at', 'desc');
-        // $grandTotal = (clone $query)
-        //     ->whereNull('deleted_at')
-        //     ->sum(DB::raw('current_salary + current_overtime_salary'));
+        $grandTotal = (clone $query)
+            ->whereNull('deleted_at')
+            ->sum(DB::raw('current_salary + current_overtime_salary'));
 
         // Mendapatkan data dengan pagination
         $manPowers = $query->get();
 
-        return new ManPowerCollection($manPowers);
-        //   return (new ManPowerCollection($manPowers))
-        //        ->withTotal($grandTotal);
+        // return new ManPowerCollection($manPowers);
+          return (new ManPowerCollection($manPowers))
+               ->withTotal($grandTotal);
     }
 
     public function counting(Request $request)
