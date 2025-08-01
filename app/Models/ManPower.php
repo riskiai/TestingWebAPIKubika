@@ -4,9 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\SoftDeletes; 
 
 class ManPower extends Model
 {
@@ -14,35 +15,15 @@ class ManPower extends Model
 
     protected $guarded = [];
 
-    /* ────────  Relationships  ──────── */
-    public function user(): HasOne
-    {
+    public function user() : HasOne {
         return $this->hasOne(User::class, 'id', 'user_id');
     }
 
-    public function project(): HasOne
-    {
-        return $this->hasOne(Project::class, 'id', 'project_id');
+    public function project() : HasOne {
+        return $this->HasOne(Project::class, 'id', 'project_id');
     }
 
-    public function logs(): HasMany
-    {
+    public function logs() : HasMany {
         return $this->hasMany(LogManPower::class, 'man_power_id', 'id');
-    }
-
-    /* ────────  Accessors  ──────── */
-    public function getCurrentSalaryAttribute($value): int
-    {
-        return (int) ($value ?? 0);
-    }
-
-    public function getCurrentOvertimeSalaryAttribute($value): int
-    {
-        return (int) ($value ?? 0);
-    }
-
-    public function getTotalSalaryAttribute(): int
-    {
-        return $this->current_salary + $this->current_overtime_salary;
     }
 }
