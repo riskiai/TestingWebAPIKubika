@@ -30,9 +30,9 @@ class ManPowerController extends Controller
     {
         // $query = $this->manPower->with('user');
         $query = $this->manPower->with(['user.divisi']);
+        $filtered = false;
 
-    
-         if ($request->filled('divisi_name')) {
+        if ($request->filled('divisi_name')) {
             $divisi = trim($request->divisi_name);
 
             $query->whereHas('user.divisi', function ($q) use ($divisi) {
@@ -42,7 +42,6 @@ class ManPowerController extends Controller
                 });
             });
         }
-
 
         // Filter berdasarkan pencarian deskripsi atau nama pengguna
         if ($request->has('search')) {
@@ -61,10 +60,11 @@ class ManPowerController extends Controller
         }
 
         // Filter berdasarkan project_id
-        if ($request->has('project_id')) {
-            $query->where("project_id", $request->project_id);
+        if ($request->filled('project_id')) {
+            $filtered = true;
+            $query->where('project_id', $request->project_id);
         }
-
+        
         // Filter berdasarkan work_type
         if ($request->has('work_type')) {
             $workType = $request->work_type;
@@ -86,28 +86,28 @@ class ManPowerController extends Controller
         }
 
         // Filter berdasarkan rentang tanggal entry_at
-    if ($request->has('entry_at')) {
-        $dates = explode(',', $request->entry_at);  // Memisahkan tanggal yang dipisah koma
-        if (count($dates) == 2) {
-            $start_date = trim($dates[0]);
-            $end_date = trim($dates[1]);
+        if ($request->has('entry_at')) {
+            $dates = explode(',', $request->entry_at);  // Memisahkan tanggal yang dipisah koma
+            if (count($dates) == 2) {
+                $start_date = trim($dates[0]);
+                $end_date = trim($dates[1]);
 
-            // Pastikan tanggalnya valid dengan format yang benar
-            if (strtotime($start_date) && strtotime($end_date)) {
-                $start_date = date('Y-m-d 00:00:00', strtotime($start_date)); // Pastikan waktu mulai pada pukul 00:00
-                $end_date = date('Y-m-d 23:59:59', strtotime($end_date));   // Pastikan waktu selesai pada pukul 23:59
+                // Pastikan tanggalnya valid dengan format yang benar
+                if (strtotime($start_date) && strtotime($end_date)) {
+                    $start_date = date('Y-m-d 00:00:00', strtotime($start_date)); // Pastikan waktu mulai pada pukul 00:00
+                    $end_date = date('Y-m-d 23:59:59', strtotime($end_date));   // Pastikan waktu selesai pada pukul 23:59
 
-                // Apply filter untuk rentang tanggal
-                $query->whereBetween('entry_at', [$start_date, $end_date]);
+                    // Apply filter untuk rentang tanggal
+                    $query->whereBetween('entry_at', [$start_date, $end_date]);
+                } else {
+                    // Jika tanggal tidak valid, beri respon error
+                    return response()->json(['error' => 'Invalid date format'], 400);
+                }
             } else {
-                // Jika tanggal tidak valid, beri respon error
-                return response()->json(['error' => 'Invalid date format'], 400);
+                // Jika parameter tanggal tidak valid (misal tidak ada koma atau hanya satu tanggal)
+                return response()->json(['error' => 'Invalid date range format. Format should be: YYYY-MM-DD,YYYY-MM-DD'], 400);
             }
-        } else {
-            // Jika parameter tanggal tidak valid (misal tidak ada koma atau hanya satu tanggal)
-            return response()->json(['error' => 'Invalid date range format. Format should be: YYYY-MM-DD,YYYY-MM-DD'], 400);
         }
-    }
 
         // Filter berdasarkan tanggal tertentu (optional)
         if ($request->has('date')) {
@@ -122,7 +122,10 @@ class ManPowerController extends Controller
             ->sum(DB::raw('current_salary + current_overtime_salary'));
 
         // Mendapatkan data dengan pagination
-        $manPowers = $query->paginate($request->per_page);
+        // $manPowers = $query->paginate($request->per_page);
+        $manPowers = $filtered
+            ? $query->get()                                           // semua baris jika ter-filter
+            : $query->paginate($request->input('per_page', 15)); 
 
         // return new ManPowerCollection($manPowers);
          return (new ManPowerCollection($manPowers))
