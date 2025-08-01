@@ -190,6 +190,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     /* Man Power */
     Route::prefix('man-power')->group(function () {
         Route::get('/', [ManPowerController::class, 'index']);
+        Route::get('/project', [ManPowerController::class, 'indexproject']);
         Route::get('/all', [ManPowerController::class, 'manpowerall']);
         Route::get('/counting', [ManPowerController::class, 'counting']);
         Route::post('/', [ManPowerController::class, 'store']);

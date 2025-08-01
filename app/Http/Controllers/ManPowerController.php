@@ -102,7 +102,90 @@ class ManPowerController extends Controller
         // $manPowers = $query->paginate($request->per_page);
         $manPowers = $filtered
             ? $query->get()                                           // semua baris jika ter-filter
-            : $query->paginate($request->input('per_page', 15)); 
+            : $query->paginate($request->input('per_page', 10)); 
+
+        // return new ManPowerCollection($manPowers);
+         return (new ManPowerCollection($manPowers))
+               ->withTotal($grandTotal);
+    }
+
+     public function indexproject(Request $request)
+    {
+        // $query = $this->manPower->with('user');
+        $query = $this->manPower->with(['user.divisi']);
+        // $filtered = false;
+
+         if ($request->filled('divisi_name')) {
+            // $filtered = true;
+            $divisi = trim($request->divisi_name);
+            $query->whereHas('user.divisi', function ($q) use ($divisi) {
+                $q->where(function ($inner) use ($divisi) {
+                    $inner->whereRaw('LOWER(name) = ?', [strtolower($divisi)])
+                          ->orWhereRaw('LOWER(kode_divisi) = ?', [strtolower($divisi)]);
+                });
+            });
+        }
+
+        // Filter berdasarkan pencarian deskripsi atau nama pengguna
+        if ($request->filled('search')) {
+                // $filtered = true;
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('description', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"));
+                });
+            }
+
+        // Filter berdasarkan user_id
+        if ($request->filled('user_id')) {
+            // $filtered = true;
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->filled('project_id')) {
+            // $filtered = true;
+            $query->where('project_id', $request->project_id);
+        }
+
+        if ($request->filled('work_type')) {
+            // $filtered = true;
+            $query->where('work_type', $request->work_type);
+        }
+
+        if ($request->filled('project_type')) {
+            // $filtered = true;
+            $query->where('project_type', $request->project_type);
+        }
+
+        if ($request->filled('entry_at')) {
+            // $filtered = true;
+            [$start, $end] = array_map('trim', explode(',', $request->entry_at));
+            if (strtotime($start) && strtotime($end)) {
+                $query->whereBetween('entry_at', [
+                    "{$start} 00:00:00", "{$end} 23:59:59",
+                ]);
+            } else {
+                return response()->json(['error' => 'Invalid date range format.'], 400);
+            }
+        }
+
+        if ($request->filled('date')) {
+            // $filtered = true;
+            $query->whereDate('created_at', $request->date);
+        }
+
+        // Urutkan berdasarkan entry_at secara descending
+        $query->orderBy('entry_at', 'desc');
+
+        $grandTotal = (clone $query)
+            ->whereNull('deleted_at')   // pastikan tidak hitung yang soft-delete
+            ->sum(DB::raw('current_salary + current_overtime_salary'));
+
+        // Mendapatkan data dengan pagination
+        $manPowers = $query->paginate($request->per_page);
+        // $manPowers = $filtered
+        //     ? $query->get()                                           // semua baris jika ter-filter
+        //     : $query->paginate($request->input('per_page', 10)); 
 
         // return new ManPowerCollection($manPowers);
          return (new ManPowerCollection($manPowers))
