@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use App\Facades\MessageActeeve;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Requests\ManPower\StoreRequest;
 use App\Http\Requests\ManPower\UpdateRequest;
 use App\Http\Resources\ManPower\ManPowerCollection;
@@ -556,6 +557,7 @@ class ManPowerController extends Controller
             ]);
 
             DB::commit();
+            // Cache::forget('latest_log_date');
             return MessageActeeve::success("Man power has been successfully created");
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -705,19 +707,20 @@ class ManPowerController extends Controller
         try {
 
             Log::info('Deleting ManPower: ', [
-                'deleted_at' => now(),
-                'deleted_by' => auth()->user()->name
+                 'man_power_id' => $manPower->id,
+                'deleted_by'   => auth()->user()->name,  // atau id()
+                'deleted_at'   => now(),
             ]);
             
             // Menambahkan log penghapusan ke dalam tabel log_man_powers
             DB::table('log_man_powers')->insert([
                 'man_power_id' => $manPower->id,
-                'message' => 'Man power deleted by ' . auth()->user()->name,
-                'created_by' => auth()->user()->name,
-                'created_at' => now(),
-                'updated_at' => now(),
-                'deleted_at' => now(), // Waktu penghapusan
-                'deleted_by' => auth()->user()->name, // Nama pengguna yang menghapus
+                'message'      => 'Man power deleted by ' . auth()->user()->name,
+                'created_by'   => auth()->user()->name,
+                'deleted_by'   => auth()->user()->name, // kolom baru
+                'created_at'   => now(),
+                'updated_at'   => now(),
+                'deleted_at'   => now(),
             ]);
 
             // Hapus data dari tabel man_powers
