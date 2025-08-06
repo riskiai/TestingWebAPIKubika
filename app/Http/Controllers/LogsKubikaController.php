@@ -55,7 +55,7 @@ class LogsKubikaController extends Controller
         // **2. Ambil data berdasarkan tanggal terbaru**
          $logManPowers = DB::table('log_man_powers as l')
             ->leftJoin('man_powers as mp', 'l.man_power_id', '=', 'mp.id')
-            ->leftJoin('users as u', 'mp.deleted_by', '=', 'u.id')
+            ->leftJoin('users as u',       'mp.deleted_by',  '=', 'u.id')
             ->selectRaw('
                 l.id,
                 l.man_power_id                 as reference_id,
@@ -65,11 +65,15 @@ class LogsKubikaController extends Controller
                 l.created_at,
                 l.updated_at,
                 l.deleted_at,
-                \'man_power\'                  as type
+                CASE
+                    WHEN l.deleted_at IS NOT NULL THEN "man_power_deleted"
+                    ELSE "man_power_created"
+                END AS type               -- ← di sini perbedaan type
             ')
             ->orderByDesc('l.created_at')
-            ->limit(50)              // ← ambil 50 log terakhir tanpa filter tanggal
+            ->limit(50)                   // ambil 50 log terakhir
             ->get();
+
 
 
 
