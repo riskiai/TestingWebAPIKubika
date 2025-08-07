@@ -24,6 +24,7 @@ class LogsKubikaController extends Controller
                 DB::table('log_man_powers')->max('created_at'),
                 DB::table('log_man_powers')->max('deleted_at'),
                 DB::table('logs_spbprojects')->max('created_at'),
+                DB::table('logs_spbprojects')->max('deleted_at'),
                 DB::table('projects')->max('created_at'),
                 DB::table('spb_projects')->max('created_at'),
                 DB::table('product_company_spbproject')->max('created_at'),
@@ -74,10 +75,7 @@ class LogsKubikaController extends Controller
             ->limit(50)                   // ambil 50 log terakhir
             ->get();
 
-
-
-
-        $logsSpbProjects = DB::table('logs_spbprojects')
+        /* $logsSpbProjects = DB::table('logs_spbprojects')
             ->whereBetween('logs_spbprojects.created_at', [$minDate, $maxDate])
             ->orWhereBetween('logs_spbprojects.updated_at', [$minDate, $maxDate])
             ->select(
@@ -92,25 +90,31 @@ class LogsKubikaController extends Controller
             )
             ->addSelect(DB::raw("'spb_project' as type"))
             ->orderByDesc('created_at')
-            ->get();
+            ->get(); */
 
-        $logsProjects = DB::table('projects')
-            ->join('users', 'projects.user_id', '=', 'users.id')
-            ->whereBetween('projects.created_at', [$minDate, $maxDate])
-            ->orWhereBetween('projects.updated_at', [$minDate, $maxDate])
-            ->select(
-                DB::raw('NULL as id'),
-                'projects.id as reference_id',
-                'users.name as created_by',
-                DB::raw("'Created project' as message"),
-                'projects.created_at',
-                'projects.updated_at',
-                DB::raw('NULL as deleted_at'),   // ← tambahkan ini
-                DB::raw('NULL as deleted_by')    // ← tambahkan ini
-            )
-            ->addSelect(DB::raw("'project' as type"))
-            ->orderByDesc('projects.created_at')
-            ->get();
+        $logsSpbProjects = DB::table('logs_spbprojects as ls')
+        ->leftJoin('spb_projects as sp', 'ls.spb_project_id', '=', 'sp.doc_no_spb') // ambil deleted_by ID
+        ->leftJoin('users as u',        'sp.deleted_by',     '=', 'u.id')          // ambil nama user
+        ->whereBetween('ls.created_at', [$minDate, $maxDate])
+        ->orWhereBetween('ls.updated_at', [$minDate, $maxDate])
+        ->orWhereNotNull('ls.deleted_at')            // tampilkan yang sudah di-delete meski > 7 hari
+        ->selectRaw('
+            ls.id,
+            ls.spb_project_id                         as reference_id,
+            ls.name                                   as created_by,
+            COALESCE(ls.deleted_by, u.name)           as deleted_by,   -- jika kolom log NULL, pakai nama user
+            ls.message,
+            ls.created_at,
+            ls.updated_at,
+            ls.deleted_at,
+            CASE
+                WHEN ls.deleted_at IS NOT NULL THEN "spb_project_deleted"
+                ELSE "spb_project_created"
+            END                                        as type
+        ')
+        ->orderByDesc('ls.created_at')
+        ->limit(50)                      // ambil 50 log terakhir
+        ->get();
 
 
         $createdSpbs = DB::table('spb_projects')
@@ -131,69 +135,86 @@ class LogsKubikaController extends Controller
             ->orderByDesc('spb_projects.created_at')
             ->get();
 
-
         // **Tambahkan logs yang tidak boleh dihapus**
         /* ── $logsProductCompanySpb ───────────────────────────── */
-$logsProductCompanySpb = DB::table('product_company_spbproject')
-    ->join('spb_projects', 'product_company_spbproject.spb_project_id', '=', 'spb_projects.doc_no_spb')
-    ->join('users', 'spb_projects.user_id', '=', 'users.id')
-    ->select(
-        DB::raw('NULL as id'),
-        'product_company_spbproject.id as reference_id',
-        'users.name as created_by',
-        DB::raw("'Updated product in SPB project' as message"),
-        'product_company_spbproject.created_at',
-        'product_company_spbproject.updated_at',
-        DB::raw('NULL as deleted_at'),   // ← tambah
-        DB::raw('NULL as deleted_by')    // ← tambah
-    )
-    ->addSelect(DB::raw("'product spb project' as type"))
-    ->orderByDesc('created_at')
-    ->get();
+        $logsProductCompanySpb = DB::table('product_company_spbproject')
+            ->join('spb_projects', 'product_company_spbproject.spb_project_id', '=', 'spb_projects.doc_no_spb')
+            ->join('users', 'spb_projects.user_id', '=', 'users.id')
+            ->select(
+                DB::raw('NULL as id'),
+                'product_company_spbproject.id as reference_id',
+                'users.name as created_by',
+                DB::raw("'Updated product in SPB project' as message"),
+                'product_company_spbproject.created_at',
+                'product_company_spbproject.updated_at',
+                DB::raw('NULL as deleted_at'),   // ← tambah
+                DB::raw('NULL as deleted_by')    // ← tambah
+            )
+            ->addSelect(DB::raw("'product spb project' as type"))
+            ->orderByDesc('created_at')
+            ->get();
 
-/* ── $logsSpbProjectTermins ──────────────────────────── */
-$logsSpbProjectTermins = DB::table('spb_project_termins')
-    ->join('spb_projects', 'spb_project_termins.doc_no_spb', '=', 'spb_projects.doc_no_spb')
-    ->join('users', 'spb_projects.user_id', '=', 'users.id')
-    ->select(
-        DB::raw('NULL as id'),
-        'spb_project_termins.id as reference_id',
-        'users.name as created_by',
-        DB::raw("CASE 
-                    WHEN spb_project_termins.file_attachment_id IS NOT NULL 
-                    THEN 'Paid termin in SPB project' 
-                    ELSE 'Updated termin in SPB project' 
-                 END as message"),
-        'spb_project_termins.created_at',
-        'spb_project_termins.updated_at',
-        DB::raw('NULL as deleted_at'),   // ← tambah
-        DB::raw('NULL as deleted_by')    // ← tambah
-    )
-    ->addSelect(DB::raw("'spb project termin' as type"))
-    ->orderByDesc('created_at')
-    ->get();
+        /* ── $logsSpbProjectTermins ──────────────────────────── */
+        $logsSpbProjectTermins = DB::table('spb_project_termins')
+            ->join('spb_projects', 'spb_project_termins.doc_no_spb', '=', 'spb_projects.doc_no_spb')
+            ->join('users', 'spb_projects.user_id', '=', 'users.id')
+            ->select(
+                DB::raw('NULL as id'),
+                'spb_project_termins.id as reference_id',
+                'users.name as created_by',
+                DB::raw("CASE 
+                            WHEN spb_project_termins.file_attachment_id IS NOT NULL 
+                            THEN 'Paid termin in SPB project' 
+                            ELSE 'Updated termin in SPB project' 
+                        END as message"),
+                'spb_project_termins.created_at',
+                'spb_project_termins.updated_at',
+                DB::raw('NULL as deleted_at'),   // ← tambah
+                DB::raw('NULL as deleted_by')    // ← tambah
+            )
+            ->addSelect(DB::raw("'spb project termin' as type"))
+            ->orderByDesc('created_at')
+            ->get();
 
-/* ── $logsProjectTermins ─────────────────────────────── */
-$logsProjectTermins = DB::table('project_termins')
-    ->join('projects', 'project_termins.project_id', '=', 'projects.id')
-    ->join('users', 'projects.user_id', '=', 'users.id')
-    ->select(
-        DB::raw('NULL as id'),
-        'project_termins.id as reference_id',
-        'users.name as created_by',
-        DB::raw("CASE 
-                    WHEN project_termins.file_attachment_pembayaran IS NOT NULL 
-                    THEN 'Paid termin in project' 
-                    ELSE 'Updated termin in project' 
-                 END as message"),
-        'project_termins.created_at',
-        'project_termins.updated_at',
-        DB::raw('NULL as deleted_at'),   // ← tambah
-        DB::raw('NULL as deleted_by')    // ← tambah
-    )
-    ->addSelect(DB::raw("'project termin' as type"))
-    ->orderByDesc('created_at')
-    ->get();
+         $logsProjects = DB::table('projects')
+            ->join('users', 'projects.user_id', '=', 'users.id')
+            ->whereBetween('projects.created_at', [$minDate, $maxDate])
+            ->orWhereBetween('projects.updated_at', [$minDate, $maxDate])
+            ->select(
+                DB::raw('NULL as id'),
+                'projects.id as reference_id',
+                'users.name as created_by',
+                DB::raw("'Created project' as message"),
+                'projects.created_at',
+                'projects.updated_at',
+                DB::raw('NULL as deleted_at'),   // ← tambahkan ini
+                DB::raw('NULL as deleted_by')    // ← tambahkan ini
+            )
+            ->addSelect(DB::raw("'project' as type"))
+            ->orderByDesc('projects.created_at')
+            ->get();
+
+        /* ── $logsProjectTermins ─────────────────────────────── */
+        $logsProjectTermins = DB::table('project_termins')
+            ->join('projects', 'project_termins.project_id', '=', 'projects.id')
+            ->join('users', 'projects.user_id', '=', 'users.id')
+            ->select(
+                DB::raw('NULL as id'),
+                'project_termins.id as reference_id',
+                'users.name as created_by',
+                DB::raw("CASE 
+                            WHEN project_termins.file_attachment_pembayaran IS NOT NULL 
+                            THEN 'Paid termin in project' 
+                            ELSE 'Updated termin in project' 
+                        END as message"),
+                'project_termins.created_at',
+                'project_termins.updated_at',
+                DB::raw('NULL as deleted_at'),   // ← tambah
+                DB::raw('NULL as deleted_by')    // ← tambah
+            )
+            ->addSelect(DB::raw("'project termin' as type"))
+            ->orderByDesc('created_at')
+            ->get();
 
 
         // **3. Gabungkan semua data**

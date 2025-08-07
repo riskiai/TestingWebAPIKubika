@@ -2727,6 +2727,7 @@ class SPBController extends Controller
 
             // Hapus SpbProject itu sendiri (soft delete)
             $spbProject->delete();
+            //  Cache::forget('latest_log_date');
 
             DB::commit();
             return MessageActeeve::success("SpbProject $docNoSpb has been deleted");

@@ -5,12 +5,13 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\ProductCompanySpbProject;
+use Illuminate\Database\Eloquent\SoftDeletes; 
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes; 
 
 
 class SpbProject extends Model
@@ -294,6 +295,18 @@ class SpbProject extends Model
     public function logs()
     {
         return $this->hasMany(LogsSPBProject::class, 'spb_project_id', 'doc_no_spb');
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $spb): void {
+            // Hanya pada soft-delete, bukan forceDelete
+            if (! $spb->isForceDeleting() && Auth::check()) {
+                $spb->deleted_by = Auth::id();   // simpan user-id
+                // pastikan kolom lain tak ter-touch
+                $spb->save();
+            }
+        });
     }
     
     /* public function project()
