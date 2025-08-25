@@ -185,7 +185,10 @@ class DivisiController extends Controller
         }
     
         try {
-            User::where('divisi_id', $id)->update(['divisi_id' => null]);
+            // User::where('divisi_id', $id)->update(['divisi_id' => null]);
+
+            $divisi->deleted_by = auth()->user()->name ?? 'system';
+            $divisi->save();
 
             // Hapus divisi
             $divisi->delete();

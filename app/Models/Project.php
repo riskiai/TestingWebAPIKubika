@@ -80,7 +80,8 @@ class Project extends Model
         'deskripsi_termin_proyek',
         'type_termin_proyek',
         'harga_termin_proyek',
-        'payment_date_termin_proyek'
+        'payment_date_termin_proyek',
+        'deleted_by'
     ];
 
     /* protected $attributes = [
@@ -268,6 +269,14 @@ class Project extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
+    protected static function booted(): void
+    {
+        // Saat di-restore, kosongkan deleted_by supaya jelas siapa yang terakhir menghapus
+        static::restoring(function (Project $project) {
+            $project->deleted_by = null;
+        });
+    }
+
      // Relasi many-to-many dengan User
     public function tenagaKerja()
     {
@@ -287,7 +296,7 @@ class Project extends Model
 
     public function company(): HasOne
     {
-        return $this->hasOne(Company::class, 'id', 'company_id');
+        return $this->hasOne(Company::class, 'id', 'company_id')->withTrashed();
     }
 
     // public function spbProjects()

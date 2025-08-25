@@ -35,10 +35,19 @@ class Company extends Model
         'currency',
         'account_number',
         'swift_code',
+         'deleted_by',
     ];
 
     public function contactType()
     {
         return $this->belongsTo(ContactType::class, 'contact_type_id');
+    }
+
+    protected static function booted(): void
+    {
+        // Saat di-restore, kosongkan penanda penghapus agar tidak membingungkan
+        static::restoring(function (Company $company) {
+            $company->deleted_by = null;
+        });
     }
 }

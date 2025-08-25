@@ -595,6 +595,8 @@ class UsersController extends Controller
         }
 
         try {
+            $user->deleted_by = auth()->user()->name ?? 'system';
+            $user->save();
             $user->delete();
 
             DB::commit();

@@ -3,9 +3,10 @@
 namespace App\Http\Requests\Product;
 
 use App\Facades\MessageActeeve;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Validation\ValidationException;
 
 class CreateRequest extends FormRequest
@@ -27,7 +28,12 @@ class CreateRequest extends FormRequest
     {
         return [
             'nama' => 'required|string|max:255',
-            'id_kategori' => 'nullable|exists:kategori,id',
+            // 'id_kategori' => 'nullable|exists:kategori,id',
+             'id_kategori' => [
+                'nullable',
+                'integer',
+                Rule::exists('kategori', 'id')->whereNull('deleted_at'),
+            ],
             'deskripsi' => 'nullable|string',
             'type_pembelian' => 'nullable|string|max:255',
             // 'stok' => 'nullable|integer|min:0',

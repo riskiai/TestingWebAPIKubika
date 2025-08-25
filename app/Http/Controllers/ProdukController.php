@@ -241,6 +241,9 @@ class ProdukController extends Controller
         }
 
         try {
+            $product->deleted_by = auth()->user()->name ?? 'system';
+            $product->save();
+
             // Hapus kategori
             $product->delete();
 

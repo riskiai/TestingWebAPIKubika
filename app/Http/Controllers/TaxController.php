@@ -107,6 +107,9 @@ class TaxController extends Controller
         }
 
         try {
+            $tax->deleted_by = auth()->user()->name ?? 'system';
+            $tax->save();
+            
             $tax->delete();
 
             DB::commit();

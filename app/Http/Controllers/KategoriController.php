@@ -212,7 +212,10 @@ class KategoriController extends Controller
 
         try {
             // Set id_kategori menjadi NULL pada produk yang terkait
-            Product::where('id_kategori', $id)->update(['id_kategori' => null]);
+            // Product::where('id_kategori', $id)->update(['id_kategori' => null]);
+
+            $kategori->deleted_by = auth()->user()->name ?? 'system';
+            $kategori->save();
 
             // Hapus kategori
             $kategori->delete();

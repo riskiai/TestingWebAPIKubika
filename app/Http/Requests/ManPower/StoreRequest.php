@@ -3,9 +3,10 @@
 namespace App\Http\Requests\ManPower;
 
 use App\Facades\MessageActeeve;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Validation\ValidationException;
 
 class StoreRequest extends FormRequest
@@ -26,7 +27,12 @@ class StoreRequest extends FormRequest
     public function rules(): array
     {
          return [
-            'user_id' => 'required|numeric|exists:users,id',
+            // 'user_id' => 'required|numeric|exists:users,id',
+             'user_id' => [
+                'required',
+                'numeric',
+                Rule::exists('users', 'id')->whereNull('deleted_at'),
+            ],
             'project_id' => 'required|exists:projects,id',
             'work_type' => 'required|boolean',
             'project_type' => 'required|boolean',

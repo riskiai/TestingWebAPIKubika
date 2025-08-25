@@ -362,7 +362,7 @@ class ContactController extends Controller
 
         try {
             // Pastikan semua project yang terkait tidak terhapus, tetapi company_id-nya di-set NULL
-            Project::where('company_id', $id)->update(['company_id' => null]);
+            // Project::where('company_id', $id)->update(['company_id' => null]);
 
             // ProductCompanySpbProject::where('company_id', $id)->update(['company_id' => null]);
 
@@ -374,6 +374,9 @@ class ContactController extends Controller
             if ($contact->file) {
                 Storage::delete($contact->file);
             }
+
+            $contact->deleted_by = auth()->user()->name ?? 'system';
+            $contact->save();
 
             // Hapus contact
             $contact->delete();

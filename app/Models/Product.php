@@ -25,13 +25,16 @@ class Product extends Model
         'harga_product',
         'stok',
         'ongkir',
+        'deleted_by',
     ];
 
     // Relasi ke model Kategori (many to one)
     public function kategori()
     {
-        return $this->belongsTo(Kategori::class, 'id_kategori');
+        return $this->belongsTo(Kategori::class, 'id_kategori')->withTrashed();
     }
+
+    
 
     // Overriding method boot untuk menggenerate kode_produk secara otomatis
     protected static function boot()
@@ -41,6 +44,11 @@ class Product extends Model
         static::creating(function ($model) {
             $model->kode_produk = $model->generateKodeProduk();
         });
+
+        static::restoring(function (Product $product) {
+            $product->deleted_by = null;
+        });
+
     }
 
     // Fungsi untuk generate kode_produk

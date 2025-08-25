@@ -19,6 +19,7 @@ class Kategori extends Model
     protected $fillable = [
         'name',
         'kode_kategori', // Tambahkan kode_kategori di sini
+        'deleted_by',
     ];
 
     // Overriding method boot untuk menggenerate kode_kategori secara otomatis
@@ -28,6 +29,10 @@ class Kategori extends Model
 
         static::creating(function ($model) {
             $model->kode_kategori = $model->generateKodeKategori();
+        });
+
+         static::restoring(function (Kategori $kategori) {
+            $kategori->deleted_by = null;
         });
     }
 

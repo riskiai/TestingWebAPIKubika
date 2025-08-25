@@ -3,9 +3,10 @@
 namespace App\Http\Requests\User;
 
 use App\Facades\MessageActeeve;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Validation\ValidationException;
 
 class CreateRequest extends FormRequest
@@ -21,7 +22,12 @@ class CreateRequest extends FormRequest
             'name' => 'required|string|min:1|max:255',
             'email' => 'required|email|unique:users,email',
             'role' => 'required|exists:roles,id',
-            'divisi' => 'nullable|exists:divisis,id',
+            // 'divisi' => 'nullable|exists:divisis,id',
+             'divisi' => [
+                'nullable',
+                'integer', // kalau id bigint
+                Rule::exists('divisis', 'id')->whereNull('deleted_at'),
+            ],
             'daily_salary' => 'required|numeric|min:0',
             'hourly_salary' => 'required|numeric|min:0',
             'hourly_overtime_salary' => 'required|numeric|min:0',

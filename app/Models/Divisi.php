@@ -16,6 +16,7 @@ class Divisi extends Model
     protected $fillable = [
         'name',
         'kode_divisi',
+        'deleted_by',
     ];
 
     protected static function boot()
@@ -25,6 +26,10 @@ class Divisi extends Model
         // Generate kode_divisi saat membuat data baru
         static::creating(function ($model) {
             $model->kode_divisi = $model->generateKodeDivisi();
+        });
+
+        static::restoring(function (Divisi $divisi) {
+            $divisi->deleted_by = null;
         });
     }
 

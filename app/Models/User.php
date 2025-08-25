@@ -28,6 +28,7 @@ class User extends Authenticatable
         'password',
         'token',
         'status',
+        'deleted_by',
     ];
 
     protected $hidden = [
@@ -38,6 +39,13 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+     protected static function booted(): void
+    {
+        static::restoring(function (User $user) {
+            $user->deleted_by = null;
+        });
+    }
 
     public function role(): BelongsTo
     {
@@ -51,7 +59,7 @@ class User extends Authenticatable
 
     public function divisi(): BelongsTo
     {
-        return $this->belongsTo(Divisi::class);
+        return $this->belongsTo(Divisi::class)->withTrashed();
     }
 
     public function salary() : HasOne {

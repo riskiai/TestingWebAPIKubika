@@ -2385,6 +2385,8 @@ class ProjectController extends Controller
                 Storage::delete($project->file);
             }
     
+             $project->deleted_by = auth()->user()->name ?? 'system';
+             $project->save();  
             // Hapus proyek dari database
             $project->delete();
     
@@ -2398,8 +2400,5 @@ class ProjectController extends Controller
             return MessageActeeve::error($th->getMessage());
         }
     }
-    
-    
-
 
 }
