@@ -6,6 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;   
 
 class CreateRequest extends FormRequest
 {
@@ -34,8 +35,16 @@ public function rules(): array
             'type_termin_spb' => 'nullable|in:1,2',
             'vendor_borongan_id' => 'nullable|exists:companies,id',
             'produk_data' => 'nullable|array',
-            'produk_data.*.produk_id' => 'required|exists:products,id',
-            'produk_data.*.vendor_id' => 'required|exists:companies,id',
+            // 'produk_data.*.produk_id' => 'required|exists:products,id',
+            // 'produk_data.*.vendor_id' => 'required|exists:companies,id',
+            'produk_data.*.produk_id' => [
+                'required',
+                Rule::exists('products', 'id')->whereNull('deleted_at'),
+            ],
+            'produk_data.*.vendor_id' => [
+                'required',
+                Rule::exists('companies', 'id')->whereNull('deleted_at'),
+            ],
             'produk_data.*.ongkir' => 'nullable|numeric|min:0',
             'produk_data.*.harga' => 'nullable|numeric|min:0',
             // 'produk_data.*.stok' => 'nullable|integer|min:0',

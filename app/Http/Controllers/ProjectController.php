@@ -2363,12 +2363,18 @@ class ProjectController extends Controller
     public function destroy($id)
     {
         DB::beginTransaction();
+
+        $project = Project::find($id);
+        if (!$project) {
+            return MessageActeeve::notFound('data not found!');
+        }
+
     
         try {
             // Temukan proyek berdasarkan ID, atau akan gagal jika tidak ditemukan
             $project = Project::findOrFail($id);
 
-            SpbProject::where('project_id', $id)->update(['project_id' => null]);
+            // SpbProject::where('project_id', $id)->update(['project_id' => null]);
     
             // Hapus hubungan many-to-many terlebih dahulu jika ada
             $project->product()->detach();  // Menanggalkan hubungan dengan produk

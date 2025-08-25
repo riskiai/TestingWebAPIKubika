@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Project extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     const ATTACHMENT_FILE = 'attachment/project/file';
     const ATTACHMENT_FILE_SPB = 'attachment/project/spb_file';
@@ -115,7 +116,7 @@ class Project extends Model
     protected function generateSequenceNumber($year)
     {
         // Ambil ID proyek terakhir untuk tahun yang sama
-        $lastId = static::where('id', 'like', 'PRO-' . $year . '%')->max('id');
+        $lastId = static::where('id', 'like', 'PRO-' . $year . '%')->withTrashed()->max('id');
 
         if ($lastId) {
             // Ambil nomor urut dari ID terakhir dan increment

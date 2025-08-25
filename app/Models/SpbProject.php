@@ -277,10 +277,15 @@ class SpbProject extends Model
         return $this->morphOne(DocumentSPB::class, 'documentable');
     }
 
-     public function company(): HasOne
+     /* public function company(): HasOne
      {
          return $this->hasOne(Company::class, 'id', 'company_id');
-     }
+     } */
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id')->withTrashed();
+    }
 
     public function user(): BelongsTo
     {
@@ -289,7 +294,7 @@ class SpbProject extends Model
 
     public function project()
     {
-        return $this->belongsTo(Project::class, 'project_id', 'id'); 
+        return $this->belongsTo(Project::class, 'project_id', 'id')->withTrashed(); 
     }
     
     public function logs()

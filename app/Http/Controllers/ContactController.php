@@ -364,7 +364,7 @@ class ContactController extends Controller
             // Pastikan semua project yang terkait tidak terhapus, tetapi company_id-nya di-set NULL
             Project::where('company_id', $id)->update(['company_id' => null]);
 
-            ProductCompanySpbProject::where('company_id', $id)->update(['company_id' => null]);
+            // ProductCompanySpbProject::where('company_id', $id)->update(['company_id' => null]);
 
             // cek kondisi jika npwp / file tersedia, maka storage tersebut akan dihapus
             if ($contact->npwp) {

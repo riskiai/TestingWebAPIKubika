@@ -87,6 +87,9 @@ class ProductCompanySpbProject extends Model
         return round(($harga * $stok) + $ongkir + $ppnValue);
     } */
 
+    // Nambah Baru
+    // protected $with = ['product', 'company'];
+
     public function getPpnDetailAttribute()
     {
         $harga = floatval($this->harga);
@@ -152,15 +155,27 @@ class ProductCompanySpbProject extends Model
     }
 
     // Tentukan relasi dengan Product (many-to-one)
-    public function product()
+    /* public function product()
     {
         return $this->belongsTo(Product::class, 'produk_id');
-    }
+    } */
 
     // Tentukan relasi dengan Company (many-to-one)
-    public function company()
+    /* public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
+    } */
+
+    // Tentukan relasi dengan Product (many-to-one)
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'produk_id')->withTrashed();
+    }
+
+    // penting: include soft-deleted company (vendor)
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id')->withTrashed();
     }
 
     public function taxPpn(): HasOne
