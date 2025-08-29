@@ -169,6 +169,15 @@ class ProjectController extends Controller
                   });
             });
         }
+
+        if (auth()->user()->role_id == Role::TENAGA_KERJA) {
+            $query->where(function ($q) {
+                $q->where('user_id', auth()->user()->id) // Proyek yang dibuat oleh Marketing
+                  ->orWhereHas('tenagaKerja', function ($q) {
+                      $q->where('user_id', auth()->user()->id); // Proyek di mana Marketing menjadi tenaga kerja
+                  });
+            });
+        }
     
         // Filter untuk Supervisor
         if (auth()->user()->role_id == Role::SUPERVISOR) {
